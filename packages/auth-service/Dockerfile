@@ -6,12 +6,17 @@ COPY package*.json ./
 
 RUN npm install --production
 
-RUN npx prisma generate
+COPY prisma/ ./prisma/
+COPY prisma.config.ts ./
+COPY .env ./
 
-RUN npx prisma migrate deploy
+# Install dotenv for prisma config
+RUN npm install dotenv
+
+RUN npx prisma generate
 
 COPY . .
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
