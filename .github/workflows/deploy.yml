@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, gateway]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: ./packages/${{ matrix.service }}
+        run: npm ci
+      - name: Build
+        working-directory: ./packages/${{ matrix.service }}
+        run: npm run build
+      - name: Deploy to production
+        run: echo "Deploying ${{ matrix.service }} to production..."
