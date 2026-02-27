@@ -4,14 +4,10 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --production
-
-RUN npx prisma generate
-
-RUN npx prisma migrate deploy
+RUN npm install --omit=dev
 
 COPY . .
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["npm", "run", "start"]
