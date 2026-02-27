@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, ci/cd ]
+  pull_request:
+    branches: [ main, ci/cd ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth-service, gateway]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: ./packages/${{ matrix.service }}
+        run: npm ci
+      - name: Build
+        working-directory: ./packages/${{ matrix.service }}
+        run: npm run build
+      - name: Run ESLint
+        working-directory: ./packages/${{ matrix.service }}
+        run: npx eslint .
+      - name: Run Knip
+        working-directory: ./packages/${{ matrix.service }}
+        run: npx knip
