@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: skolr_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skolr_auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
+  auth-service:
+    build:
+      context: ./packages/auth-service
+      dockerfile: Dockerfile.dev
+    container_name: skolr_auth_service
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - skolr_network
+volumes:
+  postgres_data:
+
+networks:
+  skolr_network:
+    driver: bridge
