@@ -1,0 +1,24 @@
+{
+  "name": "gateway",
+  "version": "1.0.0",
+  "main": "dist.app,js",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon --exec ts-node src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
+  "keywords": [],
+  "author": "thomas.grare",
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^5.7.4",
+    "dotenv": "^17.2.4",
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^5.2.5",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/sensible": "^6.0.0",
+    "@fastify/autoload": "^6.3.1"
+  }
+}
