@@ -1,4 +1,4 @@
-          import Fastify from 'fastify';
+import Fastify from 'fastify';
 import fastifyOauth2 from '@fastify/oauth2';
 import fastifyJwt from '@fastify/jwt';
 import authRoutes from './routes/authRoutes';

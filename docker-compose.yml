@@ -17,17 +17,17 @@ services:
       retries: 5
     networks:
       - skolr_network
-  auth-service:
-    build:
-      context: ./packages/auth-service
-      dockerfile: Dockerfile
-    container_name: skolr_auth_service
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-    networks:
-      - skolr_network
+  # auth-service:
+  #   build:
+  #     context: ./packages/auth-service
+  #     dockerfile: Dockerfile
+  #   container_name: skolr_auth_service
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -35,8 +35,8 @@ services:
     container_name: skolr_gateway
     ports:
       - "3001:3001"
-    depends_on:
-      - auth-service
+    # depends_on:
+    #   - auth-service
     networks:
       - skolr_network
 volumes:

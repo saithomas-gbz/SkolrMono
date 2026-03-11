@@ -10,13 +10,12 @@ COPY prisma/ ./prisma/
 COPY prisma.config.ts ./
 COPY .env ./
 
-# Install dotenv for prisma config
-RUN npm install dotenv
-
 RUN npx prisma generate
+
+RUN npm run build
 
 COPY . .
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD ["npm", "start"]
