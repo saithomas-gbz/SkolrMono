@@ -3,6 +3,7 @@ import fastifyOauth2 from '@fastify/oauth2';
 import fastifyJwt from '@fastify/jwt';
 import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
+import { testDatabaseConnection } from './db';
 
 dotenv.config();
 
@@ -32,11 +33,35 @@ app.register(fastifyOauth2, {
 
 app.register(authRoutes);
 
+app.get('/test-db', async () => {
+  const isConnected = await testDatabaseConnection();
+  if (isConnected) {
+    return { status: 'ok', message: 'Database connection successful!' };
+  } else {
+    return { status: 'error', message: 'Database connection failed!' };
+  }
+});
+
 app.get('/health', async () => {
   return { status: 'ok' };
 });
 
-app.listen({ port: 3000, host: '0.0.0.0' }, () => {
-  console.log("DATABASE URL", process.env.DATABASE_URL, typeof process.env.DATABASE_URL);
-  app.log.info('Server running on http://localhost:3000');
-});
+const start = async () => {
+  try {
+    await app.ready();
+
+    const address = await app.listen({
+      port: 3000,
+      host: '0.0.0.0'
+    });
+
+    await testDatabaseConnection();
+
+    app.log.info(`Server running on ${address}`);
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

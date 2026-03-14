@@ -1,13 +1,13 @@
-FROM node:20-alpine
+FROM oven/bun:latest
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --omit=dev
+RUN bun install --production
 
 COPY . .
 
 EXPOSE 3001
 
-CMD ["npm", "run", "start"]
+CMD ["bun", "run", "start"]

@@ -1,5 +1,5 @@
 import authController from '../controllers/authController';
-import { db } from '../db';
+import db from '../db';
 import { OAuth2Namespace } from '@fastify/oauth2';
 
 import type { FastifyInstance } from 'fastify';

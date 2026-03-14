@@ -17,17 +17,20 @@ services:
       retries: 5
     networks:
       - skolr_network
-  # auth-service:
-  #   build:
-  #     context: ./packages/auth-service
-  #     dockerfile: Dockerfile
-  #   container_name: skolr_auth_service
-  #   ports:
-  #     - "3000:3000"
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - skolr_network
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./packages/auth-service/Dockerfile
+    container_name: skolr_auth_service
+    environment:
+        - NODE_PATH=/app/node_modules
+        - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/skolr_auth?schema=public
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway

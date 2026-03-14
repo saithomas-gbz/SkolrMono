@@ -29,6 +29,7 @@ pids
 # Build output
 dist/
 build/
+packages/*/dist/
 lib-cov
 coverage/
 *.lcov
