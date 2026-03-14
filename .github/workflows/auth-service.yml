@@ -1,10 +1,14 @@
-name: CI
+name: Auth Service CI
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'packages/auth-service/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'packages/auth-service/**'
 
 jobs:
   build:
@@ -30,14 +34,6 @@ jobs:
       working-directory: packages/auth-service
       run: bun run build
 
-    - name: Build gateway
-      working-directory: packages/gateway
-      run: bun run build
-
     # - name: Test auth-service
     #   working-directory: packages/auth-service
-    #   run: bun test
-
-    # - name: Test gateway
-    #   working-directory: packages/gateway
     #   run: bun test
