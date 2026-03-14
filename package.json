@@ -7,7 +7,9 @@
   ],
   "scripts": {
     "knip": "knip",
-    "knip:fix": "knip --fix"
+    "knip:fix": "knip --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
