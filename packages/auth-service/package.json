@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun --watch run src/app.ts",
-    "build": "bun build ./src/index.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run ./dist/app.js",
     "prisma:generate": "bunx prisma generate",
     "prisma:migrate": "bunx prisma migrate dev"
