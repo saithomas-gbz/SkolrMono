@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import proxyPlugin from '../plugins/proxy';
 
 export default async function authRoutes(fastify: FastifyInstance) {
