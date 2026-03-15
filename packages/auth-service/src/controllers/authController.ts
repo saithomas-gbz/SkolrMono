@@ -2,6 +2,18 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import bcrypt from 'bcrypt';
 
+interface GoogleOAuthProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  picture: string;
+}
+
+interface GoogleOAuthQuery {
+  token: string;
+  profile: GoogleOAuthProfile;
+}
+
 const authController = {
   login: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -71,7 +83,7 @@ const authController = {
 
   googleCallback: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { token, profile } = request.query as any;
+      const { token, profile } = request.query as GoogleOAuthQuery;
 
       let user = await db.user.findFirst({
         where: {
@@ -102,7 +114,7 @@ const authController = {
       }
 
       const jwtToken = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, role: user.role, oauthToken: token },
         { expiresIn: '1h' }
       );
 
@@ -115,4 +127,3 @@ const authController = {
 };
 
 export default authController;
-``

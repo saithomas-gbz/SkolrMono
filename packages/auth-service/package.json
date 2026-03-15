@@ -16,14 +16,12 @@
   "license": "ISC",
   "devDependencies": {
     "@prisma/adapter-pg": "^7.5.0",
-
     "dotenv": "^17.2.4",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@fastify/jwt": "^10.0.0",
     "@fastify/oauth2": "^8.1.2",
-    "bcrypt": "^6.0.0",
-    "pg": "^8.20.0"
+    "bcrypt": "^6.0.0"
   }
 }
