@@ -2,6 +2,7 @@
   "name": "skolr-mono",
   "version": "1.0.0",
   "private": "true",
+  "type": "module",
   "workspaces": [
     "packages/*"
   ],
@@ -15,10 +16,10 @@
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.18.0",
-
     "knip": "^5.86.0",
     "prisma": "^7.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
     "fastify": "^5.8.2"

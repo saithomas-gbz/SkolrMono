@@ -25,3 +25,6 @@ jobs:
 
     - name: Run Knip
       run: bunx knip
+
+    - name: Run Lint
+      run: bun lint
