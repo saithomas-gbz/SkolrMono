@@ -2,12 +2,13 @@
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "workspaces": {
     "packages/auth-service": {
-      "entry": ["src/app.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/gateway": {
-      "entry": ["src/app.ts"],
       "project": ["src/**/*.ts"]
     }
-  }
+  },
+  "ignoreDependencies": ["typescript-eslint"],
+  "ignoreBinaries": ["eslint"],
+  "ignore": ["eslint.config.js"]
 }
