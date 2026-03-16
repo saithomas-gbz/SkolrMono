@@ -2,22 +2,25 @@
   "name": "skolr-mono",
   "version": "1.0.0",
   "private": "true",
+  "type": "module",
   "workspaces": [
     "packages/*"
   ],
+  "scripts": {
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
   "devDependencies": {
-    "@types/node": "^25.2.0",
-    "@typescript-eslint/eslint-plugin": "^8.54.0",
-    "@typescript-eslint/parser": "^8.54.0",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "globals": "^17.3.0",
-    "typescript": "^5.9.3"
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^25.5.0",
+    "knip": "^5.86.0",
+    "prisma": "^7.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
-    "@fastify/autoload": "^6.3.1",
-    "dotenv": "^17.2.3",
-    "fastify": "^5.7.4",
-    "nodemon": "^3.1.11"
+    "fastify": "^5.8.2"
   }
 }

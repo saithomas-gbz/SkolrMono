@@ -1,22 +1,18 @@
-FROM node:20-alpine
-
+FROM oven/bun:latest
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json bun.lock tsconfig.json ./
 
-RUN npm install --production
+COPY packages/auth-service/ ./packages/auth-service/
 
-COPY prisma/ ./prisma/
-COPY prisma.config.ts ./
-COPY .env ./
+WORKDIR /app/packages/auth-service
 
-# Install dotenv for prisma config
-RUN npm install dotenv
+RUN ls -R src
 
-RUN npx prisma generate
+RUN bun install
+RUN bun prisma generate
 
-COPY . .
+RUN bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client
 
 EXPOSE 3000
-
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD ["bun", "dist/app.js"]

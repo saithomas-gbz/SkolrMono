@@ -1,7 +1,6 @@
-import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import http from 'http';
 import https from 'https';
-import url from 'url';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -52,7 +51,7 @@ async function proxyRequest(req: FastifyRequest, reply: FastifyReply, targetUrl:
   });
 }
 
-export default async function proxyPlugin(fastify: FastifyInstance, options: FastifyPluginOptions) {
+export default async function proxyPlugin(fastify: FastifyInstance) {
   const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3000';
 
   // Decorate fastify instance with proxy method

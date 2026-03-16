@@ -1,9 +1,9 @@
-import { FastifyInstance, FastifyPluginOptions } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import proxyPlugin from '../plugins/proxy';
 
-export default async function authRoutes(fastify: FastifyInstance, options: FastifyPluginOptions) {
+export default async function authRoutes(fastify: FastifyInstance) {
   // Register proxy plugin to get the proxyToAuthService method
-  await proxyPlugin(fastify, options);
+  await proxyPlugin(fastify);
 
   // Set up proxy routes for all /auth/* endpoints
   fastify.all('/auth/*', async (request, reply) => {

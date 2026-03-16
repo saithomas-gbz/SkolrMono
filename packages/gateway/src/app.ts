@@ -18,14 +18,12 @@ gateway.register(cors, {
   origin: '*',
 });
 
-// Don't auto-load plugins since we're handling auth proxy manually
 gateway.register(autoLoad, {
   dir: join(__dirname, 'plugins'),
   dirNameRoutePrefix: false,
   ignorePattern: /proxy\.js$/,
 });
 
-// Register auth routes with proxy to auth-service
 gateway.register(import('./routes/auth'));
 
 gateway.register(fastifySwagger, {
