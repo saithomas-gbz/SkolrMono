@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "NODE_ENV=test jest",
     "dev": "bun --watch run src/app.ts",
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run ./dist/app.js",
@@ -15,11 +15,15 @@
   "author": "thomas.grare",
   "license": "ISC",
   "devDependencies": {
-    "@prisma/adapter-pg": "^7.5.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
     "dotenv": "^17.2.4",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^7.5.0",
     "@fastify/jwt": "^10.0.0",
     "@fastify/oauth2": "^8.1.2",
     "bcrypt": "^6.0.0"

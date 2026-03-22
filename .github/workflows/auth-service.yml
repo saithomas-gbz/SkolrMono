@@ -23,12 +23,13 @@ jobs:
 
     - name: Generate Prisma client
       working-directory: packages/auth-service
-      run: bunx prisma generate
+      run: bunx prisma generate && ls src/generated/prisma/internal
 
     - name: Build auth-service
       working-directory: packages/auth-service
       run: bun run build
 
-    # - name: Test auth-service
-    #   working-directory: packages/auth-service
-    #   run: bun test
+    - name: Test auth-service
+      run: bun test
+      env:
+        NODE_ENV: test
