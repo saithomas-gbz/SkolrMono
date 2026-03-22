@@ -6,13 +6,13 @@ SkolrMono est un monorepo contenant plusieurs services pour une application édu
 
 # Technologies
 
-- Node.js
+- Bun
 - TypeScript
 - Fastify
 - MongoDB
 - PostgreSQL
 - Docker
-- Next.js
+- Nuxt
 - Jest
 
 # Commands

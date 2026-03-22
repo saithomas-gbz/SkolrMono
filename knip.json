@@ -8,7 +8,7 @@
       "project": ["src/**/*.ts"]
     }
   },
-  "ignoreDependencies": ["typescript-eslint"],
+  "ignoreDependencies": ["typescript-eslint", "@prisma/adapter-pg", "@prisma/client"],
   "ignoreBinaries": ["eslint"],
   "ignore": ["eslint.config.js"]
 }

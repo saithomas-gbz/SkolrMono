@@ -1,0 +1,2 @@
+[test]
+ignore = ["packages/auth-service/src/generated/**"]
