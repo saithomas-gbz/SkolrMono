@@ -4,22 +4,26 @@
 
 SkolrMono est un monorepo contenant plusieurs services pour une application éducative. Ce dépôt utilise une architecture modulaire pour organiser les différents services et bibliothèques. Skolr.
 
+>>>>>>> Stashed changes
+- Jest
+=======
 # Technologies
 
-- Node.js
+- Bun
 - TypeScript
 - Fastify
-- MongoDB
 - PostgreSQL
 - Docker
-- Next.js
+- Jest
+=======
+>>>>>>> Stashed changes
 - Jest
 
 # Commands
 
-- `npm run dev`: Démarre le serveur en mode développement.
-- `npm run build`: Construit le projet pour la production.
-- `npm run start`: Démarre le serveur en mode production.
+- `bun run dev`: Démarre le serveur en mode développement.
+- `bun run build`: Construit le projet pour la production.
+- `bun run start`: Démarre le serveur en mode production.
 
 # Restrictions
 

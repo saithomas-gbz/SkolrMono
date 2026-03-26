@@ -27,10 +27,10 @@ Le service d'authentification gère l'authentification des utilisateurs, la gest
 - Intégration avec Prisma pour la gestion des données
 
 **Technologies :**
-- Node.js
+- Bun
 - TypeScript
 - Prisma
-- Express
+- Fastify
 
 ### gateway
 
@@ -49,7 +49,7 @@ La passerelle API agit comme un point d'entrée unique pour tous les services. E
 
 ### Prérequis
 
-- Node.js (version 16 ou supérieure)
+- Bun (version 1.0 ou supérieure)
 - Docker (pour l'environnement de développement)
 - Docker Compose
 
@@ -63,7 +63,7 @@ La passerelle API agit comme un point d'entrée unique pour tous les services. E
 
 2. Installer les dépendances :
    ```bash
-   npm install
+   bun install
    ```
 
 3. Configurer les variables d'environnement :
@@ -90,17 +90,17 @@ Chaque package dans le dossier `packages/` est un service ou une bibliothèque i
 
 - **Installer les dépendances de tous les packages :**
   ```bash
-  npm run install:all
+  bun run install:all
   ```
 
 - **Construire tous les packages :**
   ```bash
-  npm run build:all
+  bun run build:all
   ```
 
 - **Démarrer tous les services en mode développement :**
   ```bash
-  npm run dev
+  bun run dev
   ```
 
 ## Tests
@@ -108,7 +108,7 @@ Chaque package dans le dossier `packages/` est un service ou une bibliothèque i
 Pour exécuter les tests de tous les packages :
 
 ```bash
-npm test
+bun test
 ```
 
 ## Contribution
