@@ -4,9 +4,6 @@
 
 SkolrMono est un monorepo contenant plusieurs services pour une application éducative. Ce dépôt utilise une architecture modulaire pour organiser les différents services et bibliothèques. Skolr.
 
->>>>>>> Stashed changes
-- Jest
-=======
 # Technologies
 
 - Bun
@@ -14,10 +11,7 @@ SkolrMono est un monorepo contenant plusieurs services pour une application édu
 - Fastify
 - PostgreSQL
 - Docker
-- Jest
-=======
->>>>>>> Stashed changes
-- Jest
+- Nuxt
 
 # Commands
 
