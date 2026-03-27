@@ -9,17 +9,15 @@ SkolrMono est un monorepo contenant plusieurs services pour une application édu
 - Bun
 - TypeScript
 - Fastify
-- MongoDB
 - PostgreSQL
 - Docker
 - Nuxt
-- Jest
 
 # Commands
 
-- `npm run dev`: Démarre le serveur en mode développement.
-- `npm run build`: Construit le projet pour la production.
-- `npm run start`: Démarre le serveur en mode production.
+- `bun run dev`: Démarre le serveur en mode développement.
+- `bun run build`: Construit le projet pour la production.
+- `bun run start`: Démarre le serveur en mode production.
 
 # Restrictions
 
