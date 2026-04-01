@@ -20,8 +20,14 @@
     "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
+    "@nuxt/hints": "^1.0.2",
+    "@nuxt/icon": "^2.2.1",
+    "@nuxt/image": "^2.0.0",
+    "@nuxtjs/i18n": "^10.2.4",
+    "@primevue/nuxt-module": "^4.5.4",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
-    "fastify": "^5.8.2"
+    "fastify": "^5.8.2",
+    "nuxt-auth-utils": "^0.5.29"
   }
 }
