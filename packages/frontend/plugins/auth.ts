@@ -1,7 +1,7 @@
-import { defineNuxtPlugin } from '#imports'
+import { defineNuxtPlugin, useAuth } from '#imports';
 
-export default defineNuxtPlugin((nuxtApp) => {
-  const auth = useAuth()
+export default defineNuxtPlugin(() => {
+  const auth = useAuth();
 
   // Configuration pour nuxt-auth-utils
   auth.setStrategy('local', {
@@ -18,7 +18,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     user: {
       property: 'user'
     }
-  })
+  });
 
   // Configuration pour Google OAuth
   auth.setStrategy('google', {
@@ -35,5 +35,5 @@ export default defineNuxtPlugin((nuxtApp) => {
     user: {
       property: 'user'
     }
-  })
-})
+  });
+});
