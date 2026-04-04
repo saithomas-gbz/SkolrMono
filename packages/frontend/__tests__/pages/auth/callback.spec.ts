@@ -1,62 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import CallbackPage from '@/pages/auth/callback.vue';
 import { useAuth } from '@/composables/useAuth';
-import { useRoute, navigateTo } from '#imports';
+import { navigateTo, useRoute } from '#imports';
 
 vi.mock('@/composables/useAuth', () => ({
   useAuth: vi.fn()
 }));
 
+type RouteQuery = Record<string, string | string[] | undefined>;
+
+function stubRouteQuery(query: RouteQuery) {
+  vi.mocked(useRoute).mockReturnValue({ query } as ReturnType<typeof useRoute>);
+}
+
 describe('CallbackPage', () => {
-  let mockSetToken: ReturnType<typeof vi.fn>;
-  let mockNavigateTo: ReturnType<typeof vi.fn>;
+  const mockSetToken = vi.fn();
+  const mockNavigateTo = vi.fn();
 
   beforeEach(() => {
-    mockSetToken = vi.fn();
-    mockNavigateTo = vi.fn();
-
-    vi.mocked(useRoute).mockReturnValue({ query: {} } as never);
-    vi.mocked(useAuth).mockReturnValue({
-      setToken: mockSetToken
-    } as never);
+    vi.clearAllMocks();
+    vi.mocked(useAuth).mockReturnValue({ setToken: mockSetToken } as ReturnType<typeof useAuth>);
     vi.mocked(navigateTo).mockImplementation(mockNavigateTo);
+    stubRouteQuery({});
   });
 
-  it('should render loading message', () => {
+  async function mountAndFlush() {
+    mount(CallbackPage);
+    await flushPromises();
+  }
+
+  it('renders loading state', () => {
     const wrapper = mount(CallbackPage);
     expect(wrapper.text()).toContain('Loading...');
   });
 
-  it('should handle token from query', async () => {
-    vi.mocked(useRoute).mockReturnValue({ query: { token: 'test-token' } } as never);
-
-    mount(CallbackPage);
-
-    await new Promise(process.nextTick);
-
+  it('stores token from query and navigates home', async () => {
+    stubRouteQuery({ token: 'test-token' });
+    await mountAndFlush();
     expect(mockSetToken).toHaveBeenCalledWith('test-token');
     expect(mockNavigateTo).toHaveBeenCalledWith('/');
   });
 
-  it('should not navigate when no token', async () => {
-    vi.mocked(useRoute).mockReturnValue({ query: {} } as never);
-
-    mount(CallbackPage);
-
-    await new Promise(process.nextTick);
-
-    expect(mockSetToken).not.toHaveBeenCalled();
-    expect(mockNavigateTo).not.toHaveBeenCalled();
-  });
-
-  it('should handle empty token', async () => {
-    vi.mocked(useRoute).mockReturnValue({ query: { token: '' } } as never);
-
-    mount(CallbackPage);
-
-    await new Promise(process.nextTick);
-
+  it.each([
+    ['missing token', {} as RouteQuery],
+    ['empty token', { token: '' }]
+  ])('ignores OAuth callback when %s', async (_label, query) => {
+    stubRouteQuery(query);
+    await mountAndFlush();
     expect(mockSetToken).not.toHaveBeenCalled();
     expect(mockNavigateTo).not.toHaveBeenCalled();
   });
