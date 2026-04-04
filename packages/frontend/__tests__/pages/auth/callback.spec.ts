@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import CallbackPage from '@/pages/auth/callback.vue';
-import { useAuth, useRoute, navigateTo } from '#imports';
+import { useAuth } from '@/composables/useAuth';
+import { useRoute, navigateTo } from '#imports';
+
+vi.mock('@/composables/useAuth', () => ({
+  useAuth: vi.fn()
+}));
 
 describe('CallbackPage', () => {
   let mockSetToken: ReturnType<typeof vi.fn>;
@@ -13,9 +18,7 @@ describe('CallbackPage', () => {
 
     vi.mocked(useRoute).mockReturnValue({ query: {} } as never);
     vi.mocked(useAuth).mockReturnValue({
-      setToken: mockSetToken,
-      user: {},
-      loggedIn: false
+      setToken: mockSetToken
     } as never);
     vi.mocked(navigateTo).mockImplementation(mockNavigateTo);
   });

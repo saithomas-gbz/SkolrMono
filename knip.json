@@ -9,10 +9,7 @@
     },
     "packages/frontend": {
       "entry": [
-        "nuxt.config.ts",
-        "app/app.vue",
         "pages/**/*.vue",
-        "plugins/**/*.ts",
         "composables/**/*.ts",
         "components/**/*.vue",
         "__tests__/**/*.ts"
