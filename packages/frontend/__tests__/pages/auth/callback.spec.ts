@@ -1,75 +1,60 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import CallbackPage from '@/pages/auth/callback.vue'
-
-vi.mock('#imports', () => ({
-  useRoute: () => ({
-    query: {}
-  }),
-  useAuth: () => ({
-    setToken: vi.fn(),
-    user: {},
-    loggedIn: false
-  }),
-  navigateTo: vi.fn(),
-  onMounted: vi.fn((fn) => fn())
-}))
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mount } from '@vue/test-utils';
+import CallbackPage from '@/pages/auth/callback.vue';
+import { useAuth, useRoute, navigateTo } from '#imports';
 
 describe('CallbackPage', () => {
-  let mockSetToken: any
-  let mockNavigateTo: any
-  let mockUseRoute: any
+  let mockSetToken: ReturnType<typeof vi.fn>;
+  let mockNavigateTo: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    mockSetToken = vi.fn()
-    mockNavigateTo = vi.fn()
-    mockUseRoute = { query: {} }
+    mockSetToken = vi.fn();
+    mockNavigateTo = vi.fn();
 
+    vi.mocked(useRoute).mockReturnValue({ query: {} } as never);
     vi.mocked(useAuth).mockReturnValue({
       setToken: mockSetToken,
       user: {},
       loggedIn: false
-    })
-
-    vi.mocked(useRoute).mockReturnValue(mockUseRoute)
-    vi.mocked(navigateTo).mockImplementation(mockNavigateTo)
-  })
+    } as never);
+    vi.mocked(navigateTo).mockImplementation(mockNavigateTo);
+  });
 
   it('should render loading message', () => {
-    const wrapper = mount(CallbackPage)
-    expect(wrapper.text()).toContain('Loading...')
-  })
+    const wrapper = mount(CallbackPage);
+    expect(wrapper.text()).toContain('Loading...');
+  });
 
   it('should handle token from query', async () => {
-    mockUseRoute.query = { token: 'test-token' }
+    vi.mocked(useRoute).mockReturnValue({ query: { token: 'test-token' } } as never);
 
-    mount(CallbackPage)
+    mount(CallbackPage);
 
-    await new Promise(process.nextTick)
+    await new Promise(process.nextTick);
 
-    expect(mockSetToken).toHaveBeenCalledWith('test-token')
-    expect(mockNavigateTo).toHaveBeenCalledWith('/')
-  })
+    expect(mockSetToken).toHaveBeenCalledWith('test-token');
+    expect(mockNavigateTo).toHaveBeenCalledWith('/');
+  });
 
   it('should not navigate when no token', async () => {
-    mockUseRoute.query = {}
+    vi.mocked(useRoute).mockReturnValue({ query: {} } as never);
 
-    mount(CallbackPage)
+    mount(CallbackPage);
 
-    await new Promise(process.nextTick)
+    await new Promise(process.nextTick);
 
-    expect(mockSetToken).not.toHaveBeenCalled()
-    expect(mockNavigateTo).not.toHaveBeenCalled()
-  })
+    expect(mockSetToken).not.toHaveBeenCalled();
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+  });
 
   it('should handle empty token', async () => {
-    mockUseRoute.query = { token: '' }
+    vi.mocked(useRoute).mockReturnValue({ query: { token: '' } } as never);
 
-    mount(CallbackPage)
+    mount(CallbackPage);
 
-    await new Promise(process.nextTick)
+    await new Promise(process.nextTick);
 
-    expect(mockSetToken).not.toHaveBeenCalled()
-    expect(mockNavigateTo).not.toHaveBeenCalled()
-  })
-})
+    expect(mockSetToken).not.toHaveBeenCalled();
+    expect(mockNavigateTo).not.toHaveBeenCalled();
+  });
+});
