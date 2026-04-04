@@ -1,107 +1,90 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useAuth } from '@/composables/useAuth'
+import { navigateTo } from '#imports';
+import { ref } from 'vue';
+import { useAuth } from '@/composables/useAuth';
 
-const { login, loginWithGoogle } = useAuth()
+const { login, loginWithGoogle } = useAuth();
 
-const email = ref('')
-const password = ref('')
-const error = ref('')
-const loading = ref(false)
+const email = ref('');
+const password = ref('');
+const error = ref('');
+const loading = ref(false);
 
 const handleLogin = async () => {
   if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields'
-    return
+    error.value = 'Please fill in all fields';
+    return;
   }
 
-  loading.value = true
-  error.value = ''
+  loading.value = true;
+  error.value = '';
 
   try {
-    const result = await login(email.value, password.value)
+    const result = await login(email.value, password.value);
     if (result.success) {
-      await navigateTo('/')
+      await navigateTo('/');
     } else {
-      error.value = 'Invalid credentials'
+      error.value = 'Invalid credentials';
     }
-  } catch (err) {
-    error.value = 'Login failed. Please try again.'
+  } catch {
+    error.value = 'Login failed. Please try again.';
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const handleGoogleLogin = () => {
-  loginWithGoogle()
-}
+  loginWithGoogle();
+};
 </script>
 
 <template>
-  <div class="flex justify-content-center align-items-center min-h-screen">
-    <div class="surface-card p-4 shadow-2 border-round w-full lg:w-4">
-      <div class="text-center mb-5">
-        <div class="text-900 text-3xl font-medium mb-3">Welcome Back</div>
-        <span class="text-600 font-medium line-height-3">Don't have an account?</span>
-        <NuxtLink to="/register" class="font-medium no-underline ml-2 text-blue-500 cursor-pointer">
+  <SkolrAuthShell>
+    <SkolrAuthPageHeader>
+      <template #title>Welcome Back</template>
+      <template #hint>Don't have an account?</template>
+      <template #action>
+        <NuxtLink
+          to="/register"
+          class="font-medium no-underline ml-2 text-blue-500 cursor-pointer"
+        >
           Create today!
         </NuxtLink>
-      </div>
+      </template>
+    </SkolrAuthPageHeader>
 
-      <div>
-        <label for="email" class="block text-900 font-medium mb-2">Email</label>
-        <InputText 
-          id="email" 
-          v-model="email" 
-          type="text" 
-          class="w-full mb-3" 
-          placeholder="Email address"
-        />
+    <div>
+      <SkolrTextField
+        v-model="email"
+        input-id="email"
+        label="Email"
+        placeholder="Email address"
+      />
+      <SkolrPasswordField
+        v-model="password"
+        input-id="password"
+        label="Password"
+        placeholder="Password"
+      />
 
-        <label for="password" class="block text-900 font-medium mb-2">Password</label>
-        <Password 
-          id="password" 
-          v-model="password" 
-          class="w-full mb-3" 
-          placeholder="Password"
-          toggleMask
-        />
+      <div v-if="error" class="p-error text-sm mb-3">{{ error }}</div>
 
-        <div v-if="error" class="p-error text-sm mb-3">{{ error }}</div>
+      <Button
+        label="Sign In"
+        icon="pi pi-user"
+        class="w-full mb-3"
+        :loading="loading"
+        @click="handleLogin"
+      />
 
-        <Button 
-          label="Sign In" 
-          icon="pi pi-user" 
-          class="w-full mb-3" 
-          @click="handleLogin"
-          :loading="loading"
-        />
+      <SkolrAuthOrDivider>or</SkolrAuthOrDivider>
 
-        <div class="flex align-items-center justify-content-center mb-4">
-          <div class="flex-grow-1" style="height: 1px; background: var(--surface-border)"></div>
-          <div class="px-3 text-600">or</div>
-          <div class="flex-grow-1" style="height: 1px; background: var(--surface-border)"></div>
-        </div>
-
-        <Button 
-          label="Sign in with Google" 
-          icon="pi pi-google" 
-          class="w-full p-button-outlined" 
-          @click="handleGoogleLogin"
-        />
-      </div>
+      <Button
+        label="Sign in with Google"
+        icon="pi pi-google"
+        class="w-full p-button-outlined"
+        @click="handleGoogleLogin"
+      />
     </div>
-  </div>
+  </SkolrAuthShell>
 </template>
-
-<style scoped>
-.pi-eye {
-  transform: scale(1.6);
-  margin-right: 1rem;
-}
-
-.pi-eye-slash {
-  transform: scale(1.6);
-  margin-right: 1rem;
-}
-</style>
