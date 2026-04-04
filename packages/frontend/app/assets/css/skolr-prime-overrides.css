@@ -1,0 +1,6 @@
+/* Shared PrimeVue Password toggle sizing (auth screens) */
+.p-password .p-password-toggle-icon.pi-eye,
+.p-password .p-password-toggle-icon.pi-eye-slash {
+  transform: scale(1.6);
+  margin-right: 1rem;
+}

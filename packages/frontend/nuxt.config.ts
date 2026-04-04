@@ -12,6 +12,21 @@ export default defineNuxtConfig({
     'nuxt-auth-utils'
   ],
 
+  css: ['~/assets/css/skolr-prime-overrides.css'],
+
+  i18n: {
+    locales: [{ code: 'en', name: 'English', file: 'en.json' }],
+    defaultLocale: 'en',
+    langDir: 'locales',
+    strategy: 'no_prefix'
+  },
+
+  primevue: {
+    options: {
+      ripple: true
+    }
+  },
+
   runtimeConfig: {
     public: {
       auth: {
@@ -25,4 +40,4 @@ export default defineNuxtConfig({
       }
     }
   }
-})
+});
