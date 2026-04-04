@@ -6,9 +6,20 @@
     },
     "packages/gateway": {
       "project": ["src/**/*.ts"]
+    },
+    "packages/frontend": {
+      "entry": [
+        "nuxt.config.ts",
+        "app/app.vue",
+        "pages/**/*.vue",
+        "plugins/**/*.ts",
+        "composables/**/*.ts",
+        "components/**/*.vue",
+        "__tests__/**/*.ts"
+      ],
+      "project": ["**/*.{ts,vue}", "!**/.nuxt/**", "!**/.output/**"]
     }
   },
-  "ignoreDependencies": ["typescript-eslint", "@prisma/adapter-pg", "@prisma/client"],
-  "ignoreBinaries": ["eslint"],
+  "ignoreDependencies": ["typescript-eslint", "@prisma/adapter-pg", "@prisma/client", "nuxt-auth-utils"],
   "ignore": ["eslint.config.js"]
 }
