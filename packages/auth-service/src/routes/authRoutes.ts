@@ -54,11 +54,13 @@ const authRoutes = async (fastify: FastifyInstance) => {
       const jwtToken = fastify.jwt.sign({ id: user.id, email: user.email });
 
       // reply.redirect(process.env.GOOGLE_CALLBACK_URI)
-      reply.redirect(`http://votre-frontend.com/auth/success?token=${jwtToken}`);
+      const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      reply.redirect(`${frontendUrl}/auth/callback?token=${jwtToken}`);
     } catch (error) {
       console.error("error google prisma callback : " , error)
       fastify.log.error(error);
-      reply.redirect('http://votre-fronte//nd.com/auth/error');
+      const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+      reply.redirect(`${frontendUrl}/auth/error`);
     }
   });
 }

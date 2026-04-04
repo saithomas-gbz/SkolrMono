@@ -9,7 +9,6 @@ export default defineNuxtConfig({
     '@nuxt/hints',
     '@nuxtjs/i18n',
     '@primevue/nuxt-module',
-    'nuxt-auth-utils'
   ],
 
   css: ['~/assets/css/skolr-prime-overrides.css'],
@@ -29,15 +28,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      auth: {
-        baseURL: 'http://localhost:3000',
-        redirect: {
-          login: '/login',
-          logout: '/',
-          callback: '/auth/callback',
-          home: '/'
-        }
-      }
-    }
+      authBaseURL: 'http://localhost:3001',
+    },
   }
 });

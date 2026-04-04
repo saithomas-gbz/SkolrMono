@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { navigateTo, onMounted, useAuth, useRoute } from '#imports';
+import { navigateTo, onMounted, useRoute } from '#imports';
+import { useAuth } from '@/composables/useAuth';
 
 const route = useRoute();
-const auth = useAuth();
+const { setToken } = useAuth();
 
 onMounted(async () => {
   const raw = route.query.token;
   const token = Array.isArray(raw) ? raw[0] : raw;
   if (token) {
-    await auth.setToken(token);
+    setToken(token);
     await navigateTo('/');
   }
 });

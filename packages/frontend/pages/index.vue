@@ -22,7 +22,7 @@ const goRegister = () => {
       <div v-if="loggedIn" class="surface-card p-4 border-round shadow-1 mb-4">
         <p class="text-900 font-medium mb-2">Signed in</p>
         <p v-if="user" class="text-600 text-sm mb-3">
-          {{ (user as { email?: string }).email ?? 'User' }}
+          {{ user?.email ?? 'User' }}
         </p>
         <Button label="Sign out" severity="secondary" class="w-full" @click="logout" />
       </div>
