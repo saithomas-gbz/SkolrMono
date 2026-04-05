@@ -1,0 +1,13 @@
+---
+description: Jest tests and TDD — write tests before or alongside features
+globs: "**/*.test.ts,**/*.spec.ts,**/__tests__/**/*.ts,**/__tests__/**/*.tsx"
+alwaysApply: false
+---
+
+# Testing (Jest, TDD)
+
+- **Runner**: Use **Jest** for unit tests (project standard).
+- **TDD**: Prefer writing or updating tests before or in the same change as new behavior, so behavior stays verifiable.
+- **Quality**: Cover meaningful branches and edge cases; keep tests readable and aligned with existing test layout in the package.
+
+When adding a feature without an obvious test home, mirror the nearest package’s `jest.config` and test folder conventions.

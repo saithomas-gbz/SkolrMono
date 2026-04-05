@@ -1,0 +1,12 @@
+---
+description: Prettier, ESLint, Knip, Husky, CI/CD expectations
+alwaysApply: true
+---
+
+# Quality and tooling
+
+- **Prettier**: Format code with Prettier according to project config; don’t fight established formatting.
+- **ESLint**: Respect lint rules (see also `typescript-style.mdc` for camelCase, single quotes, semicolons).
+- **Knip**: Prefer removing unused dependencies and dead files when touching related areas — keep the tree lean.
+- **Husky**: Pre-commit hooks are part of the workflow; changes should pass what hooks enforce.
+- **CI/CD**: Favor small, reviewable changes that keep pipelines green; add or update workflow steps when introducing new checks the repo should run automatically.

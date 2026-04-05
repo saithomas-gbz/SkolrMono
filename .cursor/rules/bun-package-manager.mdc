@@ -1,0 +1,32 @@
+---
+description: Use Bun only — never npm (or npx) for this monorepo
+alwaysApply: true
+---
+
+# Package manager: Bun only
+
+This repo uses **Bun** for installs, scripts, and running tools. Do **not** use `npm`, `npx`, `yarn`, or `pnpm` in instructions, CI, or docs unless migrating away from Bun is explicitly requested.
+
+## Commands
+
+| Instead of | Use |
+|------------|-----|
+| `npm install` | `bun install` |
+| `npm run <script>` | `bun run <script>` |
+| `npx <pkg>` | `bunx <pkg>` |
+
+## Examples
+
+```bash
+# ❌ BAD
+npm install
+npm run build
+npx eslint .
+
+# ✅ GOOD
+bun install
+bun run build
+bunx eslint .
+```
+
+When suggesting shell commands or editing workflow files, default to Bun equivalents.

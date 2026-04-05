@@ -1,0 +1,12 @@
+---
+description: Conventional commits, small focused commits, rebase-friendly history
+alwaysApply: true
+---
+
+# Git commits
+
+- **Format**: Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject` (e.g. `fix(auth-service): handle expired token`).
+- **Size**: One logical change per commit when possible; easier review and safer reverts.
+- **History**: Prefer rebase or squash over unnecessary merge commits to keep history readable.
+- **Message body**: Add a short explanation when the subject alone isn’t enough.
+- **Before push**: Ensure lint and tests pass per project standards.

@@ -1,0 +1,15 @@
+---
+description: Non-negotiable guardrails — structure, deps, secrets, patterns, diagnostics
+alwaysApply: true
+---
+
+# Agent restrictions
+
+- **Project structure**: Do not reorganize directories or files unless the user explicitly requests it. Preserve the modular layout.
+- **Dependencies**: Do not add packages or tools that are not already reflected in the repo’s dependency manifests (e.g. root or package `package.json`). No ad-hoc new externals.
+- **Secrets**: Never hardcode API keys, passwords, tokens, or other secrets. Use environment variables and existing secret/config patterns.
+- **Patterns**: Follow established design patterns and conventions in the codebase; do not invent parallel abstractions without a clear reason.
+- **Deprecation**: Avoid deprecated APIs and patterns; prefer current, supported approaches.
+- **Intent**: For large or ambiguous changes, clarify with the user before proceeding.
+- **Diagnostics**: Fix errors and warnings you introduce or that block the task; escalate to the user if the fix is unclear or risky.
+- **Correctness**: Prefer correct, complete solutions over aggressive simplification that drops behavior.

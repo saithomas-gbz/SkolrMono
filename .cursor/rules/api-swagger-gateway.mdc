@@ -1,0 +1,12 @@
+---
+description: Document HTTP APIs with Swagger/OpenAPI; gateway must stay documented
+globs: "packages/gateway/**/*.ts,packages/**/routes/**/*.ts"
+alwaysApply: false
+---
+
+# API documentation (Swagger)
+
+- **Endpoints**: Document Fastify (or gateway-proxied) HTTP APIs using the project’s Swagger / OpenAPI setup (e.g. `@fastify/swagger`, route schemas, tags).
+- **Gateway**: The **gateway** must remain fully documented in Swagger UI — new or changed proxied routes should be reflected there as required by existing patterns.
+
+Follow how nearby routes register `schema`, `tags`, `description`, and response shapes so the generated spec stays accurate.
