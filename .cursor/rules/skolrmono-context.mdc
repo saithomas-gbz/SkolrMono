@@ -1,0 +1,20 @@
+---
+description: SkolrMono monorepo purpose, stack, and common dev commands
+alwaysApply: true
+---
+
+# SkolrMono context
+
+SkolrMono is a modular monorepo for an educational app: multiple services and shared libraries; keep that layout intact unless the user asks to change it.
+
+## Stack
+
+Bun, TypeScript, Fastify, PostgreSQL, Docker, Nuxt.
+
+## Commands
+
+Use Bun (see `bun-package-manager.mdc` — no npm/npx).
+
+- `bun run dev` — development
+- `bun run build` — production build
+- `bun run start` — production server
