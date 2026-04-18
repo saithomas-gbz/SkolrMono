@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun --watch run src/app.ts",
     "build": "bun run tsc",
-    "start": "bun run dist/app.js"
+    "start": "bun run dist/app.js",
+    "seed:dev": "bun run scripts/seed-dev.ts"
   },
   "keywords": [],
   "author": "thomas.grare",

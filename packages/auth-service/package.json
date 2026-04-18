@@ -9,7 +9,8 @@
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run ./dist/app.js",
     "prisma:generate": "bunx prisma generate",
-    "prisma:migrate": "bunx prisma migrate dev"
+    "prisma:migrate": "bunx prisma migrate dev",
+    "db:seed": "bunx prisma db seed"
   },
   "keywords": [],
   "author": "thomas.grare",
