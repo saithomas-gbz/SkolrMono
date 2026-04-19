@@ -26,10 +26,9 @@ pids
 # TypeScript
 *.tsbuildinfo
 
-# Build output
+# Build output (any dist/ directory in the repo)
 dist/
 build/
-packages/*/dist/
 lib-cov
 coverage/
 *.lcov

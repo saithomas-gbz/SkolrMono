@@ -9,7 +9,8 @@
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run ./dist/app.js",
     "prisma:generate": "bunx prisma generate",
-    "prisma:migrate": "bunx prisma migrate dev"
+    "prisma:migrate": "bunx prisma migrate dev",
+    "db:seed": "bunx prisma db seed"
   },
   "keywords": [],
   "author": "thomas.grare",
@@ -23,6 +24,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@fastify/swagger": "^9.7.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@fastify/jwt": "^10.0.0",
     "@fastify/oauth2": "^8.1.2",
