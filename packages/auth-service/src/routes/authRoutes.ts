@@ -1,6 +1,11 @@
 import authController from '../controllers/authController';
 import db from '../db';
 import { OAuth2Namespace } from '@fastify/oauth2';
+import {
+  googleCallbackRouteSchema,
+  loginRouteSchema,
+  registerRouteSchema,
+} from '../schemas/authOpenApi';
 
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -18,11 +23,13 @@ interface GoogleUserInfo {
 }
 
 const authRoutes = async (fastify: FastifyInstance) => {
-  fastify.post("/login", authController.login);
-  fastify.post("/register", authController.register);
+  fastify.post('/login', { schema: loginRouteSchema }, authController.login);
+  fastify.post('/register', { schema: registerRouteSchema }, authController.register);
 
-
-  fastify.get('/login/google/callback', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get(
+    '/login/google/callback',
+    { schema: googleCallbackRouteSchema },
+    async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const token = await fastify.googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
 
@@ -56,11 +63,11 @@ const authRoutes = async (fastify: FastifyInstance) => {
       // reply.redirect(process.env.GOOGLE_CALLBACK_URI)
       reply.redirect(`http://votre-frontend.com/auth/success?token=${jwtToken}`);
     } catch (error) {
-      console.error("error google prisma callback : " , error)
+      console.error('error google prisma callback : ', error);
       fastify.log.error(error);
       reply.redirect('http://votre-fronte//nd.com/auth/error');
     }
   });
-}
+};
 
 export default authRoutes;

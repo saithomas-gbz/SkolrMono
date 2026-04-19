@@ -23,6 +23,7 @@
       "dependencies": {
         "@fastify/jwt": "^10.0.0",
         "@fastify/oauth2": "^8.1.2",
+        "@fastify/swagger": "^9.7.0",
         "@prisma/adapter-pg": "^7.5.0",
         "bcrypt": "^6.0.0",
       },
@@ -46,6 +47,9 @@
         "@fastify/swagger-ui": "^5.2.5",
         "dotenv": "^17.2.4",
         "fastify": "^5.7.4",
+      },
+      "devDependencies": {
+        "openapi-types": "^12.1.3",
       },
     },
   },
