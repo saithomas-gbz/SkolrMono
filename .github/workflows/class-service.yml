@@ -36,3 +36,7 @@ jobs:
       run: bun test src/__tests__
       env:
         NODE_ENV: test
+
+    - name: Build Docker image
+      working-directory: packages/class-service
+      run: docker build -t class-service .
