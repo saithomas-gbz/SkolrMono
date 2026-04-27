@@ -1,9 +1,7 @@
 /**
- * Merges auth-service OpenAPI into the gateway document with a path prefix
+ * Merges a service OpenAPI into the gateway document with a path prefix
  * and namespaced component schema keys to avoid collisions with gateway defs.
  */
-
-const SCHEMA_REF_PREFIX = 'authService_';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -11,7 +9,7 @@ function isRecord(value: unknown): value is JsonRecord {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
-function rewriteSchemaRefs(spec: JsonRecord): JsonRecord {
+function rewriteSchemaRefs(spec: JsonRecord, schemaRefPrefix: string): JsonRecord {
   const schemas = spec.components;
   if (!isRecord(schemas)) {
     return spec;
@@ -23,7 +21,7 @@ function rewriteSchemaRefs(spec: JsonRecord): JsonRecord {
 
   const renamed: JsonRecord = {};
   for (const [key, val] of Object.entries(schemaMap)) {
-    renamed[`${SCHEMA_REF_PREFIX}${key}`] = val;
+    renamed[`${schemaRefPrefix}${key}`] = val;
   }
 
   const withRenamedKeys = {
@@ -37,7 +35,7 @@ function rewriteSchemaRefs(spec: JsonRecord): JsonRecord {
   let raw = JSON.stringify(withRenamedKeys);
   for (const key of Object.keys(schemaMap)) {
     const from = `#/components/schemas/${key}`;
-    const to = `#/components/schemas/${SCHEMA_REF_PREFIX}${key}`;
+    const to = `#/components/schemas/${schemaRefPrefix}${key}`;
     raw = raw.split(from).join(to);
   }
 
@@ -92,11 +90,28 @@ export function mergeGatewayWithAuthService(
   authServiceSpec: JsonRecord | null,
   pathPrefix: string,
 ): JsonRecord {
-  if (!authServiceSpec) {
+  return mergeGatewayWithService(gatewayObject, authServiceSpec, pathPrefix, 'authService_');
+}
+
+export function mergeGatewayWithClassService(
+  gatewayObject: JsonRecord,
+  classServiceSpec: JsonRecord | null,
+  pathPrefix: string,
+): JsonRecord {
+  return mergeGatewayWithService(gatewayObject, classServiceSpec, pathPrefix, 'classService_');
+}
+
+export function mergeGatewayWithService(
+  gatewayObject: JsonRecord,
+  serviceSpec: JsonRecord | null,
+  pathPrefix: string,
+  schemaRefPrefix: string,
+): JsonRecord {
+  if (!serviceSpec) {
     return gatewayObject;
   }
 
-  const rewritten = rewriteSchemaRefs(authServiceSpec);
+  const rewritten = rewriteSchemaRefs(serviceSpec, schemaRefPrefix);
   const paths = isRecord(rewritten.paths) ? rewritten.paths : {};
   const mergedPaths = {
     ...(isRecord(gatewayObject.paths) ? gatewayObject.paths : {}),
@@ -112,7 +127,7 @@ export function mergeGatewayWithAuthService(
     ),
   };
 
-  const tags = mergeTags(gatewayObject.tags, authServiceSpec.tags);
+  const tags = mergeTags(gatewayObject.tags, serviceSpec.tags);
   if (tags) {
     merged.tags = tags;
   }

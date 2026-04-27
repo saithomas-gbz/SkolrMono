@@ -1,16 +1,16 @@
-name: Auth Service CI
+name: Class Service CI
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - 'packages/auth-service/**'
+      - 'packages/class-service/**'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'packages/auth-service/**'
+      - 'packages/class-service/**'
     changes:
-      - 'packages/auth-service/**'
+      - 'packages/class-service/**'
 
 jobs:
   build:
@@ -24,15 +24,15 @@ jobs:
       run: bun install
 
     - name: Generate Prisma client
-      working-directory: packages/auth-service
+      working-directory: packages/class-service
       run: bunx prisma generate && ls src/generated/prisma/internal
 
-    - name: Build auth-service
-      working-directory: packages/auth-service
+    - name: Build class-service
+      working-directory: packages/class-service
       run: bun run build
 
-    - name: Test auth-service
-      working-directory: packages/auth-service
+    - name: Test class-service
+      working-directory: packages/class-service
       run: bun test src/__tests__
       env:
         NODE_ENV: test
