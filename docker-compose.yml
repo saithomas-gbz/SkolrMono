@@ -49,6 +49,15 @@ services:
       - postgres
     networks:
       - skolr_network
+  class-service:
+    build:
+      context: .
+      dockerfile: ./packages/class-service/Dockerfile
+    container_name: skolr_class_service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@localhost:5433/skolr_class?schema=public
+    depends_on:
+      - postgres-class
   gateway:
     build:
       context: ./packages/gateway
