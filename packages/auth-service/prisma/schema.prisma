@@ -31,6 +31,8 @@ model User {
 
 enum Role {
   USER
+  TEACHER
+  STAFF
   ADMIN
 }
 

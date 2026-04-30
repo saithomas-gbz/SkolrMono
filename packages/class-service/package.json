@@ -1,0 +1,27 @@
+{
+  "name": "class-service",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test src/__tests__",
+    "dev": "bun --watch run src/app.ts",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
+    "start": "bun run ./dist/app.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "^7.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^5.2.6",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.2"
+  }
+}

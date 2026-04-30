@@ -31,7 +31,18 @@ mock.module('../db', () => ({
   }
 }));
 
-const prismaMock = db as any;
+type MockedDb = {
+  user: {
+    findUnique: ReturnType<typeof mock>;
+    findFirst: ReturnType<typeof mock>;
+    create: ReturnType<typeof mock>;
+  };
+  account: {
+    create: ReturnType<typeof mock>;
+  };
+};
+
+const prismaMock = db as MockedDb;
 
 describe('AuthController', () => {
   const mockRequest = {

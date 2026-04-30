@@ -6,9 +6,12 @@
     },
     "packages/gateway": {
       "project": ["src/**/*.ts"]
+    },
+    "packages/class-service": {
+      "project": ["src/**/*.ts"]
     }
   },
-  "ignoreDependencies": ["typescript-eslint", "@prisma/adapter-pg", "@prisma/client"],
+  "ignoreDependencies": ["typescript-eslint","@prisma/adapter-pg", "@prisma/client"],
   "ignoreBinaries": ["eslint"],
   "ignore": ["eslint.config.js"]
 }

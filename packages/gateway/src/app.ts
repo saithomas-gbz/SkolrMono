@@ -7,7 +7,7 @@ import sensible from '@fastify/sensible';
 import autoLoad from '@fastify/autoload';
 import { join } from 'path';
 import type { OpenAPIV3_1 } from 'openapi-types';
-import { mergeGatewayWithAuthService } from './lib/mergeOpenApi';
+import { mergeGatewayWithAuthService, mergeGatewayWithClassService } from './lib/mergeOpenApi';
 
 dotenv.config();
 
@@ -16,7 +16,11 @@ const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:3000';
 /** Path on auth-service for raw OpenAPI JSON (e.g. /openapi.json or /documentation/json) */
 const authOpenApiPath = process.env.AUTH_OPENAPI_PATH || '/openapi.json';
 
-async function fetchAuthOpenApiSpec(baseUrl: string, path: string): Promise<Record<string, unknown> | null> {
+const classServiceUrl = process.env.CLASS_SERVICE_URL || 'http://localhost:3002';
+/** Path on class-service for raw OpenAPI JSON (e.g. /openapi.json or /documentation/json) */
+const classOpenApiPath = process.env.CLASS_OPENAPI_PATH || '/openapi.json';
+
+async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<Record<string, unknown> | null> {
   const tryPaths = path === '/openapi.json' ? [path, '/documentation/json'] : [path];
 
   for (const p of tryPaths) {
@@ -34,12 +38,20 @@ async function fetchAuthOpenApiSpec(baseUrl: string, path: string): Promise<Reco
 }
 
 async function build() {
-  const cachedAuthSpec = await fetchAuthOpenApiSpec(authServiceUrl, authOpenApiPath);
+  const cachedAuthSpec = await fetchServiceOpenApiSpec(authServiceUrl, authOpenApiPath);
+  const cachedClassSpec = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
 
   if (!cachedAuthSpec) {
     console.warn(
       `[gateway] Auth OpenAPI not available at ${authServiceUrl} (tried ${authOpenApiPath}` +
         (authOpenApiPath === '/openapi.json' ? ' and /documentation/json' : '') +
+        '); /docs will only list gateway routes.',
+    );
+  }
+  if (!cachedClassSpec) {
+    console.warn(
+      `[gateway] Class OpenAPI not available at ${classServiceUrl} (tried ${classOpenApiPath}` +
+        (classOpenApiPath === '/openapi.json' ? ' and /documentation/json' : '') +
         '); /docs will only list gateway routes.',
     );
   }
@@ -63,15 +75,19 @@ async function build() {
           description: 'Gateway (public URL for this document)',
         },
       ],
-      tags: [{ name: 'auth', description: 'Proxied to auth-service under /auth' }],
+      tags: [
+        { name: 'auth', description: 'Proxied to auth-service under /auth' },
+        { name: 'class', description: 'Proxied to class-service under /class' },
+      ],
     },
     transformObject: (documentObject) => {
       if ('openapiObject' in documentObject && documentObject.openapiObject) {
-        return mergeGatewayWithAuthService(
+        const mergedAuth = mergeGatewayWithAuthService(
           documentObject.openapiObject as Record<string, unknown>,
           cachedAuthSpec,
           '/auth',
-        ) as Partial<OpenAPIV3_1.Document>;
+        );
+        return mergeGatewayWithClassService(mergedAuth, cachedClassSpec, '/class') as Partial<OpenAPIV3_1.Document>;
       }
       return 'swaggerObject' in documentObject ? documentObject.swaggerObject : {};
     },
@@ -89,6 +105,7 @@ async function build() {
   });
 
   await gateway.register(import('./routes/auth'));
+  await gateway.register(import('./routes/class'));
 
   await gateway.register(fastifySwaggerUi, {
     routePrefix: '/docs',

@@ -1,0 +1,43 @@
+generator client {
+  provider = "prisma-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Class {
+  id          String   @id @unique @default(uuid())
+  name        String
+  description String
+  students    ClassStudent[]
+  classTeachers ClassTeacher[] 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model ClassTeacher {
+  id        String   @id @unique @default(uuid())
+  classId   String
+  teacherId String   // userId of the teacher (auth-service)
+  isPrincipal Boolean @default(false)
+  class     Class    @relation(fields: [classId], references: [id])
+
+  @@unique([classId, teacherId])
+  @@index([teacherId])
+}
+
+model ClassStudent {
+  id        String   @id @unique @default(uuid())
+  classId   String
+  studentId String   // userId of the student (auth-service)
+  class     Class    @relation(fields: [classId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([classId, studentId]) 
+  @@index([studentId])
+}
