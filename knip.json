@@ -15,7 +15,8 @@
       "ignoreDependencies": ["vue", "vue-router"]
     }
   },
-  "ignoreDependencies": ["typescript-eslint", "@prisma/client"],
-  "ignoreBinaries": ["eslint"],
-  "ignore": ["eslint.config.js"]
+  "ignoreDependencies": ["@prisma/client"],
+  "eslint": {
+    "config": ["eslint.config.js", "eslint.base.mjs"]
+  }
 }
