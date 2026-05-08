@@ -14,6 +14,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      request.log.info({
+        msg: 'proxy auth',
+        incoming: request.url,
+        method: request.method,
+        hasParsedBody: request.body != null,
+      });
       await fastify.proxyToAuthService(request, reply);
     },
   );

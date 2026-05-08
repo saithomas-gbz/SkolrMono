@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_auth_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -27,7 +27,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_class_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -46,7 +46,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - skolr_network
   class-service:
@@ -55,22 +56,48 @@ services:
       dockerfile: ./packages/class-service/Dockerfile
     container_name: skolr_class_service
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@localhost:5433/skolr_class?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-class:5432/skolr_class?schema=public
     depends_on:
-      - postgres-class
+      postgres-class:
+        condition: service_healthy
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
       dockerfile: Dockerfile
     container_name: skolr_gateway
+    environment:
+      - PORT=3001
+      - AUTH_SERVICE_URL=http://auth-service:3000
+      - CLASS_SERVICE_URL=http://class-service:3002
     ports:
       - "3001:3001"
-    # depends_on:
-    #   - auth-service
+    depends_on:
+      - auth-service
+    networks:
+      - skolr_network
+
+  frontend:
+    image: oven/bun:latest
+    container_name: skolr_frontend
+    working_dir: /app
+    volumes:
+      - ./packages/frontend:/app
+    environment:
+      - NODE_ENV=development
+      - NUXT_PUBLIC_GATEWAY_BASE_URL=/api
+      - GATEWAY_INTERNAL_URL=http://gateway:3001
+    command: bun run dev --host 0.0.0.0 --port 3003
+    ports:
+      - "3003:3003"
+    depends_on:
+      - gateway
     networks:
       - skolr_network
 volumes:
-  postgres_data:
+  postgres_auth_data:
+  postgres_class_data:
 
 networks:
   skolr_network:

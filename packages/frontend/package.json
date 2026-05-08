@@ -1,0 +1,23 @@
+{
+  "name": "frontend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@primevue/nuxt-module": "^4.5.5",
+    "nuxt": "^4.4.2",
+    "primevue": "^4.5.5",
+    "vue": "^3.5.33",
+    "vue-router": "^5.0.6"
+  },
+  "devDependencies": {
+    "@primeuix/themes": "^2.0.3",
+    "h3": "^1.15.11"
+  }
+}
