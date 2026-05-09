@@ -9,9 +9,14 @@
     },
     "packages/class-service": {
       "project": ["src/**/*.ts"]
+    },
+    "packages/frontend": {
+      "project": ["app/**/*.{vue,ts,tsx,jsx}", "server/**/*.ts"],
+      "ignoreDependencies": ["vue", "vue-router"]
     }
   },
-  "ignoreDependencies": ["typescript-eslint","@prisma/adapter-pg", "@prisma/client"],
-  "ignoreBinaries": ["eslint"],
-  "ignore": ["eslint.config.js"]
+  "ignoreDependencies": ["@prisma/client"],
+  "eslint": {
+    "config": ["eslint.config.js", "eslint.base.mjs"]
+  }
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "test": "bun test src/lib",
     "dev": "bun --watch run src/app.ts",
-    "build": "bun run tsc",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run dist/app.js",
     "seed:dev": "bun run scripts/seed-dev.ts"
   },
