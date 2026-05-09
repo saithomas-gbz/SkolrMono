@@ -27,7 +27,6 @@ jobs:
       working-directory: packages/frontend
       run: bun run build
 
-    # Need to implement tests for frontend
-    # - name: Test frontend
-    #   working-directory: packages/frontend
-    #   run: bun test
+    - name: Build Docker image
+      working-directory: packages/frontend
+      run: docker build -f Dockerfile -t frontend-skolr .

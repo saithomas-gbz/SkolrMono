@@ -79,9 +79,10 @@ services:
       - skolr_network
 
   frontend:
-    image: oven/bun:latest
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
     container_name: skolr_frontend
-    working_dir: /app
     volumes:
       - ./packages/frontend:/app
     environment:
