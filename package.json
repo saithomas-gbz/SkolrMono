@@ -10,7 +10,10 @@
     "knip": "knip",
     "knip:fix": "knip --fix",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "seed:dev": "bun run scripts/seed-dev.ts",
+    "db:migrate:dev": "bun run scripts/db-migrate-dev.ts",
+    "db:run:stack": "bun run scripts/db-run-stack.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

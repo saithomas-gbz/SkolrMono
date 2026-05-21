@@ -7,7 +7,11 @@
     "test": "bun test src/__tests__",
     "dev": "bun --watch run src/app.ts",
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
-    "start": "bun run ./dist/app.js"
+    "start": "bun run ./dist/app.js",
+    "prisma:generate": "bunx prisma generate",
+    "prisma:migrate": "bunx prisma migrate dev",
+    "db:migrate:deploy": "bunx prisma migrate deploy",
+    "db:seed": "bunx prisma db seed"
   },
   "devDependencies": {
     "@types/bun": "latest",
