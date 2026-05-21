@@ -1,17 +1,15 @@
 {
-  "name": "class-service",
+  "name": "grade-service",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun test src/__tests__",
-    "dev": "bun --watch run src/app.ts",
-    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
-    "start": "bun run ./dist/app.js",
+    "dev": "bun --watch run index.ts",
+    "build": "bun build ./index.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
+    "start": "bun run ./dist/index.js",
     "prisma:generate": "bunx prisma generate",
     "prisma:migrate": "bunx prisma migrate dev",
-    "db:migrate:deploy": "bunx prisma migrate deploy",
-    "db:seed": "bunx prisma db seed"
+    "db:migrate:deploy": "bunx prisma migrate deploy"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -21,8 +19,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@fastify/swagger": "^9.7.0",
-    "@fastify/swagger-ui": "^5.2.6",
     "@prisma/adapter-pg": "7.5.0",
     "@prisma/client": "7.5.0",
     "dotenv": "^17.4.2",

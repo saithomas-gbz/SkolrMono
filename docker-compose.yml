@@ -35,6 +35,15 @@ services:
       retries: 5
     networks:
       - "skolr_network"
+  postgres-grade:
+    image: postgres:15-alpine
+    container_name: skolr_grade_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skolr_grade
+    ports:
+      - "5434:5432"
   auth-service:
     build:
       context: .

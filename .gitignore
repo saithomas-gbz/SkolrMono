@@ -167,3 +167,5 @@ dist-newstyle/
 *.backup
 *.old
 *~
+
+/generated/prisma

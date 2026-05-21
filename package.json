@@ -6,6 +6,11 @@
   "workspaces": [
     "packages/*"
   ],
+  "overrides": {
+    "@prisma/adapter-pg": "7.5.0",
+    "@prisma/client": "7.5.0",
+    "prisma": "7.5.0"
+  },
   "scripts": {
     "knip": "knip",
     "knip:fix": "knip --fix",
