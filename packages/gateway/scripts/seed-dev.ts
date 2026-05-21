@@ -34,9 +34,12 @@ function main() {
   console.log('\n--- Gateway (dev) ---');
   console.log(`PORT=${port}`);
   console.log(`AUTH_SERVICE_URL=${authUrl}`);
-  console.log('\nTest accounts (after `bun run db:seed` in packages/auth-service):');
-  console.log('  dev.admin@skolr.local / dev-admin-123');
-  console.log('  dev.user@skolr.local  / dev-user-123');
+  console.log('\nTest accounts (after `bun run seed:dev` at repo root):');
+  console.log('  dev.admin@skolr.local   / dev-admin-123');
+  console.log('  dev.user@skolr.local    / dev-user-123');
+  console.log('  dev.teacher@skolr.local / dev-teacher-123');
+  console.log('  dev.student@skolr.local / dev-student-123');
+  console.log('\nDev classes (class-service seed): CM2-A, 6ème Sciences');
   console.log('\nLogin via gateway:');
   console.log(
     `  curl -s -X POST http://localhost:${port}/auth/login ` +
