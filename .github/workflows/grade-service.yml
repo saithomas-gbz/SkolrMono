@@ -38,5 +38,4 @@ jobs:
         NODE_ENV: test
 
     - name: Build Docker image
-      working-directory: packages/grade-service
       run: docker build -f packages/grade-service/Dockerfile -t grade-service .
