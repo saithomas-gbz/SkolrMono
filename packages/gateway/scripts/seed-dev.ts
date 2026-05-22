@@ -40,6 +40,9 @@ function main() {
   console.log('  dev.teacher@skolr.local / dev-teacher-123');
   console.log('  dev.student@skolr.local / dev-student-123');
   console.log('\nDev classes (class-service seed): CM2-A, 6ème Sciences');
+  console.log('Dev grades (grade-service seed): sample notes for dev users');
+  console.log('\nGrades via gateway:');
+  console.log(`  curl -s http://localhost:${port}/grade/grades`);
   console.log('\nLogin via gateway:');
   console.log(
     `  curl -s -X POST http://localhost:${port}/auth/login ` +

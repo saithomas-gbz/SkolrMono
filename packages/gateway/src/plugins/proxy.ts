@@ -6,6 +6,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     proxyToAuthService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     proxyToClassService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    proxyToGradeService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -55,6 +56,7 @@ async function proxyRequest(req: FastifyRequest, reply: FastifyReply, targetUrl:
 export default async function proxyPlugin(fastify: FastifyInstance) {
   const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3000';
   const classServiceUrl = process.env.CLASS_SERVICE_URL || 'http://class-service:3002';
+  const gradeServiceUrl = process.env.GRADE_SERVICE_URL || 'http://grade-service:3007';
 
   // Decorate fastify instance with proxy method
   fastify.decorate('proxyToAuthService', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -72,6 +74,20 @@ export default async function proxyPlugin(fastify: FastifyInstance) {
   fastify.decorate('proxyToClassService', async (request: FastifyRequest, reply: FastifyReply) => {
     const targetPath = request.url.replace(/^\/class/, '');
     const targetUrl = `${classServiceUrl}${targetPath}`;
+
+    try {
+      await proxyRequest(request, reply, targetUrl);
+    } catch (error) {
+      fastify.log.error({ message: 'Proxy error', error });
+      reply
+        .code(500)
+        .send({ error: 'Proxy error', details: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  fastify.decorate('proxyToGradeService', async (request: FastifyRequest, reply: FastifyReply) => {
+    const targetPath = request.url.replace(/^\/grade/, '');
+    const targetUrl = `${gradeServiceUrl}${targetPath}`;
 
     try {
       await proxyRequest(request, reply, targetUrl);

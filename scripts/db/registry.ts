@@ -28,6 +28,14 @@ export const DB_SERVICES: DbService[] = [
     migrateScript: 'db:migrate:deploy',
     seedScript: 'db:seed',
   },
+  {
+    packageDir: 'grade-service',
+    composeService: 'postgres-grade',
+    defaultDatabaseUrl:
+      'postgresql://postgres:postgres@localhost:5434/skolr_grade?schema=public',
+    migrateScript: 'db:migrate:deploy',
+    seedScript: 'db:seed',
+  },
 ];
 
 export const COMPOSE_DB_SERVICES = [

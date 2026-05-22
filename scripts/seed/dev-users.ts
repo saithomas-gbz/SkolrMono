@@ -1,5 +1,5 @@
 /**
- * Stable dev IDs shared across service seeds (auth → class, future services).
+ * Stable dev IDs shared across service seeds (auth → class → grade).
  * Keep in sync when adding personas or entities.
  */
 export const DEV_USER_IDS = {
