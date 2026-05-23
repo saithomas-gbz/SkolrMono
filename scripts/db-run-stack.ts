@@ -31,6 +31,7 @@ async function main() {
     ').');
   console.log('  Auth DB:  localhost:5432 / skolr_auth');
   console.log('  Class DB: localhost:5433 / skolr_class');
+  console.log('  Grade DB: localhost:5434 / skolr_grade');
   console.log('  Next: bun run seed:dev (if you skipped seed) or start services.');
 }
 

@@ -7,7 +7,11 @@ import sensible from '@fastify/sensible';
 import autoLoad from '@fastify/autoload';
 import { join } from 'path';
 import type { OpenAPIV3_1 } from 'openapi-types';
-import { mergeGatewayWithAuthService, mergeGatewayWithClassService } from './lib/mergeOpenApi';
+import {
+  mergeGatewayWithAuthService,
+  mergeGatewayWithClassService,
+  mergeGatewayWithGradeService,
+} from './lib/mergeOpenApi';
 
 dotenv.config();
 
@@ -19,6 +23,10 @@ const authOpenApiPath = process.env.AUTH_OPENAPI_PATH || '/openapi.json';
 const classServiceUrl = process.env.CLASS_SERVICE_URL || 'http://localhost:3002';
 /** Path on class-service for raw OpenAPI JSON (e.g. /openapi.json or /documentation/json) */
 const classOpenApiPath = process.env.CLASS_OPENAPI_PATH || '/openapi.json';
+
+const gradeServiceUrl = process.env.GRADE_SERVICE_URL || 'http://localhost:3007';
+/** Path on grade-service for raw OpenAPI JSON (e.g. /openapi.json or /documentation/json) */
+const gradeOpenApiPath = process.env.GRADE_OPENAPI_PATH || '/openapi.json';
 
 async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<Record<string, unknown> | null> {
   const tryPaths = path === '/openapi.json' ? [path, '/documentation/json'] : [path];
@@ -40,6 +48,7 @@ async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<R
 async function build() {
   const cachedAuthSpec = await fetchServiceOpenApiSpec(authServiceUrl, authOpenApiPath);
   const cachedClassSpec = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
+  const cachedGradeSpec = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
 
   if (!cachedAuthSpec) {
     console.warn(
@@ -55,6 +64,13 @@ async function build() {
         '); /docs will only list gateway routes.',
     );
   }
+  if (!cachedGradeSpec) {
+    console.warn(
+      `[gateway] Grade OpenAPI not available at ${gradeServiceUrl} (tried ${gradeOpenApiPath}` +
+        (gradeOpenApiPath === '/openapi.json' ? ' and /documentation/json' : '') +
+        '); /docs will only list gateway routes.',
+    );
+  }
 
   const gateway = fastify({
     logger: true,
@@ -67,7 +83,7 @@ async function build() {
         title: 'Skolr Gateway Documentation',
         version: '1.0.0',
         description:
-          'API Gateway for Skolr services. Auth paths are merged from auth-service OpenAPI when reachable at startup.',
+          'API Gateway for Skolr services. Paths are merged from service OpenAPI specs when reachable at startup.',
       },
       servers: [
         {
@@ -78,6 +94,7 @@ async function build() {
       tags: [
         { name: 'auth', description: 'Proxied to auth-service under /auth' },
         { name: 'class', description: 'Proxied to class-service under /class' },
+        { name: 'grade', description: 'Proxied to grade-service under /grade' },
       ],
     },
     transformObject: (documentObject) => {
@@ -87,7 +104,8 @@ async function build() {
           cachedAuthSpec,
           '/auth',
         );
-        return mergeGatewayWithClassService(mergedAuth, cachedClassSpec, '/class') as Partial<OpenAPIV3_1.Document>;
+        const mergedClass = mergeGatewayWithClassService(mergedAuth, cachedClassSpec, '/class');
+        return mergeGatewayWithGradeService(mergedClass, cachedGradeSpec, '/grade') as Partial<OpenAPIV3_1.Document>;
       }
       return 'swaggerObject' in documentObject ? documentObject.swaggerObject : {};
     },
@@ -106,6 +124,7 @@ async function build() {
 
   await gateway.register(import('./routes/auth'));
   await gateway.register(import('./routes/class'));
+  await gateway.register(import('./routes/grade'));
 
   await gateway.register(fastifySwaggerUi, {
     routePrefix: '/docs',

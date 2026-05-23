@@ -1,0 +1,41 @@
+name: Grade Service CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'packages/grade-service/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'packages/grade-service/**'
+    changes:
+      - 'packages/grade-service/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Generate Prisma client
+      working-directory: packages/grade-service
+      run: bunx prisma generate && ls src/generated/prisma/internal
+
+    - name: Build grade-service
+      working-directory: packages/grade-service
+      run: bun run build
+
+    - name: Test grade-service
+      working-directory: packages/grade-service
+      run: bun test src/__tests__
+      env:
+        NODE_ENV: test
+
+    - name: Build Docker image
+      run: docker build -f packages/grade-service/Dockerfile -t grade-service .
