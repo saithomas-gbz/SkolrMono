@@ -35,7 +35,13 @@ async function buildApp() {
     },
   });
 
-  app.get('/health', async () => ({ status: 'ok' }));
+  app.get('/health', async () => {
+    const isConnected = await testDatabaseConnection();
+    if (isConnected) {
+      return { status: 'ok', message: 'Database connection successful!' };
+    }
+    return { status: 'error', message: 'Database connection failed!' };
+  });
 
   const openApiHandler = async () => app.swagger();
 
