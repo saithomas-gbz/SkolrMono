@@ -45,6 +45,24 @@ async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<R
   return null;
 }
 
+const SPECS_CACHE_TTL_MS = 60_000;
+
+interface SpecsCache {
+  auth: Record<string, unknown> | null;
+  class: Record<string, unknown> | null;
+  grade: Record<string, unknown> | null;
+  lastFetchAt: number;
+}
+
+const specsCache: SpecsCache = { auth: null, class: null, grade: null, lastFetchAt: 0 };
+
+async function refreshSpecs() {
+  specsCache.auth = await fetchServiceOpenApiSpec(authServiceUrl, authOpenApiPath);
+  specsCache.class = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
+  specsCache.grade = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
+  specsCache.lastFetchAt = Date.now();
+}
+
 async function build() {
   const cachedAuthSpec = await fetchServiceOpenApiSpec(authServiceUrl, authOpenApiPath);
   const cachedClassSpec = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
@@ -98,6 +116,10 @@ async function build() {
       ],
     },
     transformObject: (documentObject) => {
+      if (Date.now() - specsCache.lastFetchAt > SPECS_CACHE_TTL_MS) {
+        void refreshSpecs();
+      }
+
       if ('openapiObject' in documentObject && documentObject.openapiObject) {
         const mergedAuth = mergeGatewayWithAuthService(
           documentObject.openapiObject as Record<string, unknown>,
