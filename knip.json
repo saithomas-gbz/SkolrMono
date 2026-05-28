@@ -12,7 +12,7 @@
     },
     "packages/frontend": {
       "project": ["app/**/*.{vue,ts,tsx,jsx}", "server/**/*.ts"],
-      "ignoreDependencies": ["vue", "vue-router"]
+      "ignoreDependencies": ["vue", "vue-router", "chart.js"]
     }
   },
   "ignoreDependencies": ["@prisma/client"],

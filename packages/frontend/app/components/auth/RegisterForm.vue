@@ -122,7 +122,7 @@ async function submit() {
       trimmedName ? trimmedName : undefined,
     );
     emit('success', result);
-    await router.push('/');
+    await router.push('/dashboard');
   } catch (e) {
     error.value = normalizeAuthError(e);
   } finally {

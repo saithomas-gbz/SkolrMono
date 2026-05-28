@@ -103,7 +103,7 @@ async function submit() {
   try {
     const result = await login(credentialPolicy.trimmedEmail.value, password.value);
     emit('success', result);
-    await router.push('/');
+    await router.push('/dashboard');
   } catch (e) {
     error.value = normalizeAuthError(e);
   } finally {

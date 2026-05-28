@@ -1,6 +1,8 @@
+import { useAuthTokenCookie } from '~/composables/authSession';
+
 export default defineNuxtRouteMiddleware(() => {
-  const token = useCookie<string | null>('auth_token', { sameSite: 'lax', default: () => null });
-  if (token.value?.trim()) {
+  const authTokenCookie = useAuthTokenCookie();
+  if (authTokenCookie.value?.trim()) {
     return navigateTo('/');
   }
 });
