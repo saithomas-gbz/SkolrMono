@@ -4,11 +4,13 @@ import db from '../db';
 const gradeInclude = {
   user: true,
   class: true,
+  course: true,
 } as const;
 
 export interface CreateGradeBody {
   userId: string;
   classId: string;
+  courseId: string;
   value: number;
 }
 
@@ -83,7 +85,7 @@ export default {
     reply: FastifyReply,
   ) => {
     try {
-      const { userId, classId, value } = request.body;
+      const { userId, classId, courseId, value } = request.body;
 
       const user = await db.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -95,12 +97,17 @@ export default {
         return reply.status(404).send({ error: 'Class not found' });
       }
 
+      const courseExists = await db.course.findUnique({ where: { id: courseId } });
+      if (!courseExists) {
+        return reply.status(404).send({ error: 'Course not found' });
+      }
+
       if (user.classId !== classId) {
         return reply.status(400).send({ error: 'User does not belong to this class' });
       }
 
       const grade = await db.grade.create({
-        data: { userId, classId, value },
+        data: { userId, classId, courseId, value },
         include: gradeInclude,
       });
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });

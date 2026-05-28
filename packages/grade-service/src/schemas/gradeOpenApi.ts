@@ -29,19 +29,31 @@ const gradeClass = {
   required: ['id', 'name', 'description'],
 } as const;
 
+const gradeCourse = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+  },
+  required: ['id', 'name', 'description'],
+} as const;
+
 const gradeEntity = {
   type: 'object',
   properties: {
     id: { type: 'string' },
     userId: { type: 'string' },
     classId: { type: 'string' },
+    courseId: { type: 'string' },
     value: { type: 'number' },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
     user: gradeUser,
     class: gradeClass,
+    course: gradeCourse,
   },
-  required: ['id', 'userId', 'classId', 'value', 'createdAt', 'updatedAt'],
+  required: ['id', 'userId', 'classId', 'courseId', 'value', 'createdAt', 'updatedAt'],
 } as const;
 
 const gradeResponse = {
@@ -128,9 +140,10 @@ export const createGradeSchema = {
     properties: {
       userId: { type: 'string' },
       classId: { type: 'string' },
+      courseId: { type: 'string' },
       value: { type: 'number' },
     },
-    required: ['userId', 'classId', 'value'],
+    required: ['userId', 'classId', 'courseId', 'value'],
   },
   response: {
     201: gradeResponse,

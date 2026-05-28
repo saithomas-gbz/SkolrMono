@@ -8,6 +8,7 @@ mock.module('../generated/prisma/client', () => ({
     grade = { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() };
     user = { findUnique: mock() };
     class = { findUnique: mock() };
+    course = { findUnique: mock() };
   },
 }));
 
@@ -24,6 +25,9 @@ mock.module('../db', () => ({
       findUnique: mock(),
     },
     class: {
+      findUnique: mock(),
+    },
+    course: {
       findUnique: mock(),
     },
   },
@@ -43,12 +47,16 @@ const prismaMock = db as {
   class: {
     findUnique: ReturnType<typeof mock>;
   };
+  course: {
+    findUnique: ReturnType<typeof mock>;
+  };
 };
 
 const sampleGrade = {
   id: 'grade-1',
   userId: 'user-1',
   classId: 'class-1',
+  courseId: 'course-1',
   value: 15.5,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
@@ -62,6 +70,11 @@ const sampleGrade = {
     id: 'class-1',
     name: 'CM2-A',
     description: 'Demo class',
+  },
+  course: {
+    id: 'course-1',
+    name: 'Mathématiques',
+    description: 'Demo course',
   },
 };
 
@@ -81,6 +94,7 @@ describe('GradeRoutes', () => {
     prismaMock.grade.delete.mockReset();
     prismaMock.user.findUnique.mockReset();
     prismaMock.class.findUnique.mockReset();
+    prismaMock.course.findUnique.mockReset();
   });
 
   it('GET /grades returns all grades', async () => {
@@ -131,12 +145,13 @@ describe('GradeRoutes', () => {
   it('POST /grades creates a grade', async () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
     prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
+    prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
     prismaMock.grade.create.mockResolvedValue(sampleGrade);
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'POST',
       url: '/grades',
-      payload: { userId: 'user-1', classId: 'class-1', value: 16 },
+      payload: { userId: 'user-1', classId: 'class-1', courseId: 'course-1', value: 16 },
     });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toEqual({ data: sampleGrade, message: 'Grade created successfully' });
@@ -146,11 +161,12 @@ describe('GradeRoutes', () => {
   it('POST /grades returns 400 when user does not belong to class', async () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'other-class' });
     prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
+    prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'POST',
       url: '/grades',
-      payload: { userId: 'user-1', classId: 'class-1', value: 16 },
+      payload: { userId: 'user-1', classId: 'class-1', courseId: 'course-1', value: 16 },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'User does not belong to this class' });

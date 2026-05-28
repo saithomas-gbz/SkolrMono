@@ -32,12 +32,21 @@ model Class {
   grades      Grade[]
 }
 
+model Course {
+  id          String @id @unique @default(uuid())
+  name        String
+  description String
+  grades      Grade[]
+}
+
 model Grade {
   id        String   @id @unique @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   class     Class    @relation(fields: [classId], references: [id])
   classId   String
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
   value     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
