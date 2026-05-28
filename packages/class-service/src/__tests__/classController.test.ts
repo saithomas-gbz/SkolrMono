@@ -66,6 +66,35 @@ describe('ClassController', () => {
     prismaMock.class.delete.mockReset();
   });
 
+  describe('getClassesSummary', () => {
+    it('should return id, name, teacherCount and studentCount', async () => {
+      prismaMock.class.findMany.mockResolvedValue([
+        { id: '1', name: 'CM2-A', _count: { classTeachers: 2, students: 10 } },
+      ]);
+      const req = createMockRequest();
+      await classController.getClassesSummary(req, mockReply);
+      expect(prismaMock.class.findMany).toHaveBeenCalledWith({
+        select: { id: true, name: true, _count: { select: { classTeachers: true, students: true } } },
+        orderBy: { name: 'asc' },
+      });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        data: [{ id: '1', name: 'CM2-A', teacherCount: 2, studentCount: 10 }],
+        message: 'Classes summary fetched successfully',
+      });
+    });
+
+    it('should always return data as an array', async () => {
+      prismaMock.class.findMany.mockResolvedValue(null);
+      const req = createMockRequest();
+      await classController.getClassesSummary(req, mockReply);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        data: [],
+        message: 'Classes summary fetched successfully',
+      });
+    });
+  });
+
   describe('getAllClasses', () => {
     it('should return all classes', async () => {
       prismaMock.class.findMany.mockResolvedValue([]);
@@ -83,6 +112,22 @@ describe('ClassController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({ data: { id: '1', name: 'Class 1', description: 'Description 1' }, message: 'Class fetched successfully' });
     });
+
+    it('should reject reserved path segment summary with 404', async () => {
+      const req = createMockRequest<{ Params: { id: string } }>({ params: { id: 'summary' } });
+      await classController.getClassById(req, mockReply);
+      expect(prismaMock.class.findUnique).not.toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({ error: 'Class not found' });
+    });
+
+    it('should reject reserved path segment student with 404', async () => {
+      const req = createMockRequest<{ Params: { id: string } }>({ params: { id: 'student' } });
+      await classController.getClassById(req, mockReply);
+      expect(prismaMock.class.findUnique).not.toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({ error: 'Class not found' });
+    });
   });
   describe('getClassByTeacherId', () => {
     it('should return classes by teacher id', async () => {
@@ -91,6 +136,37 @@ describe('ClassController', () => {
       await classController.getClassByTeacherId(req, mockReply);
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({ data: [], message: 'Classes fetched successfully' });
+    });
+  });
+
+  describe('getClassesByStudentId', () => {
+    it('should return classes where the student is enrolled', async () => {
+      const mockClass = { id: 'c1', name: 'CM2-A', classTeachers: [], students: [{ studentId: 's1' }] };
+      prismaMock.class.findMany.mockResolvedValue([mockClass]);
+      const req = createMockRequest<{ Params: { studentId: string } }>({ params: { studentId: 's1' } });
+      await classController.getClassesByStudentId(req, mockReply);
+      expect(prismaMock.class.findMany).toHaveBeenCalledWith({
+        where: { students: { some: { studentId: 's1' } } },
+        include: { classTeachers: true, students: true },
+      });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({ data: [mockClass], message: 'Classes fetched successfully' });
+    });
+
+    it('should return an empty list when student is not enrolled in any class', async () => {
+      prismaMock.class.findMany.mockResolvedValue([]);
+      const req = createMockRequest<{ Params: { studentId: string } }>({ params: { studentId: 'unknown' } });
+      await classController.getClassesByStudentId(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({ data: [], message: 'Classes fetched successfully' });
+    });
+
+    it('should return 500 on db error', async () => {
+      prismaMock.class.findMany.mockRejectedValue(new Error('DB error'));
+      const req = createMockRequest<{ Params: { studentId: string } }>({ params: { studentId: 's1' } });
+      await classController.getClassesByStudentId(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
     });
   });
   describe('createClass', () => {

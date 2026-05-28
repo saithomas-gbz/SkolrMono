@@ -4,7 +4,9 @@ import {
   createClassSchema,
   deleteClassSchema,
   getAllClassesSchema,
+  getClassesSummarySchema,
   getClassByIdSchema,
+  getClassesByStudentIdSchema,
   getClassesByTeacherIdSchema,
   updateClassNameOrDescriptionSchema,
   updateClassStudentListSchema,
@@ -13,12 +15,22 @@ import {
 
 export default async function classRoutes(fastify: FastifyInstance) {
   fastify.get('/classes', { schema: getAllClassesSchema }, classController.getAllClasses);
-  fastify.get('/classes/:id', { schema: getClassByIdSchema }, classController.getClassById);
+  fastify.get(
+    '/classes/summary',
+    { schema: getClassesSummarySchema },
+    classController.getClassesSummary,
+  );
   fastify.get(
     '/classes/teacher/:teacherId',
     { schema: getClassesByTeacherIdSchema },
     classController.getClassByTeacherId,
   );
+  fastify.get(
+    '/classes/student/:studentId',
+    { schema: getClassesByStudentIdSchema },
+    classController.getClassesByStudentId,
+  );
+  fastify.get('/classes/:id', { schema: getClassByIdSchema }, classController.getClassById);
 
   fastify.post('/classes', { schema: createClassSchema }, classController.createClass);
 

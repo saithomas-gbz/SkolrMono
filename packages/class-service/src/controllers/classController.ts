@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { randomUUID } from 'crypto';
+import { RESERVED_CLASS_PATH_IDS, sendListOk } from '../lib/listResponse';
 
 export interface ClassData {
   name: string;
@@ -12,6 +13,35 @@ export interface ClassData {
 type CreateClassBodyData = Required<ClassData>;
 
 export default {
+  getClassesSummary: async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const classes = await db.class.findMany({
+        select: {
+          id: true,
+          name: true,
+          _count: {
+            select: {
+              classTeachers: true,
+              students: true,
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+      });
+      const data = Array.isArray(classes)
+        ? classes.map((c) => ({
+            id: c.id,
+            name: c.name,
+            teacherCount: c._count.classTeachers,
+            studentCount: c._count.students,
+          }))
+        : [];
+      return sendListOk(reply, data, 'Classes summary fetched successfully');
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
   getAllClasses: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const classes = await db.class.findMany({
@@ -20,7 +50,7 @@ export default {
           students: true,
         },
       });
-      return reply.status(200).send({ data: classes, message: 'Classes fetched successfully' });
+      return sendListOk(reply, classes, 'Classes fetched successfully');
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Internal server error' });
@@ -29,6 +59,9 @@ export default {
   getClassById: async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
+      if (RESERVED_CLASS_PATH_IDS.has(id)) {
+        return reply.status(404).send({ error: 'Class not found' });
+      }
       const classData = await db.class.findUnique({
         where: { id },
         include: {
@@ -36,6 +69,9 @@ export default {
           students: true,
         },
       });
+      if (!classData) {
+        return reply.status(404).send({ error: 'Class not found' });
+      }
       return reply.status(200).send({ data: classData, message: 'Class fetched successfully' });
     } catch (error) {
       request.log.error(error);
@@ -52,7 +88,23 @@ export default {
           students: true,
         },
       });
-      return reply.status(200).send({ data: classData, message: 'Class fetched successfully' });
+      return sendListOk(reply, classData, 'Classes fetched successfully');
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
+  getClassesByStudentId: async (request: FastifyRequest<{ Params: { studentId: string } }>, reply: FastifyReply) => {
+    try {
+      const { studentId } = request.params;
+      const classData = await db.class.findMany({
+        where: { students: { some: { studentId } } },
+        include: {
+          classTeachers: true,
+          students: true,
+        },
+      });
+      return sendListOk(reply, classData, 'Classes fetched successfully');
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Internal server error' });
