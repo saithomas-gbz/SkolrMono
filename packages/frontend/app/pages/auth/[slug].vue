@@ -15,7 +15,7 @@
         </Message>
       </template>
       <template #footer>
-        <Button v-if="token" label="Aller à l’accueil" @click="navigateTo('/')" />
+        <Button v-if="token" label="Accéder au tableau de bord" @click="navigateTo('/dashboard')" />
         <Button v-else label="Retour" severity="secondary" @click="navigateTo('/auth/login')" />
       </template>
     </Card>
@@ -31,9 +31,11 @@ const token = computed(() => {
   return typeof t === 'string' ? t : null;
 });
 
-if (process.client && slug.value === 'success' && token.value) {
-  const authToken = useCookie('auth_token', { sameSite: 'lax' });
-  authToken.value = token.value;
+const { setSession } = useAuth();
+
+if (import.meta.client && slug.value === 'success' && token.value) {
+  setSession(token.value);
+  await navigateTo('/dashboard');
 }
 </script>
 
