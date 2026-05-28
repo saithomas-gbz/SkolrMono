@@ -18,6 +18,9 @@
     <Sidebar v-model:visible="isSidebarOpen" header="Navigation" position="left">
       <nav class="sidebar-nav">
         <NuxtLink class="sidebar-link" to="/" @click="isSidebarOpen = false">Accueil</NuxtLink>
+        <NuxtLink class="sidebar-link" to="/dashboard" @click="isSidebarOpen = false">
+          Tableau de bord
+        </NuxtLink>
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
           Déconnexion
         </button>
@@ -43,6 +46,10 @@ const items = computed<MenuItem[]>(() => [
   {
     label: 'Accueil',
     command: () => navigateTo('/'),
+  },
+  {
+    label: 'Tableau de bord',
+    command: () => navigateTo('/dashboard'),
   },
 ]);
 

@@ -1,3 +1,9 @@
+import {
+  authUserFromToken,
+  useAuthTokenCookie,
+  useAuthUserCookie,
+} from '~/composables/authSession';
+
 /** Forme minimale des erreurs $fetch / ofetch (évite une dépendance directe pour Knip). */
 type FetchErrorLike = { data?: { error?: string } };
 
@@ -13,9 +19,7 @@ export type AuthSuccess = {
   user: AuthUser;
 };
 
-function useAuthCookie() {
-  return useCookie<string | null>('auth_token', { sameSite: 'lax', default: () => null });
-}
+export type AuthRole = AuthUser['role'];
 
 const serverErrorHints: Record<string, string> = {
   'Invalid credentials': 'Identifiants incorrects.',
@@ -78,15 +82,27 @@ export function useAuthCredentialPolicy(email: Ref<string>, password: Ref<string
 
 export function useAuth() {
   const api = useApi();
-  const authTokenCookie = useAuthCookie();
+  const authTokenCookie = useAuthTokenCookie();
+  const authUserCookie = useAuthUserCookie();
   const isLoggedIn = computed(() => Boolean(authTokenCookie.value?.trim()));
+  const user = computed(() => authUserCookie.value);
+  const userId = computed(() => authUserCookie.value?.id ?? null);
+  const role = computed(() => authUserCookie.value?.role ?? null);
 
-  function setSession(token: string) {
+  function setSession(token: string, authUser?: AuthUser) {
     authTokenCookie.value = token;
+    const resolvedUser = authUser ?? authUserFromToken(token);
+    authUserCookie.value = resolvedUser;
   }
 
   function clearSession() {
     authTokenCookie.value = null;
+    authUserCookie.value = null;
+  }
+
+  function hasRole(...roles: AuthRole[]) {
+    const currentRole = authUserCookie.value?.role;
+    return Boolean(currentRole && roles.includes(currentRole));
   }
 
   async function register(email: string, password: string, name?: string) {
@@ -100,7 +116,7 @@ export function useAuth() {
         },
       });
       if (response.token) {
-        setSession(response.token);
+        setSession(response.token, response.user);
       }
       return response;
     } catch (error) {
@@ -116,7 +132,7 @@ export function useAuth() {
         body: { email, password },
       });
       if (response.token) {
-        setSession(response.token);
+        setSession(response.token, response.user);
       }
       return response;
     } catch (error) {
@@ -137,8 +153,6 @@ export function useAuth() {
     }
   }
 
-
-
   return {
     register,
     login,
@@ -146,5 +160,9 @@ export function useAuth() {
     setSession,
     clearSession,
     isLoggedIn,
+    user,
+    userId,
+    role,
+    hasRole,
   };
 }
