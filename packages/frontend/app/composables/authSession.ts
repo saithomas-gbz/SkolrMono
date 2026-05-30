@@ -38,10 +38,12 @@ export function authUserFromToken(token: string): AuthUser | null {
   }
 }
 
+const AUTH_COOKIE_OPTIONS = { sameSite: 'lax' as const, default: () => null };
+
 export function useAuthTokenCookie() {
-  return useCookie<string | null>(AUTH_TOKEN_COOKIE, { sameSite: 'lax', default: () => null });
+  return useCookie<string | null>(AUTH_TOKEN_COOKIE, AUTH_COOKIE_OPTIONS);
 }
 
 export function useAuthUserCookie() {
-  return useCookie<AuthUser | null>(AUTH_USER_COOKIE, { sameSite: 'lax', default: () => null });
+  return useCookie<AuthUser | null>(AUTH_USER_COOKIE, AUTH_COOKIE_OPTIONS);
 }
