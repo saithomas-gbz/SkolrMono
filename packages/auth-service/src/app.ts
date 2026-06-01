@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes';
 import dotenv from 'dotenv';
 import { testDatabaseConnection } from './db';
 import { authTag } from './schemas/authOpenApi';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ async function buildApp() {
   });
 
   await app.register(authRoutes);
+  await app.register(userRoutes);
 
   app.get('/test-db', async () => {
     const isConnected = await testDatabaseConnection();
