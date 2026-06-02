@@ -139,9 +139,11 @@ services:
     build:
       context: ./packages/frontend
       dockerfile: Dockerfile
+      target: dev
     container_name: skolr_frontend
     volumes:
       - ./packages/frontend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - NUXT_PUBLIC_GATEWAY_BASE_URL=/api
