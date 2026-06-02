@@ -1,4 +1,4 @@
-export const userTag = 'user';
+const userTag = 'user';
 
 const userPublic = {
   type: 'object',

@@ -8,7 +8,7 @@ export type UserProfile = {
   role: 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN';
 };
 
-export type UsersApiResponse = {
+type UsersApiResponse = {
   data: UserProfile[];
 };
 

@@ -60,7 +60,8 @@ const mockUser: User = {
 };
 
 const userWithoutPassword = (u: User) => {
-  const { password: _pw, ...rest } = u;
+  const { password, ...rest } = u;
+  void password;
   return rest;
 };
 

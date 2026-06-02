@@ -3,19 +3,19 @@
  * Single source of truth: keep auth/class/grade seeds consuming these exports
  * so the three databases stay in sync.
  */
-export const DEV_USER_IDS = {
+const DEV_USER_IDS = {
   admin: '11111111-1111-1111-1111-111111111101',
   user: '11111111-1111-1111-1111-111111111102',
   teacher: '11111111-1111-1111-1111-111111111103',
   student: '11111111-1111-1111-1111-111111111104',
 } as const;
 
-export const DEV_CLASS_IDS = {
+const DEV_CLASS_IDS = {
   cm2a: '22222222-2222-2222-2222-222222222201',
   sciences6: '22222222-2222-2222-2222-222222222202',
 } as const;
 
-export const DEV_COURSE_IDS = {
+const DEV_COURSE_IDS = {
   maths: '33333333-3333-3333-3333-333333333302',
   sciences: '33333333-3333-3333-3333-333333333303',
   francais: '33333333-3333-3333-3333-333333333304',
@@ -25,14 +25,14 @@ export const DEV_COURSE_IDS = {
 export const DEV_TEACHER_PASSWORD = 'dev-teacher-123';
 export const DEV_STUDENT_PASSWORD = 'dev-student-123';
 
-export type DevClass = { id: string; name: string; description: string };
+type DevClass = { id: string; name: string; description: string };
 
 export const DEV_CLASSES: DevClass[] = [
   { id: DEV_CLASS_IDS.cm2a, name: 'CM2-A', description: 'Classe de démonstration — primaire' },
   { id: DEV_CLASS_IDS.sciences6, name: '6ème Sciences', description: 'Classe de démonstration — collège' },
 ];
 
-export type DevCourse = { id: string; name: string; description: string };
+type DevCourse = { id: string; name: string; description: string };
 
 export const DEV_COURSES: DevCourse[] = [
   { id: DEV_COURSE_IDS.maths, name: 'Mathématiques', description: 'Cours de démonstration — maths' },
@@ -45,7 +45,7 @@ export const DEV_COURSES: DevCourse[] = [
   },
 ];
 
-export type DevTeacher = { id: string; email: string; name: string; classIds: string[] };
+type DevTeacher = { id: string; email: string; name: string; classIds: string[] };
 
 /** 4 enseignants supplémentaires, co-profs des classes (le prof principal reste `dev.teacher`). */
 export const DEV_TEACHERS: DevTeacher[] = [
@@ -75,7 +75,7 @@ export const DEV_TEACHERS: DevTeacher[] = [
   },
 ];
 
-export type DevStudent = { id: string; email: string; name: string; classId: string };
+type DevStudent = { id: string; email: string; name: string; classId: string };
 
 const STUDENT_NAMES = [
   'Léa Martin',
@@ -122,7 +122,7 @@ export const DEV_GENERATED_STUDENTS: DevStudent[] = STUDENT_NAMES.map((name, i) 
 });
 
 /** Comptes de login historiques, également inscrits comme élèves en CM2-A. */
-export const DEV_LEGACY_STUDENTS: DevStudent[] = [
+const DEV_LEGACY_STUDENTS: DevStudent[] = [
   {
     id: DEV_USER_IDS.student,
     email: 'dev.student@skolr.local',

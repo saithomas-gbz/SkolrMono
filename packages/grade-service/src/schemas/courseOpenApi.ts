@@ -1,4 +1,4 @@
-export const courseTag = 'course';
+const courseTag = 'course';
 
 const errorBody = {
   type: 'object',
