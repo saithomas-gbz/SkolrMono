@@ -31,6 +31,34 @@ export const meRouteSchema = {
   },
 } as const;
 
+export const getUsersByIdsRouteSchema = {
+  description: 'Batch lookup of users by their IDs (comma-separated query string)',
+  tags: [userTag],
+  querystring: {
+    type: 'object',
+    properties: {
+      ids: {
+        type: 'string',
+        description: 'Comma-separated list of user IDs, e.g. id1,id2,id3',
+      },
+    },
+    required: ['ids'],
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: userPublic,
+        },
+      },
+      required: ['data'],
+    },
+    500: errorBody,
+  },
+} as const;
+
 export const getUserByIdRouteSchema = {
   description: 'Get a user by ID',
   tags: [userTag],

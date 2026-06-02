@@ -28,6 +28,31 @@ const userController = {
     }
   },
 
+  getUsersByIds: async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { ids } = request.query as { ids?: string };
+
+      const idList = (ids ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0);
+
+      if (idList.length === 0) {
+        return reply.send({ data: [] });
+      }
+
+      const users = await db.user.findMany({
+        where: { id: { in: idList } },
+        omit: { password: true },
+      });
+
+      return reply.send({ data: users });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
+
   createUser: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { email, password, name, role } = request.body as {

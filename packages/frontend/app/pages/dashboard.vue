@@ -14,6 +14,12 @@
           <ChartGradesChart :initial-class-id="initialClassId" />
         </template>
       </Card>
+      <Card>
+        <template #title>Mes élèves</template>
+        <template #content>
+          <TablesTeacherClassStudentTable />
+        </template>
+      </Card>
     </template>
 
     <!-- ADMIN : vue globale (effectifs + toutes les notes) -->

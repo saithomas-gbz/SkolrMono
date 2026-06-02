@@ -9,6 +9,7 @@ mock.module('../db', () => ({
   default: {
     user: {
       findUnique: mock(),
+      findMany: mock(),
       create: mock(),
       update: mock(),
       delete: mock(),
@@ -20,6 +21,7 @@ mock.module('../db', () => ({
 type MockedDb = {
   user: {
     findUnique: ReturnType<typeof mock>;
+    findMany: ReturnType<typeof mock>;
     create: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
     delete: ReturnType<typeof mock>;
@@ -68,6 +70,7 @@ describe('UserController', () => {
   beforeEach(() => {
     reply = makeReply();
     prismaMock.user.findUnique.mockReset();
+    prismaMock.user.findMany.mockReset();
     prismaMock.user.create.mockReset();
     prismaMock.user.update.mockReset();
     prismaMock.user.delete.mockReset();
@@ -116,6 +119,57 @@ describe('UserController', () => {
       const request = makeRequest({ params: { id: 'user-1' } });
 
       await userController.getUserById(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(500);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getUsersByIds
+  // ---------------------------------------------------------------------------
+  describe('getUsersByIds', () => {
+    it('should return matching users for a comma-separated list of ids', async () => {
+      const users = [
+        userWithoutPassword(mockUser),
+        userWithoutPassword({ ...mockUser, id: 'user-2', email: 'second@example.com' }),
+      ];
+      prismaMock.user.findMany.mockResolvedValue(users);
+      const request = makeRequest({ query: { ids: 'user-1,user-2' } } as Partial<FastifyRequest>);
+
+      await userController.getUsersByIds(request, reply);
+
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: ['user-1', 'user-2'] } } })
+      );
+      expect(reply.send).toHaveBeenCalledWith({ data: users });
+    });
+
+    it('should trim whitespace and ignore empty ids', async () => {
+      prismaMock.user.findMany.mockResolvedValue([]);
+      const request = makeRequest({ query: { ids: ' user-1 , , user-2 ' } } as Partial<FastifyRequest>);
+
+      await userController.getUsersByIds(request, reply);
+
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: { in: ['user-1', 'user-2'] } } })
+      );
+    });
+
+    it('should return an empty array without querying when ids is missing', async () => {
+      const request = makeRequest({ query: {} } as Partial<FastifyRequest>);
+
+      await userController.getUsersByIds(request, reply);
+
+      expect(prismaMock.user.findMany).not.toHaveBeenCalled();
+      expect(reply.send).toHaveBeenCalledWith({ data: [] });
+    });
+
+    it('should return 500 on unexpected error', async () => {
+      prismaMock.user.findMany.mockRejectedValue(new Error('DB failure'));
+      const request = makeRequest({ query: { ids: 'user-1' } } as Partial<FastifyRequest>);
+
+      await userController.getUsersByIds(request, reply);
 
       expect(reply.status).toHaveBeenCalledWith(500);
       expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });

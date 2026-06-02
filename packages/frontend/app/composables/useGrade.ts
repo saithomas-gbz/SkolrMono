@@ -46,6 +46,11 @@ export type GradeListApiResponse = {
   message: string;
 };
 
+export type CourseListApiResponse = {
+  data: GradeCourse[];
+  message: string;
+};
+
 export type CreateGradeBody = {
   userId: string;
   classId: string;
@@ -137,6 +142,11 @@ export function useGrade() {
     return response.data;
   }
 
+  async function fetchCourses() {
+    const response = await api<CourseListApiResponse>('/grade/courses');
+    return response.data;
+  }
+
   async function createGrade(body: CreateGradeBody) {
     const response = await api<GradeApiResponse>('/grade/grades', {
       method: 'POST',
@@ -165,6 +175,7 @@ export function useGrade() {
     fetchGradeById,
     fetchGradesByClassId,
     fetchGradesByUserId,
+    fetchCourses,
     createGrade,
     updateGrade,
     deleteGrade,

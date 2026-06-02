@@ -10,7 +10,7 @@ export type SkolrClass = {
   name: string;
   description: string;
   classTeachers?: Array<{ id: string; teacherId: string; classId: string }>;
-  students?: Array<{ id: string; studentId: string; classId: string }>;
+  students?: Array<{ id: string; studentId: string; classId: string; joinedAt?: string }>;
 };
 
 export type ClassesSummaryApiResponse = {
@@ -65,7 +65,7 @@ export function useClass() {
   async function fetchClassesByStudentId(studentId: string) {
     const response = await api<ClassesApiResponse>(`/class/classes/student/${studentId}`);
     return response.data;
-  }
+  }   
 
   async function fetchClassesByTeacherId(teacherId: string) {
     const response = await api<ClassesApiResponse>(`/class/classes/teacher/${teacherId}`);
