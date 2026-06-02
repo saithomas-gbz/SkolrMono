@@ -44,10 +44,19 @@
         <p>Aucun élève dans cette classe.</p>
       </div>
 
-      <DataTable v-else :value="rows" data-key="studentId" responsive-layout="scroll" class="students-table">
-        <Column field="name" header="Nom" />
-        <Column field="email" header="Email" />
-        <Column header="Inscrit le">
+      <DataTable
+        v-else
+        :value="rows"
+        data-key="studentId"
+        responsive-layout="scroll"
+        class="students-table"
+        sort-field="name"
+        :sort-order="1"
+        removable-sort
+      >
+        <Column field="name" header="Nom" sortable />
+        <Column field="email" header="Email" sortable />
+        <Column field="joinedAt" header="Inscrit le" sortable>
           <template #body="{ data }">
             {{ formatDate(data.joinedAt) }}
           </template>
@@ -69,6 +78,7 @@
     <TablesTeacherGradeDialog
       v-model:visible="dialogVisible"
       :student="activeStudent"
+      :students="rows"
       :class-id="selectedClassId"
     />
   </div>

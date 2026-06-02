@@ -7,8 +7,21 @@
     :breakpoints="{ '640px': '95vw' }"
     @update:visible="(value) => emit('update:visible', value)"
   >
-    <div v-if="student" class="grade-dialog">
-      <p class="dialog-subtitle">{{ student.email }}</p>
+    <div v-if="activeStudent" class="grade-dialog">
+      <!-- Sélecteur d'élève -->
+      <section class="dialog-section">
+        <label for="grade-student-select" class="section-title">Élève</label>
+        <Select
+          id="grade-student-select"
+          v-model="selectedStudentId"
+          :options="studentOptions"
+          option-label="label"
+          option-value="value"
+          placeholder="Choisir un élève"
+          class="student-select"
+        />
+        <p class="dialog-subtitle">{{ activeStudent.email }}</p>
+      </section>
 
       <!-- Notes existantes -->
       <section class="dialog-section">
@@ -118,6 +131,7 @@ type DialogStudent = {
 const props = defineProps<{
   visible: boolean;
   student: DialogStudent | null;
+  students?: DialogStudent[];
   classId: string | null;
 }>();
 
@@ -133,8 +147,26 @@ const courses = ref<GradeCourse[]>([]);
 const gradesPending = ref(false);
 const gradesError = ref<string | null>(null);
 
+// Liste des élèves disponibles dans le dialog (toute la classe, ou à défaut l'élève fourni).
+const studentList = computed<DialogStudent[]>(() => {
+  if (props.students && props.students.length > 0) {
+    return props.students;
+  }
+  return props.student ? [props.student] : [];
+});
+
+const studentOptions = computed(() =>
+  studentList.value.map((s) => ({ label: s.name, value: s.studentId })),
+);
+
+const selectedStudentId = ref<string | null>(null);
+
+const activeStudent = computed<DialogStudent | null>(
+  () => studentList.value.find((s) => s.studentId === selectedStudentId.value) ?? null,
+);
+
 const dialogHeader = computed(() =>
-  props.student ? `Notes — ${props.student.name}` : 'Notes',
+  activeStudent.value ? `Notes — ${activeStudent.value.name}` : 'Notes',
 );
 
 const courseOptions = computed(() =>
@@ -147,13 +179,13 @@ function courseName(courseId: string) {
 
 async function loadGrades() {
   gradesError.value = null;
-  if (!props.student || !props.classId) {
+  if (!activeStudent.value || !props.classId) {
     grades.value = [];
     return;
   }
   gradesPending.value = true;
   try {
-    const all = await fetchGradesByUserId(props.student.studentId);
+    const all = await fetchGradesByUserId(activeStudent.value.studentId);
     grades.value = all.filter((grade) => grade.classId === props.classId);
   } catch (error) {
     gradesError.value = normalizeApiError(error);
@@ -171,16 +203,28 @@ async function loadCourses() {
   }
 }
 
+// À l'ouverture : (ré)initialise l'élève sélectionné sur celui de la ligne cliquée.
 watch(
-  () => [props.visible, props.student?.studentId, props.classId],
-  () => {
-    if (!props.visible) {
+  () => props.visible,
+  (isVisible) => {
+    if (!isVisible) {
       return;
     }
+    selectedStudentId.value = props.student?.studentId ?? studentList.value[0]?.studentId ?? null;
     resetForms();
-    void loadGrades();
     if (courses.value.length === 0) {
       void loadCourses();
+    }
+  },
+  { immediate: true },
+);
+
+// Recharge les notes quand l'élève sélectionné ou la classe change (dialog ouvert).
+watch(
+  () => [props.visible, selectedStudentId.value, props.classId],
+  () => {
+    if (props.visible) {
+      void loadGrades();
     }
   },
   { immediate: true },
@@ -198,7 +242,7 @@ const canCreate = computed(
     newValue.value !== null &&
     newValue.value >= 0 &&
     newValue.value <= 20 &&
-    Boolean(props.student) &&
+    Boolean(activeStudent.value) &&
     Boolean(props.classId),
 );
 
@@ -206,7 +250,7 @@ async function submitCreate() {
   createError.value = null;
   if (
     !canCreate.value ||
-    !props.student ||
+    !activeStudent.value ||
     !props.classId ||
     newCourseId.value === null ||
     newValue.value === null
@@ -216,7 +260,7 @@ async function submitCreate() {
   creating.value = true;
   try {
     await createGrade({
-      userId: props.student.studentId,
+      userId: activeStudent.value.studentId,
       classId: props.classId,
       courseId: newCourseId.value,
       value: newValue.value,
@@ -314,6 +358,10 @@ function resetForms() {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+.student-select {
+  max-width: 22rem;
 }
 
 .dialog-loading {
