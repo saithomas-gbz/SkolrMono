@@ -67,10 +67,16 @@ export function useClass() {
     return response.data;
   }
 
+  async function fetchClassesByTeacherId(teacherId: string) {
+    const response = await api<ClassesApiResponse>(`/class/classes/teacher/${teacherId}`);
+    return response.data;
+  }
+
   return {
     fetchClassesSummary,
     fetchClassById,
     fetchClasses,
     fetchClassesByStudentId,
+    fetchClassesByTeacherId,
   };
 }
