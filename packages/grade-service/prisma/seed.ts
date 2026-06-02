@@ -1,93 +1,46 @@
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { DEV_CLASS_IDS, DEV_COURSE_IDS, DEV_USER_IDS } from '../../../scripts/seed/dev-users';
+import {
+  DEV_CLASSES,
+  DEV_COURSES,
+  DEV_STUDENTS,
+  DEV_USER_IDS,
+} from '../../../scripts/seed/dev-users';
 
-const devClasses = [
-  {
-    id: DEV_CLASS_IDS.cm2a,
-    name: 'CM2-A',
-    description: 'Classe de démonstration — primaire',
-  },
-  {
-    id: DEV_CLASS_IDS.sciences6,
-    name: '6ème Sciences',
-    description: 'Classe de démonstration — collège',
-  },
-] as const;
-
-const devCourses = [
-  {
-    id: DEV_COURSE_IDS.general,
-    name: 'Cours général',
-    description: 'Cours par défaut pour les notes existantes',
-  },
-  {
-    id: DEV_COURSE_IDS.maths,
-    name: 'Mathématiques',
-    description: 'Cours de démonstration — maths',
-  },
-  {
-    id: DEV_COURSE_IDS.sciences,
-    name: 'Sciences',
-    description: 'Cours de démonstration — sciences',
-  },
-] as const;
+const devClasses = DEV_CLASSES;
+const devCourses = DEV_COURSES;
 
 /**
- * Utilisateurs grade-service (élèves avec notes uniquement).
- * `classId` = classe principale (CM2-A) ; aligné sur class-service :
- * - CM2-A : student + user (élèves)
- * - 6ème Sciences : student (élève) ; teacher + admin (profs, pas de notes ici)
+ * Utilisateurs grade-service : tous les élèves inscrits (aligné class-service).
+ * `classId` = la classe de l'élève (contrainte grade-service : 1 élève → 1 classe).
  */
-const devGradeUsers = [
-  {
-    id: DEV_USER_IDS.student,
-    name: 'Dev Student',
-    email: 'dev.student@skolr.local',
-    classId: DEV_CLASS_IDS.cm2a,
-  },
-  {
-    id: DEV_USER_IDS.user,
-    name: 'Dev User',
-    email: 'dev.user@skolr.local',
-    classId: DEV_CLASS_IDS.cm2a,
-  },
-] as const;
+const devGradeUsers = DEV_STUDENTS.map((s) => ({
+  id: s.id,
+  name: s.name,
+  email: s.email,
+  classId: s.classId,
+}));
 
-/** Notes uniquement pour les élèves inscrits (voir class-service/prisma/seed.ts). */
-const devGrades = [
-  {
-    userId: DEV_USER_IDS.student,
-    classId: DEV_CLASS_IDS.cm2a,
-    courseId: DEV_COURSE_IDS.maths,
-    value: 15.5,
-  },
-  {
-    userId: DEV_USER_IDS.student,
-    classId: DEV_CLASS_IDS.cm2a,
-    courseId: DEV_COURSE_IDS.maths,
-    value: 17,
-  },
-  {
-    userId: DEV_USER_IDS.student,
-    classId: DEV_CLASS_IDS.sciences6,
-    courseId: DEV_COURSE_IDS.sciences,
-    value: 16,
-  },
-  {
-    userId: DEV_USER_IDS.user,
-    classId: DEV_CLASS_IDS.cm2a,
-    courseId: DEV_COURSE_IDS.sciences,
-    value: 14,
-  },
-] as const;
+/**
+ * Notes déterministes : 2 notes par élève, sur 2 cours, dans la classe de l'élève.
+ * Valeurs reproductibles (pas d'aléatoire) pour des seeds idempotents.
+ */
+const devGrades = devGradeUsers.flatMap((student, i) =>
+  [0, 1].map((k) => {
+    const course = devCourses[(i + k) % devCourses.length]!;
+    const raw = 8 + ((i * 3 + k * 7) % 12) + (k === 0 ? 0 : 0.5);
+    const value = Math.min(20, Math.max(0, Number(raw.toFixed(1))));
+    return {
+      userId: student.id,
+      classId: student.classId,
+      courseId: course.id,
+      value,
+    };
+  }),
+);
 
-const devGradeUserIds = [
-  DEV_USER_IDS.student,
-  DEV_USER_IDS.user,
-  DEV_USER_IDS.teacher,
-] as const;
+const devGradeUserIds = [...devGradeUsers.map((u) => u.id), DEV_USER_IDS.teacher];
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -137,8 +90,9 @@ async function main() {
     }
 
     console.log('Seed grade-service: dev classes, courses, users, and grades ready.');
-    console.log('  • Aligné class-service : CM2-A (student, user) ; 6ème (student)');
-    console.log(`  • ${devGrades.length} grades (élèves uniquement, pas de note prof)`);
+    console.log(
+      `  • ${devCourses.length} cours, ${devGradeUsers.length} élèves, ${devGrades.length} notes`,
+    );
     console.log(
       '\nList grades: GET http://localhost:3007/grades (or via gateway GET http://localhost:3001/grade/grades)',
     );
