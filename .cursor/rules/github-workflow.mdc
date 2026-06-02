@@ -1,0 +1,90 @@
+---
+description: GitHub workflow — issue, branch naming, PR title and body aligned with CI
+alwaysApply: true
+---
+
+# GitHub workflow (issue → branch → PR)
+
+The `pr-validation.yml` workflow blocks any PR that does not follow these rules. Always use `gh` CLI from the repo root.
+
+## 1. Open an issue first
+
+- **Title**: descriptive, no `type:` prefix (e.g. `Factorize auth cookie options in frontend`).
+- **Labels**: pick from existing repo labels (`Frontend`, `backend`, `devops`, `task`, `debt`, `enhancement`, `documentation`, `bug`, `DX-Experience`).
+- **Body**: include `## Description`, the goal/proposal, and acceptance criteria.
+
+## 2. Branch naming
+
+`<issue-number>-<kebab-summary>` from the latest `main`:
+
+```bash
+git checkout main && git pull --rebase
+git checkout -b 45-factorize-auth-cookie-options
+```
+
+## 3. Commits
+
+Conventional commits with scope, one logical change per commit, reference the issue in the body:
+
+```
+refactor(frontend): factorize auth cookie options
+
+<short body explaining the why>
+
+Refs #45
+```
+
+Run `bun run lint` (and tests where relevant) before pushing.
+
+## 4. PR title — must satisfy CI `contains()` checks
+
+CI checks for the literal token (with the colon). Do **not** add a scope between the type and the colon:
+
+```text
+# OK — contains "refactor:"
+refactor: factorize auth cookie options
+
+# KO — CI fails, "refactor(frontend):" does NOT contain "refactor:"
+refactor(frontend): factorize auth cookie options
+```
+
+Allowed prefixes: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:`, `chore:`, `ci:`.
+
+## 5. PR body — required sections
+
+The CI requires all of the following in the PR body:
+
+- A linked issue keyword: `closes #N`, `fixes #N`, or `resolves #N`
+- A `## Description` heading
+- A `## Testing` heading
+
+Minimal template:
+
+```markdown
+closes #45
+
+## Description
+
+What changed and why.
+
+## Testing
+
+- `bun run lint` (packages/frontend)
+- Manual QA: …
+```
+
+## 6. Open the PR
+
+```bash
+git push -u origin HEAD
+gh pr create --title 'refactor: factorize auth cookie options' --body "$(cat <<'EOF'
+closes #45
+
+## Description
+...
+
+## Testing
+...
+EOF
+)"
+```
