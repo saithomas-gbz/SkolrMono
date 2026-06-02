@@ -21,6 +21,14 @@
         <NuxtLink class="sidebar-link" to="/dashboard" @click="isSidebarOpen = false">
           Tableau de bord
         </NuxtLink>
+        <NuxtLink
+          v-if="isTeacher"
+          class="sidebar-link"
+          to="/teacher/students"
+          @click="isSidebarOpen = false"
+        >
+          Mes élèves
+        </NuxtLink>
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
           Déconnexion
         </button>
@@ -40,18 +48,31 @@
 import type { MenuItem } from 'primevue/menuitem';
 
 const isSidebarOpen = ref(false);
-const { isLoggedIn, clearSession } = useAuth();
+const { isLoggedIn, clearSession, hasRole } = useAuth();
 
-const items = computed<MenuItem[]>(() => [
-  {
-    label: 'Accueil',
-    command: () => navigateTo('/'),
-  },
-  {
-    label: 'Tableau de bord',
-    command: () => navigateTo('/dashboard'),
-  },
-]);
+const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
+
+const items = computed<MenuItem[]>(() => {
+  const menu: MenuItem[] = [
+    {
+      label: 'Accueil',
+      command: () => navigateTo('/'),
+    },
+    {
+      label: 'Tableau de bord',
+      command: () => navigateTo('/dashboard'),
+    },
+  ];
+
+  if (isTeacher.value) {
+    menu.push({
+      label: 'Mes élèves',
+      command: () => navigateTo('/teacher/students'),
+    });
+  }
+
+  return menu;
+});
 
 async function signOut() {
   isSidebarOpen.value = false;

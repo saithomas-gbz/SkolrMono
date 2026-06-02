@@ -2,13 +2,19 @@ import 'dotenv/config';
 import bcrypt from 'bcrypt';
 import { PrismaClient, Role } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { DEV_USER_IDS } from '../../../scripts/seed/dev-users';
+import {
+  DEV_USER_IDS,
+  DEV_TEACHERS,
+  DEV_GENERATED_STUDENTS,
+  DEV_TEACHER_PASSWORD,
+  DEV_STUDENT_PASSWORD,
+} from '../../../scripts/seed/dev-users';
 
 /**
  * Local dev accounts only (idempotent upsert by email).
  * Plain passwords here — never use this pattern in production.
  */
-const devUsers: Array<{
+const baseUsers: Array<{
   id: string;
   email: string;
   plainPassword: string;
@@ -43,6 +49,24 @@ const devUsers: Array<{
     name: 'Dev Student',
     role: Role.USER,
   },
+];
+
+const devUsers: typeof baseUsers = [
+  ...baseUsers,
+  ...DEV_TEACHERS.map((t) => ({
+    id: t.id,
+    email: t.email,
+    plainPassword: DEV_TEACHER_PASSWORD,
+    name: t.name,
+    role: Role.TEACHER,
+  })),
+  ...DEV_GENERATED_STUDENTS.map((s) => ({
+    id: s.id,
+    email: s.email,
+    plainPassword: DEV_STUDENT_PASSWORD,
+    name: s.name,
+    role: Role.USER,
+  })),
 ];
 
 async function main() {

@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { DEV_CLASS_IDS, DEV_USER_IDS } from '../../../scripts/seed/dev-users';
+import {
+  DEV_CLASSES,
+  studentIdsForClass,
+  teacherIdsForClass,
+} from '../../../scripts/seed/dev-users';
 
 const devClasses: Array<{
   id: string;
@@ -9,22 +13,11 @@ const devClasses: Array<{
   description: string;
   teacherIds: string[];
   studentIds: string[];
-}> = [
-  {
-    id: DEV_CLASS_IDS.cm2a,
-    name: 'CM2-A',
-    description: 'Classe de démonstration — primaire',
-    teacherIds: [DEV_USER_IDS.teacher],
-    studentIds: [DEV_USER_IDS.student, DEV_USER_IDS.user],
-  },
-  {
-    id: DEV_CLASS_IDS.sciences6,
-    name: '6ème Sciences',
-    description: 'Classe de démonstration — collège',
-    teacherIds: [DEV_USER_IDS.teacher, DEV_USER_IDS.admin],
-    studentIds: [DEV_USER_IDS.student],
-  },
-];
+}> = DEV_CLASSES.map((c) => ({
+  ...c,
+  teacherIds: teacherIdsForClass(c.id),
+  studentIds: studentIdsForClass(c.id),
+}));
 
 async function seedClass(
   prisma: PrismaClient,
@@ -85,7 +78,7 @@ async function main() {
     console.log('Seed class-service: dev classes ready.');
     for (const spec of devClasses) {
       console.log(
-        `  • ${spec.name} (${spec.id}) — teachers: ${spec.teacherIds.join(', ')}`,
+        `  • ${spec.name} (${spec.id}) — ${spec.teacherIds.length} prof(s), ${spec.studentIds.length} élève(s)`,
       );
     }
     console.log(

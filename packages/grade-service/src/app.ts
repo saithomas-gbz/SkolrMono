@@ -4,6 +4,7 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
 import gradeRoutes from './routes/gradeRoutes';
+import courseRoutes from './routes/courseRoutes';
 
 dotenv.config();
 
@@ -21,11 +22,15 @@ async function buildApp() {
         description: 'Grade Service API',
       },
       servers: [{ url: `http://localhost:${gradePort}`, description: 'Grade Service (direct)' }],
-      tags: [{ name: 'grade', description: 'Grade services api' }],
+      tags: [
+        { name: 'grade', description: 'Grade services api' },
+        { name: 'course', description: 'Course management api' },
+      ],
     },
   });
 
   await app.register(gradeRoutes);
+  await app.register(courseRoutes);
 
   await app.register(fastifySwaggerUi, {
     routePrefix: '/docs',
