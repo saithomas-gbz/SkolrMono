@@ -100,10 +100,13 @@ services:
     environment:
       - PORT=3007
       - DATABASE_URL=postgresql://postgres:postgres@postgres-grade:5432/skolr_grade?schema=public
+      - CLASS_SERVICE_URL=http://class-service:3002
     ports:
       - "3007:3007"
     depends_on:
       postgres-grade:
+        condition: service_healthy
+      class-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3007/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]

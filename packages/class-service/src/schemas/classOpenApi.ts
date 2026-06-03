@@ -82,6 +82,25 @@ const classSummaryListResponse = {
   required: ['data', 'message'],
 } as const;
 
+const classCourse = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+  },
+  required: ['id', 'name', 'description'],
+} as const;
+
+const classCourseListResponse = {
+  type: 'object',
+  properties: {
+    data: { type: 'array', items: classCourse },
+    message: { type: 'string' },
+  },
+  required: ['data', 'message'],
+} as const;
+
 export const getClassesSummarySchema = {
   description: 'List classes with id, name, teacherCount and studentCount (lightweight, for selectors)',
   tags: [classTag],
@@ -145,6 +164,24 @@ export const getClassesByTeacherIdSchema = {
   },
   response: {
     200: classListResponse,
+    500: errorBody,
+  },
+} as const;
+
+export const getTeacherCoursesInClassSchema = {
+  description: 'List courses a teacher is allowed to grade in a given class',
+  tags: [classTag],
+  params: {
+    type: 'object',
+    properties: {
+      classId: { type: 'string' },
+      teacherId: { type: 'string' },
+    },
+    required: ['classId', 'teacherId'],
+  },
+  response: {
+    200: classCourseListResponse,
+    404: errorBody,
     500: errorBody,
   },
 } as const;

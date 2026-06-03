@@ -3,6 +3,12 @@ import Fastify from 'fastify';
 import gradeRoutes from '../routes/gradeRoutes';
 import db from '../db';
 
+const teacherTeachesCourseMock = mock();
+
+mock.module('../lib/classServiceClient', () => ({
+  teacherTeachesCourse: teacherTeachesCourseMock,
+}));
+
 mock.module('../generated/prisma/client', () => ({
   PrismaClient: class {
     grade = { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() };
@@ -95,6 +101,7 @@ describe('GradeRoutes', () => {
     prismaMock.user.findUnique.mockReset();
     prismaMock.class.findUnique.mockReset();
     prismaMock.course.findUnique.mockReset();
+    teacherTeachesCourseMock.mockReset();
   });
 
   it('GET /grades returns all grades', async () => {
@@ -146,12 +153,19 @@ describe('GradeRoutes', () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
     prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
     prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
+    teacherTeachesCourseMock.mockResolvedValue(true);
     prismaMock.grade.create.mockResolvedValue(sampleGrade);
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'POST',
       url: '/grades',
-      payload: { userId: 'user-1', classId: 'class-1', courseId: 'course-1', value: 16 },
+      payload: {
+        userId: 'user-1',
+        classId: 'class-1',
+        courseId: 'course-1',
+        value: 16,
+        teacherId: 'teacher-1',
+      },
     });
     expect(res.statusCode).toBe(201);
     expect(res.json()).toEqual({ data: sampleGrade, message: 'Grade created successfully' });
@@ -166,7 +180,13 @@ describe('GradeRoutes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/grades',
-      payload: { userId: 'user-1', classId: 'class-1', courseId: 'course-1', value: 16 },
+      payload: {
+        userId: 'user-1',
+        classId: 'class-1',
+        courseId: 'course-1',
+        value: 16,
+        teacherId: 'teacher-1',
+      },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: 'User does not belong to this class' });

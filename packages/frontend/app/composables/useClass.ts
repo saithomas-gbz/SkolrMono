@@ -28,6 +28,17 @@ export type ClassApiResponse = {
   message: string;
 };
 
+export type ClassCourse = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+export type ClassCoursesApiResponse = {
+  data: ClassCourse[];
+  message: string;
+};
+
 type FetchErrorLike = { data?: { error?: string }; statusMessage?: string };
 
 export function normalizeApiError(e: unknown): string {
@@ -72,11 +83,19 @@ export function useClass() {
     return response.data;
   }
 
+  async function fetchTeacherCourses(classId: string, teacherId: string) {
+    const response = await api<ClassCoursesApiResponse>(
+      `/class/classes/${classId}/teachers/${teacherId}/courses`,
+    );
+    return response.data;
+  }
+
   return {
     fetchClassesSummary,
     fetchClassById,
     fetchClasses,
     fetchClassesByStudentId,
     fetchClassesByTeacherId,
+    fetchTeacherCourses,
   };
 }

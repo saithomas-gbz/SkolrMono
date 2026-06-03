@@ -150,3 +150,22 @@ export function teacherIdsForClass(classId: string): string[] {
 export function studentIdsForClass(classId: string): string[] {
   return DEV_STUDENTS.filter((s) => s.classId === classId).map((s) => s.id);
 }
+
+const TEACHER_SPECIALTY_COURSE: Record<string, string> = {
+  '55555555-5555-5555-5555-000000000001': DEV_COURSE_IDS.maths,
+  '55555555-5555-5555-5555-000000000002': DEV_COURSE_IDS.sciences,
+  '55555555-5555-5555-5555-000000000003': DEV_COURSE_IDS.francais,
+  '55555555-5555-5555-5555-000000000004': DEV_COURSE_IDS.histoire,
+};
+
+/** Matières qu'un prof peut noter dans une classe (affectation class-service). */
+export function courseIdsForTeacherInClass(teacherId: string, classId: string): string[] {
+  if (!teacherIdsForClass(classId).includes(teacherId)) {
+    return [];
+  }
+  if (teacherId === DEV_USER_IDS.teacher) {
+    return DEV_COURSES.map((course) => course.id);
+  }
+  const specialty = TEACHER_SPECIALTY_COURSE[teacherId];
+  return specialty ? [specialty] : [];
+}

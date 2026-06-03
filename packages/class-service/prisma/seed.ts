@@ -3,6 +3,8 @@ import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   DEV_CLASSES,
+  DEV_COURSES,
+  courseIdsForTeacherInClass,
   studentIdsForClass,
   teacherIdsForClass,
 } from '../../../scripts/seed/dev-users';
@@ -41,12 +43,16 @@ async function seedClass(
     await tx.classStudent.deleteMany({ where: { classId: spec.id } });
 
     for (let i = 0; i < spec.teacherIds.length; i++) {
-      const teacherId = spec.teacherIds[i];
+      const teacherId = spec.teacherIds[i]!;
+      const courseIds = courseIdsForTeacherInClass(teacherId, spec.id);
       await tx.classTeacher.create({
         data: {
           classId: spec.id,
           teacherId,
           isPrincipal: i === 0,
+          courses: {
+            connect: courseIds.map((id) => ({ id })),
+          },
         },
       });
     }
@@ -71,6 +77,14 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   try {
+    for (const course of DEV_COURSES) {
+      await prisma.course.upsert({
+        where: { id: course.id },
+        create: course,
+        update: { name: course.name, description: course.description },
+      });
+    }
+
     for (const spec of devClasses) {
       await seedClass(prisma, spec);
     }
