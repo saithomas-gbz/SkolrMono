@@ -7,6 +7,7 @@ declare module 'fastify' {
     proxyToAuthService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     proxyToClassService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     proxyToGradeService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    proxyToPlanningService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -57,6 +58,7 @@ export default async function proxyPlugin(fastify: FastifyInstance) {
   const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://auth-service:3000';
   const classServiceUrl = process.env.CLASS_SERVICE_URL || 'http://class-service:3002';
   const gradeServiceUrl = process.env.GRADE_SERVICE_URL || 'http://grade-service:3007';
+  const planningServiceUrl = process.env.PLANNING_SERVICE_URL || 'http://planning-services:3008';
 
   // Decorate fastify instance with proxy method
   fastify.decorate('proxyToAuthService', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -99,6 +101,17 @@ export default async function proxyPlugin(fastify: FastifyInstance) {
     }
   });
 
-  // Proxy plugin provides the proxyToAuthService method
-  // Routes are set up in the auth routes file
+  fastify.decorate('proxyToPlanningService', async (request: FastifyRequest, reply: FastifyReply) => {
+    const targetPath = request.url.replace(/^\/planning/, '');
+    const targetUrl = `${planningServiceUrl}${targetPath}`;
+
+    try {
+      await proxyRequest(request, reply, targetUrl);
+    } catch (error) {
+      fastify.log.error({ message: 'Proxy error', error });
+      reply
+        .code(500)
+        .send({ error: 'Proxy error', details: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
 }
