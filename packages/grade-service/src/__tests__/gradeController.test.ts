@@ -4,6 +4,12 @@ import db from '../db';
 import type { FastifyRequest, FastifyReply, RouteGenericInterface } from 'fastify';
 import type { CreateGradeBody, UpdateGradeBody } from '../controllers/gradeController';
 
+const teacherTeachesCourseMock = mock();
+
+mock.module('../lib/classServiceClient', () => ({
+  teacherTeachesCourse: teacherTeachesCourseMock,
+}));
+
 mock.module('../generated/prisma/client', () => ({
   PrismaClient: class {
     grade = { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() };
@@ -104,6 +110,7 @@ describe('GradeController', () => {
     prismaMock.user.findUnique.mockReset();
     prismaMock.class.findUnique.mockReset();
     prismaMock.course.findUnique.mockReset();
+    teacherTeachesCourseMock.mockReset();
 
     (mockReply.status as ReturnType<typeof mock>).mockReset();
     (mockReply.send as ReturnType<typeof mock>).mockReset();
@@ -185,12 +192,14 @@ describe('GradeController', () => {
       classId: 'class-1',
       courseId: 'course-1',
       value: 16,
+      teacherId: 'teacher-1',
     };
 
     it('should create a grade', async () => {
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
+      teacherTeachesCourseMock.mockResolvedValue(true);
       prismaMock.grade.create.mockResolvedValue(sampleGrade);
       const req = createMockRequest<{ Body: CreateGradeBody }>({ body });
       await gradeController.createGrade(req, mockReply);
@@ -236,6 +245,19 @@ describe('GradeController', () => {
       await gradeController.createGrade(req, mockReply);
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'User does not belong to this class' });
+    });
+
+    it('should return 403 when teacher cannot grade the course', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+      prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
+      prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
+      teacherTeachesCourseMock.mockResolvedValue(false);
+      const req = createMockRequest<{ Body: CreateGradeBody }>({ body });
+      await gradeController.createGrade(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        error: 'Teacher is not allowed to grade this course in this class',
+      });
     });
   });
 

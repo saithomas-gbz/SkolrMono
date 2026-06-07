@@ -56,6 +56,7 @@ export type CreateGradeBody = {
   classId: string;
   courseId: string;
   value: number;
+  teacherId: string;
 };
 
 export type UpdateGradeBody = {

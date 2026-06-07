@@ -79,7 +79,6 @@ export function useAuthCredentialPolicy(email: Ref<string>, password: Ref<string
     satisfiesLoginRegisterFields,
   };
 }
-
 export function useAuth() {
   const api = useApi();
   const authTokenCookie = useAuthTokenCookie();

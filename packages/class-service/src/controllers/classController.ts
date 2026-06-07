@@ -110,6 +110,25 @@ export default {
       return reply.status(500).send({ error: 'Internal server error' });
     }
   },
+  getTeacherCoursesInClass: async (
+    request: FastifyRequest<{ Params: { classId: string; teacherId: string } }>,
+    reply: FastifyReply,
+  ) => {
+    try {
+      const { classId, teacherId } = request.params;
+      const assignment = await db.classTeacher.findUnique({
+        where: { classId_teacherId: { classId, teacherId } },
+        include: { courses: true },
+      });
+      if (!assignment) {
+        return reply.status(404).send({ error: 'Teacher is not assigned to this class' });
+      }
+      return sendListOk(reply, assignment.courses, 'Teacher courses fetched successfully');
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
   createClass: async (request: FastifyRequest<{ Body: CreateClassBodyData }>, reply: FastifyReply) => {
     try {
       const { name, description, teacherIds, studentIds } = request.body;

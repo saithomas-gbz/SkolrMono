@@ -8,6 +8,7 @@ import {
   getClassByIdSchema,
   getClassesByStudentIdSchema,
   getClassesByTeacherIdSchema,
+  getTeacherCoursesInClassSchema,
   updateClassNameOrDescriptionSchema,
   updateClassStudentListSchema,
   updateClassTeacherListSchema,
@@ -29,6 +30,11 @@ export default async function classRoutes(fastify: FastifyInstance) {
     '/classes/student/:studentId',
     { schema: getClassesByStudentIdSchema },
     classController.getClassesByStudentId,
+  );
+  fastify.get(
+    '/classes/:classId/teachers/:teacherId/courses',
+    { schema: getTeacherCoursesInClassSchema },
+    classController.getTeacherCoursesInClass,
   );
   fastify.get('/classes/:id', { schema: getClassByIdSchema }, classController.getClassById);
 

@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
+import { teacherTeachesCourse } from '../lib/classServiceClient';
 
 const gradeInclude = {
   user: true,
@@ -12,6 +13,7 @@ export interface CreateGradeBody {
   classId: string;
   courseId: string;
   value: number;
+  teacherId: string;
 }
 
 export interface UpdateGradeBody {
@@ -85,7 +87,11 @@ export default {
     reply: FastifyReply,
   ) => {
     try {
-      const { userId, classId, courseId, value } = request.body;
+      const { userId, classId, courseId, value, teacherId } = request.body;
+
+      if (!teacherId) {
+        return reply.status(400).send({ error: 'teacherId is required' });
+      }
 
       const user = await db.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -104,6 +110,13 @@ export default {
 
       if (user.classId !== classId) {
         return reply.status(400).send({ error: 'User does not belong to this class' });
+      }
+
+      const allowed = await teacherTeachesCourse(classId, teacherId, courseId);
+      if (!allowed) {
+        return reply
+          .status(403)
+          .send({ error: 'Teacher is not allowed to grade this course in this class' });
       }
 
       const grade = await db.grade.create({

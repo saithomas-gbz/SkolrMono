@@ -120,7 +120,7 @@
 
 <script setup lang="ts">
 import { useGrade, type GradeEntity, type GradeCourse } from '~/composables/useGrade';
-import { normalizeApiError } from '~/composables/useClass';
+import { normalizeApiError, useClass } from '~/composables/useClass';
 
 type DialogStudent = {
   studentId: string;
@@ -140,7 +140,9 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
-const { fetchGradesByUserId, fetchCourses, createGrade, updateGrade, deleteGrade } = useGrade();
+const { fetchGradesByUserId, createGrade, updateGrade, deleteGrade } = useGrade();
+const { fetchTeacherCourses } = useClass();
+const { user } = useAuth();
 
 const grades = ref<GradeEntity[]>([]);
 const courses = ref<GradeCourse[]>([]);
@@ -195,9 +197,13 @@ async function loadGrades() {
   }
 }
 
-async function loadCourses() {
+async function loadTeacherCourses() {
+  if (!props.classId || !user.value?.id) {
+    courses.value = [];
+    return;
+  }
   try {
-    courses.value = await fetchCourses();
+    courses.value = await fetchTeacherCourses(props.classId, user.value.id);
   } catch {
     courses.value = [];
   }
@@ -212,9 +218,7 @@ watch(
     }
     selectedStudentId.value = props.student?.studentId ?? studentList.value[0]?.studentId ?? null;
     resetForms();
-    if (courses.value.length === 0) {
-      void loadCourses();
-    }
+    void loadTeacherCourses();
   },
   { immediate: true },
 );
@@ -230,6 +234,15 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [props.visible, props.classId, user.value?.id],
+  () => {
+    if (props.visible) {
+      void loadTeacherCourses();
+    }
+  },
+);
+
 // --- Création ---
 const newCourseId = ref<string | null>(null);
 const newValue = ref<number | null>(null);
@@ -243,7 +256,8 @@ const canCreate = computed(
     newValue.value >= 0 &&
     newValue.value <= 20 &&
     Boolean(activeStudent.value) &&
-    Boolean(props.classId),
+    Boolean(props.classId) &&
+    Boolean(user.value?.id),
 );
 
 async function submitCreate() {
@@ -252,6 +266,7 @@ async function submitCreate() {
     !canCreate.value ||
     !activeStudent.value ||
     !props.classId ||
+    !user.value?.id ||
     newCourseId.value === null ||
     newValue.value === null
   ) {
@@ -264,6 +279,7 @@ async function submitCreate() {
       classId: props.classId,
       courseId: newCourseId.value,
       value: newValue.value,
+      teacherId: user.value.id,
     });
     newCourseId.value = null;
     newValue.value = null;

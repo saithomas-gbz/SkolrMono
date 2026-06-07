@@ -26,9 +26,16 @@ model ClassTeacher {
   teacherId String   // userId of the teacher (auth-service)
   isPrincipal Boolean @default(false)
   class     Class    @relation(fields: [classId], references: [id])
-
+  courses   Course[]
   @@unique([classId, teacherId])
   @@index([teacherId])
+}
+
+model Course {
+  id          String @id @unique @default(uuid())
+  name        String
+  description String
+  classTeachers ClassTeacher[]
 }
 
 model ClassStudent {

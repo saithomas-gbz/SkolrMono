@@ -26,7 +26,10 @@ mock.module('../db', () => ({
       create: mock(),
       update: mock(),
       delete: mock()
-    }
+    },
+    classTeacher: {
+      findUnique: mock(),
+    },
   }
 }));
 
@@ -38,6 +41,9 @@ const prismaMock = db as {
     create: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
     delete: ReturnType<typeof mock>;
+  };
+  classTeacher: {
+    findUnique: ReturnType<typeof mock>;
   };
 };
 
@@ -64,6 +70,7 @@ describe('ClassController', () => {
     prismaMock.class.create.mockReset();
     prismaMock.class.update.mockReset();
     prismaMock.class.delete.mockReset();
+    prismaMock.classTeacher.findUnique.mockReset();
   });
 
   describe('getClassesSummary', () => {
@@ -169,6 +176,33 @@ describe('ClassController', () => {
       expect(mockReply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
     });
   });
+
+  describe('getTeacherCoursesInClass', () => {
+    it('should return courses for a teacher assigned to a class', async () => {
+      const courses = [{ id: 'course-1', name: 'Mathématiques', description: 'Demo' }];
+      prismaMock.classTeacher.findUnique.mockResolvedValue({ id: 'ct-1', courses });
+      const req = createMockRequest<{ Params: { classId: string; teacherId: string } }>({
+        params: { classId: 'class-1', teacherId: 'teacher-1' },
+      });
+      await classController.getTeacherCoursesInClass(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        data: courses,
+        message: 'Teacher courses fetched successfully',
+      });
+    });
+
+    it('should return 404 when teacher is not assigned to the class', async () => {
+      prismaMock.classTeacher.findUnique.mockResolvedValue(null);
+      const req = createMockRequest<{ Params: { classId: string; teacherId: string } }>({
+        params: { classId: 'class-1', teacherId: 'unknown' },
+      });
+      await classController.getTeacherCoursesInClass(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({ error: 'Teacher is not assigned to this class' });
+    });
+  });
+
   describe('createClass', () => {
     it('should create a class', async () => {
       prismaMock.class.create.mockResolvedValue({ id: '1', name: 'Class 1', description: 'Description 1' });
