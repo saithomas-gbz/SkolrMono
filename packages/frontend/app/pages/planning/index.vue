@@ -67,6 +67,7 @@ import type { CourseListApiResponse } from '~/composables/useGrade';
 import type { Session } from '~/composables/usePlanning';
 
 definePageMeta({ middleware: ['auth'] });
+defineExpose({ removeSession });
 
 const api = useApi();
 const { hasRole, userId } = useAuth();
@@ -181,7 +182,6 @@ async function removeSession(id: string) {
   }
 }
 
-defineExpose({ removeSession });
 </script>
 
 <style scoped>
