@@ -46,10 +46,16 @@
     </Card>
 
     <PlanningSessionDialog
-      v-model:visible="dialogVisible"
+      v-model:visible="sessionDialogVisible"
       :session="activeSession"
       :classes="classes"
       :initial-date="slotDate"
+      @saved="refresh"
+    />
+
+    <PlanningAbsenceDialog
+      v-model:visible="absenceDialogVisible"
+      :session="activeSession"
       @saved="refresh"
     />
   </div>
@@ -142,21 +148,27 @@ watch(sessions, async (newSessions) => {
   }
 });
 
-// Dialog create/edit
-const dialogVisible = ref(false);
+// Dialogs
+const sessionDialogVisible = ref(false);
+const absenceDialogVisible = ref(false);
 const activeSession = ref<Session | null>(null);
 const slotDate = ref<Date | null>(null);
 
 function openEditDialog(session: Session) {
   activeSession.value = session;
   slotDate.value = null;
-  dialogVisible.value = true;
+  if (canEdit.value) {
+    sessionDialogVisible.value = true;
+  } else {
+    // Élève ou visiteur : déclarer une absence sur cette session
+    absenceDialogVisible.value = true;
+  }
 }
 
 function openCreateDialog(date: Date | null) {
   activeSession.value = null;
   slotDate.value = date;
-  dialogVisible.value = true;
+  sessionDialogVisible.value = true;
 }
 
 // Suppression accessible depuis le dialog via event futur

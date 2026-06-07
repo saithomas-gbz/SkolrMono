@@ -7,7 +7,10 @@
     @hide="reset"
   >
     <div class="absence-form">
-      <div class="session-info" v-if="session">
+      <div
+        v-if="session"
+        class="session-info"
+      >
         <span class="session-info-label">Session</span>
         <span>{{ formatDatetime(session.startAt) }} – {{ formatTime(session.endAt) }}</span>
         <span v-if="session.room" class="session-room">Salle {{ session.room }}</span>
