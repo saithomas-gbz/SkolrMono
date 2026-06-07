@@ -36,6 +36,8 @@
         <PlanningWeeklyCalendar
           v-else
           :sessions="sessions"
+          :course-names="courseNames"
+          :teacher-names="teacherNames"
           :can-edit="canEdit"
           @session-click="openEditDialog"
           @slot-click="openCreateDialog"
@@ -55,6 +57,7 @@
 
 <script setup lang="ts">
 import { normalizeApiError, type SkolrClass, type ClassesApiResponse } from '~/composables/useClass';
+import type { CourseListApiResponse } from '~/composables/useGrade';
 import type { Session } from '~/composables/usePlanning';
 
 definePageMeta({ middleware: ['auth'] });
@@ -62,6 +65,7 @@ definePageMeta({ middleware: ['auth'] });
 const api = useApi();
 const { hasRole, userId } = useAuth();
 const { fetchSessions, deleteSession } = usePlanning();
+const { fetchUsersByIds } = useUser();
 
 const isAdmin = computed(() => hasRole('ADMIN'));
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
@@ -78,6 +82,21 @@ const { data: classesResponse } = await useFetch<ClassesApiResponse>('/class/cla
 });
 const classes = computed(() => classesResponse.value?.data ?? []);
 const classOptions = computed(() => classes.value.map((c) => ({ label: c.name, value: c.id })));
+
+// Noms des matières (grade-service)
+const { data: coursesResponse } = await useFetch<CourseListApiResponse>('/grade/courses', {
+  $fetch: api,
+  default: () => ({ data: [], message: '' }),
+});
+const courseNames = computed(
+  () => new Map((coursesResponse.value?.data ?? []).map((c) => [c.id, c.name])),
+);
+
+// Noms des professeurs — chargés dynamiquement depuis les sessions
+const teacherProfiles = ref<{ id: string; name: string | null; email: string }[]>([]);
+const teacherNames = computed(
+  () => new Map(teacherProfiles.value.map((t) => [t.id, t.name ?? t.email])),
+);
 
 // Construire les filtres selon le rôle
 const filters = computed(() => {
@@ -111,6 +130,17 @@ async function refresh() {
 }
 
 watch(filters, refresh, { immediate: true });
+
+// Quand les sessions changent, résoudre les noms des profs
+watch(sessions, async (newSessions) => {
+  const ids = [...new Set(newSessions.map((s) => s.teacherId))];
+  if (ids.length === 0) return;
+  try {
+    teacherProfiles.value = await fetchUsersByIds(ids);
+  } catch {
+    // non-bloquant : le calendrier affichera juste l'ID si le fetch échoue
+  }
+});
 
 // Dialog create/edit
 const dialogVisible = ref(false);

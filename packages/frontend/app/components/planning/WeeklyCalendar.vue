@@ -13,6 +13,8 @@ import type { Session } from '~/composables/usePlanning';
 
 const props = defineProps<{
   sessions: Session[];
+  courseNames?: Map<string, string>;
+  teacherNames?: Map<string, string>;
   canEdit?: boolean;
 }>();
 
@@ -21,17 +23,48 @@ const emit = defineEmits<{
   (e: 'slot-click', date: Date): void;
 }>();
 
+// Palette de couleurs par matière (déterministe sur courseId)
+const PALETTE = [
+  { bg: '#3b82f6', border: '#2563eb' }, // bleu
+  { bg: '#10b981', border: '#059669' }, // vert
+  { bg: '#f59e0b', border: '#d97706' }, // ambre
+  { bg: '#8b5cf6', border: '#7c3aed' }, // violet
+  { bg: '#ec4899', border: '#db2777' }, // rose
+  { bg: '#ef4444', border: '#dc2626' }, // rouge
+];
+
+function courseColor(courseId: string) {
+  const hash = courseId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return PALETTE[hash % PALETTE.length]!;
+}
+
 const events = computed(() =>
-  props.sessions.map((s) => ({
-    id: s.id,
-    title: s.room ? `Salle ${s.room}` : 'Sans salle',
-    start: s.startAt,
-    end: s.endAt,
-    extendedProps: { session: s },
-    backgroundColor: 'var(--p-primary-color)',
-    borderColor: 'var(--p-primary-color)',
-  })),
+  props.sessions.map((s) => {
+    const color       = courseColor(s.courseId);
+    const courseName  = props.courseNames?.get(s.courseId) ?? null;
+    const teacherName = props.teacherNames?.get(s.teacherId) ?? null;
+    return {
+      id: s.id,
+      title: courseName ?? '',
+      start: s.startAt,
+      end: s.endAt,
+      extendedProps: { session: s, courseName, teacherName },
+      backgroundColor: color.bg,
+      borderColor: color.border,
+    };
+  }),
 );
+
+function buildEventHtml(
+  courseName: string | null,
+  teacherName: string | null,
+  room: string | null,
+): string {
+  const courseEl  = courseName  ? `<span class="ev-course">${courseName}</span>`   : '';
+  const teacherEl = teacherName ? `<span class="ev-teacher">${teacherName}</span>` : '';
+  const roomEl    = room        ? `<span class="ev-room">🏫 ${room}</span>`        : '';
+  return `<div class="ev-body">${courseEl}${teacherEl}${roomEl}</div>`;
+}
 
 function handleEventClick(arg: EventClickArg) {
   const session = arg.event.extendedProps['session'] as Session;
@@ -54,14 +87,19 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   },
   buttonText: { today: "Aujourd'hui", prev: '‹', next: '›' },
   events: events.value,
+  eventContent: (arg) => {
+    const { courseName, teacherName, session } = arg.event.extendedProps as {
+      session: Session;
+      courseName: string | null;
+      teacherName: string | null;
+    };
+    return { html: buildEventHtml(courseName, teacherName, session.room) };
+  },
   eventClick: handleEventClick,
-  dateClick: props.canEdit
-    ? (arg) => emit('slot-click', arg.date)
-    : undefined,
+  dateClick: props.canEdit ? (arg) => emit('slot-click', arg.date) : undefined,
   height: 'auto',
   expandRows: true,
   nowIndicator: true,
-  eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
   slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
 }));
 </script>
@@ -94,10 +132,41 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 .weekly-calendar :deep(.fc-event) {
   cursor: pointer;
   border-radius: 4px;
-  padding: 2px 4px;
+  overflow: hidden;
 }
 
 .weekly-calendar :deep(.fc-timegrid-slot) {
   height: 2.5rem;
+}
+
+/* Contenu custom des événements */
+.weekly-calendar :deep(.ev-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 4px;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.weekly-calendar :deep(.ev-course) {
+  font-weight: 700;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekly-calendar :deep(.ev-teacher) {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weekly-calendar :deep(.ev-room) {
+  font-size: 0.7rem;
+  opacity: 0.8;
 }
 </style>

@@ -36,6 +36,14 @@ export const DB_SERVICES: DbService[] = [
     migrateScript: 'db:migrate:deploy',
     seedScript: 'db:seed',
   },
+  {
+    packageDir: 'planning-services',
+    composeService: 'postgres-planning',
+    defaultDatabaseUrl:
+      'postgresql://postgres:postgres@localhost:5435/skolr_planning?schema=public',
+    migrateScript: 'db:migrate:deploy',
+    seedScript: 'db:seed',
+  },
 ];
 
 export const COMPOSE_DB_SERVICES = [
