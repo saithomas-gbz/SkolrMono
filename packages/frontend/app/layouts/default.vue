@@ -29,6 +29,17 @@
         >
           Mes élèves
         </NuxtLink>
+        <NuxtLink class="sidebar-link" to="/planning" @click="isSidebarOpen = false">
+          Emploi du temps
+        </NuxtLink>
+        <NuxtLink
+          v-if="isTeacher"
+          class="sidebar-link"
+          to="/planning/absences"
+          @click="isSidebarOpen = false"
+        >
+          Absences
+        </NuxtLink>
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
           Déconnexion
         </button>
@@ -69,6 +80,12 @@ const items = computed<MenuItem[]>(() => {
       label: 'Mes élèves',
       command: () => navigateTo('/teacher/students'),
     });
+  }
+
+  menu.push({ label: 'Emploi du temps', command: () => navigateTo('/planning') });
+
+  if (isTeacher.value) {
+    menu.push({ label: 'Absences', command: () => navigateTo('/planning/absences') });
   }
 
   return menu;

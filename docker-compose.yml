@@ -53,6 +53,24 @@ services:
       retries: 5
     networks:
       - skolr_network
+  postgres-planning:
+    image: postgres:15-alpine
+    container_name: skolr_planning_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skolr_planning
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_planning_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
   auth-service:
     build:
       context: .
@@ -116,6 +134,27 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+  planning-services:
+    build:
+      context: .
+      dockerfile: ./packages/planning-services/Dockerfile
+    container_name: skolr_planning_service
+    environment:
+      - PORT=3008
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-planning:5432/skolr_planning?schema=public
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres-planning:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3008/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -126,6 +165,7 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:3000
       - CLASS_SERVICE_URL=http://class-service:3002
       - GRADE_SERVICE_URL=http://grade-service:3007
+      - PLANNING_SERVICE_URL=http://planning-services:3008
     ports:
       - "3001:3001"
     depends_on:
@@ -134,6 +174,8 @@ services:
       class-service:
         condition: service_healthy
       grade-service:
+        condition: service_healthy
+      planning-services:
         condition: service_healthy
     networks:
       - skolr_network
@@ -162,6 +204,7 @@ volumes:
   postgres_auth_data:
   postgres_class_data:
   postgres_grade_data:
+  postgres_planning_data:
 
 networks:
   skolr_network:

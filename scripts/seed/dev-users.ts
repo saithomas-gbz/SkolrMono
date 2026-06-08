@@ -3,7 +3,7 @@
  * Single source of truth: keep auth/class/grade seeds consuming these exports
  * so the three databases stay in sync.
  */
-const DEV_USER_IDS = {
+export const DEV_USER_IDS = {
   admin: '11111111-1111-1111-1111-111111111101',
   user: '11111111-1111-1111-1111-111111111102',
   teacher: '11111111-1111-1111-1111-111111111103',
