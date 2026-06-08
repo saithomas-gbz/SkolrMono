@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
@@ -7,6 +8,13 @@ import gradeRoutes from './routes/gradeRoutes';
 import courseRoutes from './routes/courseRoutes';
 
 dotenv.config();
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+  serverName: 'grade-service',
+  tracesSampleRate: 1.0,
+});
 
 const gradePort = Number(process.env.PORT || 3007);
 
@@ -31,6 +39,8 @@ async function buildApp() {
 
   await app.register(gradeRoutes);
   await app.register(courseRoutes);
+
+  Sentry.setupFastifyErrorHandler(app);
 
   await app.register(fastifySwaggerUi, {
     routePrefix: '/docs',

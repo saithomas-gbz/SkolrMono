@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import fastifyOauth2 from '@fastify/oauth2';
 import fastifyJwt from '@fastify/jwt';
@@ -9,6 +10,13 @@ import { authTag } from './schemas/authOpenApi';
 import userRoutes from './routes/userRoutes';
 
 dotenv.config();
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+  serverName: 'auth-service',
+  tracesSampleRate: 1.0,
+});
 
 async function buildApp() {
   const app = Fastify({ logger: true });
@@ -50,6 +58,8 @@ async function buildApp() {
 
   await app.register(authRoutes);
   await app.register(userRoutes);
+
+  Sentry.setupFastifyErrorHandler(app);
 
   app.get('/test-db', async () => {
     const isConnected = await testDatabaseConnection();
