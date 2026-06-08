@@ -22,8 +22,11 @@
       </Card>
     </template>
 
-    <!-- ADMIN : vue globale (effectifs + toutes les notes) -->
+    <!-- ADMIN : vue globale (KPIs + effectifs + notes + absences + élèves) -->
     <template v-else-if="isAdmin">
+      <div class="admin-full-width">
+        <AdminKpiCards />
+      </div>
       <Card>
         <template #title>Effectifs par classe</template>
         <template #content>
@@ -34,6 +37,21 @@
         <template #title>Distribution globale des notes</template>
         <template #content>
           <ChartGradesChart :initial-class-id="initialClassId" />
+        </template>
+      </Card>
+      <Card>
+        <template #title>Absences récentes (7 jours)</template>
+        <template #content>
+          <AdminAbsencesWidget />
+        </template>
+      </Card>
+      <Card class="admin-full-width">
+        <template #title>
+          <span>Aperçu des élèves</span>
+          <NuxtLink to="/admin/students" class="card-link">Voir tout →</NuxtLink>
+        </template>
+        <template #content>
+          <AdminClassStudentTable :initial-class-id="initialClassId" />
         </template>
       </Card>
     </template>
@@ -99,6 +117,22 @@ const isStudent = computed(() => hasRole('USER'));
 
 .page :deep(.p-card) {
   flex: 1 1 min(100%, 30rem);
+}
+
+.admin-full-width {
+  flex: 1 1 100%;
+}
+
+.card-link {
+  float: right;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--p-primary-color, #6366f1);
+  text-decoration: none;
+}
+
+.card-link:hover {
+  text-decoration: underline;
 }
 
 .dashboard-hint {

@@ -29,11 +29,19 @@
         >
           Mes élèves
         </NuxtLink>
+        <NuxtLink
+          v-if="isAdmin"
+          class="sidebar-link"
+          to="/admin/students"
+          @click="isSidebarOpen = false"
+        >
+          Élèves (établissement)
+        </NuxtLink>
         <NuxtLink class="sidebar-link" to="/planning" @click="isSidebarOpen = false">
           Emploi du temps
         </NuxtLink>
         <NuxtLink
-          v-if="isTeacher"
+          v-if="isTeacher || isAdmin"
           class="sidebar-link"
           to="/planning/absences"
           @click="isSidebarOpen = false"
@@ -62,6 +70,7 @@ const isSidebarOpen = ref(false);
 const { isLoggedIn, clearSession, hasRole } = useAuth();
 
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
+const isAdmin = computed(() => hasRole('ADMIN'));
 
 const items = computed<MenuItem[]>(() => {
   const menu: MenuItem[] = [
@@ -82,9 +91,16 @@ const items = computed<MenuItem[]>(() => {
     });
   }
 
+  if (isAdmin.value) {
+    menu.push({
+      label: 'Élèves (établissement)',
+      command: () => navigateTo('/admin/students'),
+    });
+  }
+
   menu.push({ label: 'Emploi du temps', command: () => navigateTo('/planning') });
 
-  if (isTeacher.value) {
+  if (isTeacher.value || isAdmin.value) {
     menu.push({ label: 'Absences', command: () => navigateTo('/planning/absences') });
   }
 
