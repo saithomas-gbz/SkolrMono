@@ -3,15 +3,15 @@ services:
     image: postgres:15-alpine
     container_name: skolr_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: skolr_auth
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_AUTH_DB:-skolr_auth}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_AUTH_PORT:-5432}:5432"
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,33 +21,33 @@ services:
     image: postgres:15-alpine
     container_name: skolr_class_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: skolr_class
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_CLASS_DB:-skolr_class}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_CLASS_PORT:-5433}:5432"
     volumes:
       - postgres_class_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - "skolr_network"
+      - skolr_network
   postgres-grade:
     image: postgres:15-alpine
     container_name: skolr_grade_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: skolr_grade
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_GRADE_DB:-skolr_grade}
     ports:
-      - "5434:5432"
+      - "${POSTGRES_GRADE_PORT:-5434}:5432"
     volumes:
       - postgres_grade_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -57,15 +57,15 @@ services:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: skolr_planning
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_PLANNING_DB:-skolr_planning}
     ports:
-      - "5435:5432"
+      - "${POSTGRES_PLANNING_PORT:-5435}:5432"
     volumes:
       - postgres_planning_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -77,10 +77,14 @@ services:
       dockerfile: ./packages/auth-service/Dockerfile
     container_name: skolr_auth_service
     environment:
-        - NODE_PATH=/app/node_modules
-        - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/skolr_auth?schema=public
+      - NODE_PATH=/app/node_modules
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_AUTH_DB:-skolr_auth}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_CALLBACK_URI=${GOOGLE_CALLBACK_URI:-http://localhost:3000/login/google/callback}
     ports:
-      - "3000:3000"
+      - "${AUTH_SERVICE_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,7 +102,7 @@ services:
       dockerfile: ./packages/class-service/Dockerfile
     container_name: skolr_class_service
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres-class:5432/skolr_class?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?schema=public
     depends_on:
       postgres-class:
         condition: service_healthy
@@ -116,18 +120,18 @@ services:
       dockerfile: ./packages/grade-service/Dockerfile
     container_name: skolr_grade_service
     environment:
-      - PORT=3007
-      - DATABASE_URL=postgresql://postgres:postgres@postgres-grade:5432/skolr_grade?schema=public
-      - CLASS_SERVICE_URL=http://class-service:3002
+      - PORT=${GRADE_SERVICE_PORT:-3007}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?schema=public
+      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
     ports:
-      - "3007:3007"
+      - "${GRADE_SERVICE_PORT:-3007}:${GRADE_SERVICE_PORT:-3007}"
     depends_on:
       postgres-grade:
         condition: service_healthy
       class-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3007/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${GRADE_SERVICE_PORT:-3007}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -140,15 +144,15 @@ services:
       dockerfile: ./packages/planning-services/Dockerfile
     container_name: skolr_planning_service
     environment:
-      - PORT=3008
-      - DATABASE_URL=postgresql://postgres:postgres@postgres-planning:5432/skolr_planning?schema=public
+      - PORT=${PLANNING_SERVICE_PORT:-3008}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
     ports:
-      - "3008:3008"
+      - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
     depends_on:
       postgres-planning:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3008/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PLANNING_SERVICE_PORT:-3008}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -161,13 +165,13 @@ services:
       dockerfile: Dockerfile
     container_name: skolr_gateway
     environment:
-      - PORT=3001
-      - AUTH_SERVICE_URL=http://auth-service:3000
-      - CLASS_SERVICE_URL=http://class-service:3002
-      - GRADE_SERVICE_URL=http://grade-service:3007
-      - PLANNING_SERVICE_URL=http://planning-services:3008
+      - PORT=${GATEWAY_PORT:-3001}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
+      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
+      - GRADE_SERVICE_URL=${GRADE_SERVICE_URL:-http://grade-service:3007}
+      - PLANNING_SERVICE_URL=${PLANNING_SERVICE_URL:-http://planning-services:3008}
     ports:
-      - "3001:3001"
+      - "${GATEWAY_PORT:-3001}:${GATEWAY_PORT:-3001}"
     depends_on:
       auth-service:
         condition: service_healthy
@@ -191,21 +195,112 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - NUXT_PUBLIC_GATEWAY_BASE_URL=/api
-      - GATEWAY_INTERNAL_URL=http://gateway:3001
-    command: bun run dev --host 0.0.0.0 --port 3003
+      - NUXT_PUBLIC_GATEWAY_BASE_URL=${NUXT_PUBLIC_GATEWAY_BASE_URL:-/api}
+      - GATEWAY_INTERNAL_URL=${GATEWAY_INTERNAL_URL:-http://gateway:3001}
+    command: bun run dev --host 0.0.0.0 --port ${FRONTEND_PORT:-3003}
     ports:
-      - "3003:3003"
+      - "${FRONTEND_PORT:-3003}:${FRONTEND_PORT:-3003}"
     depends_on:
       - gateway
     networks:
       - skolr_network
+  grafana:
+    image: grafana/grafana:latest
+    container_name: skolr_grafana
+    ports:
+      - "${GRAFANA_PORT:-3030}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - skolr_network
+      - monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    networks:
+      - monitoring
+    restart: unless-stopped
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring
+    restart: unless-stopped
+  postgres-exporter-auth:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_auth
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_AUTH_DB:-skolr_auth}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - skolr_network
+      - monitoring
+    restart: unless-stopped
+  postgres-exporter-class:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_class
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?sslmode=disable
+    depends_on:
+      postgres-class:
+        condition: service_healthy
+    networks:
+      - skolr_network
+      - monitoring
+    restart: unless-stopped
+  postgres-exporter-grade:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_grade
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?sslmode=disable
+    depends_on:
+      postgres-grade:
+        condition: service_healthy
+    networks:
+      - skolr_network
+      - monitoring
+    restart: unless-stopped
+  postgres-exporter-planning:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter_planning
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?sslmode=disable
+    depends_on:
+      postgres-planning:
+        condition: service_healthy
+    networks:
+      - skolr_network
+      - monitoring
+    restart: unless-stopped
+
 volumes:
   postgres_auth_data:
   postgres_class_data:
   postgres_grade_data:
   postgres_planning_data:
+  grafana_data:
+  prometheus_data:
 
 networks:
   skolr_network:
+    driver: bridge
+  monitoring:
     driver: bridge
