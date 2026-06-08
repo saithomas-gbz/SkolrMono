@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
@@ -7,6 +8,13 @@ import sessionRoutes from './routes/sessionRoutes';
 import absenceRoutes from './routes/absenceRoutes';
 
 dotenv.config();
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+  serverName: 'planning-services',
+  tracesSampleRate: 1.0,
+});
 
 const planningPort = Number(process.env.PORT || 3008);
 
@@ -31,6 +39,8 @@ async function buildApp() {
 
   await app.register(sessionRoutes);
   await app.register(absenceRoutes);
+
+  Sentry.setupFastifyErrorHandler(app);
 
   await app.register(fastifySwaggerUi, {
     routePrefix: '/docs',

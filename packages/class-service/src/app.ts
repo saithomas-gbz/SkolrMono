@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
@@ -6,6 +7,13 @@ import { testDatabaseConnection } from './db';
 import classRoutes from './routes/classRoutes';
 
 dotenv.config();
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+  serverName: 'class-service',
+  tracesSampleRate: 1.0,
+});
 
 
 async function buildApp() {
@@ -25,6 +33,8 @@ async function buildApp() {
   });
 
   await app.register(classRoutes);
+
+  Sentry.setupFastifyErrorHandler(app);
 
   await app.register(fastifySwaggerUi, {
     routePrefix: '/docs',

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import fastify from 'fastify';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -15,6 +16,13 @@ import {
 } from './lib/mergeOpenApi';
 
 dotenv.config();
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+  serverName: 'gateway',
+  tracesSampleRate: 1.0,
+});
 
 const gatewayPort = parseInt(process.env.PORT || '3001', 10);
 const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:3000';
@@ -149,6 +157,8 @@ async function build() {
       return 'swaggerObject' in documentObject ? documentObject.swaggerObject : {};
     },
   });
+
+  Sentry.setupFastifyErrorHandler(gateway);
 
   await gateway.register(sensible);
   await gateway.register(cors, {

@@ -1,0 +1,13 @@
+# Branche Sentry self-hosted sur le réseau Skolr pour que les services
+# puissent envoyer des événements via skolr_sentry_nginx (port 80 interne).
+services:
+  nginx:
+    container_name: skolr_sentry_nginx
+    networks:
+      - default
+      - skolr_network
+
+networks:
+  skolr_network:
+    external: true
+    name: skolr_network
