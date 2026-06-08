@@ -32,11 +32,24 @@ model Class {
   grades      Grade[]
 }
 
-model Course {
-  id          String @id @unique @default(uuid())
+model Subject {
+  id          String   @id @unique @default(uuid())
   name        String
   description String
-  grades      Grade[]
+  courses     Course[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Course {
+  id               String    @id @unique @default(uuid())
+  name             String
+  description      String
+  subjectId        String?
+  subject          Subject?  @relation(fields: [subjectId], references: [id])
+  relatedCourses   Course[]  @relation("CourseRelations")
+  relatedCoursesOf Course[]  @relation("CourseRelations")
+  grades           Grade[]
 }
 
 model Grade {

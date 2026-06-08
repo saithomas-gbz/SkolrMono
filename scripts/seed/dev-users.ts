@@ -22,6 +22,12 @@ const DEV_COURSE_IDS = {
   histoire: '33333333-3333-3333-3333-333333333305',
 } as const;
 
+const DEV_SUBJECT_IDS = {
+  sciences: 'AAAA0000-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+  lettres: 'BBBB0000-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+  sciencesHumaines: 'CCCC0000-CCCC-CCCC-CCCC-CCCCCCCCCCCC',
+} as const;
+
 export const DEV_TEACHER_PASSWORD = 'dev-teacher-123';
 export const DEV_STUDENT_PASSWORD = 'dev-student-123';
 
@@ -32,16 +38,25 @@ export const DEV_CLASSES: DevClass[] = [
   { id: DEV_CLASS_IDS.sciences6, name: '6ème Sciences', description: 'Classe de démonstration — collège' },
 ];
 
-type DevCourse = { id: string; name: string; description: string };
+type DevSubject = { id: string; name: string; description: string };
+
+export const DEV_SUBJECTS: DevSubject[] = [
+  { id: DEV_SUBJECT_IDS.sciences, name: 'Sciences', description: 'Matière sciences (maths, physique, SVT)' },
+  { id: DEV_SUBJECT_IDS.lettres, name: 'Lettres', description: 'Matière lettres (français, langues)' },
+  { id: DEV_SUBJECT_IDS.sciencesHumaines, name: 'Sciences Humaines', description: 'Matière sciences humaines (histoire, géo)' },
+];
+
+type DevCourse = { id: string; name: string; description: string; subjectId?: string };
 
 export const DEV_COURSES: DevCourse[] = [
-  { id: DEV_COURSE_IDS.maths, name: 'Mathématiques', description: 'Cours de démonstration — maths' },
-  { id: DEV_COURSE_IDS.sciences, name: 'Sciences', description: 'Cours de démonstration — sciences' },
-  { id: DEV_COURSE_IDS.francais, name: 'Français', description: 'Cours de démonstration — français' },
+  { id: DEV_COURSE_IDS.maths, name: 'Mathématiques', description: 'Cours de démonstration — maths', subjectId: DEV_SUBJECT_IDS.sciences },
+  { id: DEV_COURSE_IDS.sciences, name: 'Sciences', description: 'Cours de démonstration — sciences', subjectId: DEV_SUBJECT_IDS.sciences },
+  { id: DEV_COURSE_IDS.francais, name: 'Français', description: 'Cours de démonstration — français', subjectId: DEV_SUBJECT_IDS.lettres },
   {
     id: DEV_COURSE_IDS.histoire,
     name: 'Histoire-Géographie',
     description: 'Cours de démonstration — histoire-géo',
+    subjectId: DEV_SUBJECT_IDS.sciencesHumaines,
   },
 ];
 

@@ -7,6 +7,8 @@ import {
   updateCourseSchema,
   deleteCourseSchema,
   massDeleteCoursesSchema,
+  addRelatedCourseSchema,
+  removeRelatedCourseSchema,
 } from '../schemas/courseOpenApi';
 
 export default async function courseRoutes(fastify: FastifyInstance) {
@@ -16,4 +18,6 @@ export default async function courseRoutes(fastify: FastifyInstance) {
   fastify.put('/courses/:id', { schema: updateCourseSchema }, courseController.updateCourse);
   fastify.delete('/courses/:id', { schema: deleteCourseSchema }, courseController.deleteCourse);
   fastify.delete('/courses', { schema: massDeleteCoursesSchema }, courseController.massDeleteCourses);
+  fastify.post('/courses/:id/related', { schema: addRelatedCourseSchema }, courseController.addRelatedCourse);
+  fastify.delete('/courses/:id/related/:relatedId', { schema: removeRelatedCourseSchema }, courseController.removeRelatedCourse);
 }
