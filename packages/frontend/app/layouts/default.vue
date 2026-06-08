@@ -40,6 +40,12 @@
         >
           Absences
         </NuxtLink>
+        <template v-if="isAdmin">
+          <div class="sidebar-section">Administration</div>
+          <NuxtLink class="sidebar-link" to="/admin/subjects" @click="isSidebarOpen = false">
+            Matières &amp; Programmes
+          </NuxtLink>
+        </template>
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
           Déconnexion
         </button>
@@ -62,6 +68,7 @@ const isSidebarOpen = ref(false);
 const { isLoggedIn, clearSession, hasRole } = useAuth();
 
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
+const isAdmin = computed(() => hasRole('ADMIN'));
 
 const items = computed<MenuItem[]>(() => {
   const menu: MenuItem[] = [
@@ -86,6 +93,10 @@ const items = computed<MenuItem[]>(() => {
 
   if (isTeacher.value) {
     menu.push({ label: 'Absences', command: () => navigateTo('/planning/absences') });
+  }
+
+  if (isAdmin.value) {
+    menu.push({ label: 'Matières & Programmes', command: () => navigateTo('/admin/subjects') });
   }
 
   return menu;
@@ -156,6 +167,15 @@ async function signOut() {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+.sidebar-section {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--p-text-muted-color, #94a3b8);
+  padding: 0.75rem 0.75rem 0.25rem;
 }
 
 .guest-root {

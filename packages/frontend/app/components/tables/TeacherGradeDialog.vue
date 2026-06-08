@@ -94,7 +94,7 @@
             :options="courseOptions"
             option-label="label"
             option-value="value"
-            placeholder="Choisir un cours"
+            placeholder="Choisir un programme"
             class="create-course"
           />
           <InputNumber
