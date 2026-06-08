@@ -6,6 +6,7 @@ import {
   DEV_COURSES,
   DEV_STUDENTS,
   DEV_SUBJECTS,
+  DEV_TOPICS,
   DEV_USER_IDS,
 } from '../../../scripts/seed/dev-users';
 
@@ -76,6 +77,14 @@ async function main() {
       });
     }
 
+    for (const spec of DEV_TOPICS) {
+      await prisma.topic.upsert({
+        where: { id: spec.id },
+        create: spec,
+        update: { name: spec.name, description: spec.description },
+      });
+    }
+
     // Link Maths ↔ Sciences as related courses (bidirectional via connect)
     const [mathsCourse, sciencesCourse] = devCourses;
     if (mathsCourse && sciencesCourse) {
@@ -107,9 +116,9 @@ async function main() {
       await prisma.grade.create({ data: spec });
     }
 
-    console.log('Seed grade-service: dev classes, subjects, courses, users, and grades ready.');
+    console.log('Seed grade-service: dev classes, subjects, courses, topics, users, and grades ready.');
     console.log(
-      `  • ${DEV_SUBJECTS.length} matières, ${devCourses.length} cours, ${devGradeUsers.length} élèves, ${devGrades.length} notes`,
+      `  • ${DEV_SUBJECTS.length} matières, ${devCourses.length} cours, ${DEV_TOPICS.length} sujets, ${devGradeUsers.length} élèves, ${devGrades.length} notes`,
     );
     console.log(
       '\nList grades: GET http://localhost:3007/grades (or via gateway GET http://localhost:3001/grade/grades)',

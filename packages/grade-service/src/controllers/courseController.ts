@@ -13,7 +13,7 @@ export interface UpdateCourseBody {
   subjectId?: string;
 }
 
-const courseInclude = { subject: true, relatedCourses: true };
+const courseInclude = { subject: true, relatedCourses: true, topics: { orderBy: { createdAt: 'asc' as const } } };
 
 export default {
   getAllCourses: async (request: FastifyRequest, reply: FastifyReply) => {

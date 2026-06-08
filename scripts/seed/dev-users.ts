@@ -46,6 +46,18 @@ export const DEV_SUBJECTS: DevSubject[] = [
   { id: DEV_SUBJECT_IDS.sciencesHumaines, name: 'Sciences Humaines', description: 'Matière sciences humaines (histoire, géo)' },
 ];
 
+const DEV_TOPIC_IDS = {
+  trigonometrie: 'DDDD0000-DDDD-DDDD-DDDD-000000000001',
+  pythagore: 'DDDD0000-DDDD-DDDD-DDDD-000000000002',
+  algebre: 'DDDD0000-DDDD-DDDD-DDDD-000000000003',
+  physique: 'DDDD0000-DDDD-DDDD-DDDD-000000000004',
+  biologie: 'DDDD0000-DDDD-DDDD-DDDD-000000000005',
+  grammaire: 'DDDD0000-DDDD-DDDD-DDDD-000000000006',
+  conjugaison: 'DDDD0000-DDDD-DDDD-DDDD-000000000007',
+  prehistoire: 'DDDD0000-DDDD-DDDD-DDDD-000000000008',
+  antiquite: 'DDDD0000-DDDD-DDDD-DDDD-000000000009',
+} as const;
+
 type DevCourse = { id: string; name: string; description: string; subjectId?: string };
 
 export const DEV_COURSES: DevCourse[] = [
@@ -58,6 +70,20 @@ export const DEV_COURSES: DevCourse[] = [
     description: 'Cours de démonstration — histoire-géo',
     subjectId: DEV_SUBJECT_IDS.sciencesHumaines,
   },
+];
+
+type DevTopic = { id: string; name: string; description: string; courseId: string };
+
+export const DEV_TOPICS: DevTopic[] = [
+  { id: DEV_TOPIC_IDS.trigonometrie, name: 'Trigonométrie', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.pythagore, name: 'Théorème de Pythagore', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.algebre, name: 'Algèbre', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.physique, name: 'Physique', description: '', courseId: DEV_COURSE_IDS.sciences },
+  { id: DEV_TOPIC_IDS.biologie, name: 'Biologie', description: '', courseId: DEV_COURSE_IDS.sciences },
+  { id: DEV_TOPIC_IDS.grammaire, name: 'Grammaire', description: '', courseId: DEV_COURSE_IDS.francais },
+  { id: DEV_TOPIC_IDS.conjugaison, name: 'Conjugaison', description: '', courseId: DEV_COURSE_IDS.francais },
+  { id: DEV_TOPIC_IDS.prehistoire, name: 'Préhistoire', description: '', courseId: DEV_COURSE_IDS.histoire },
+  { id: DEV_TOPIC_IDS.antiquite, name: 'Antiquité', description: '', courseId: DEV_COURSE_IDS.histoire },
 ];
 
 type DevTeacher = { id: string; email: string; name: string; classIds: string[] };

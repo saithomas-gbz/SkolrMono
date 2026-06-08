@@ -7,6 +7,7 @@ import { testDatabaseConnection } from './db';
 import gradeRoutes from './routes/gradeRoutes';
 import courseRoutes from './routes/courseRoutes';
 import subjectRoutes from './routes/subjectRoutes';
+import topicRoutes from './routes/topicRoutes';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ async function buildApp() {
         { name: 'grade', description: 'Grade services api' },
         { name: 'course', description: 'Course management api' },
         { name: 'subject', description: 'Subject management api' },
+        { name: 'topic', description: 'Topic management api' },
       ],
     },
   });
@@ -42,6 +44,7 @@ async function buildApp() {
   await app.register(gradeRoutes);
   await app.register(courseRoutes);
   await app.register(subjectRoutes);
+  await app.register(topicRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 

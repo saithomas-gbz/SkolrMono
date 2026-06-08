@@ -8,6 +8,17 @@ const errorBody = {
   required: ['error'],
 } as const;
 
+const courseTopicEntity = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+    courseId: { type: 'string' },
+  },
+  required: ['id', 'name', 'description', 'courseId'],
+} as const;
+
 const courseSubjectEntity = {
   type: 'object',
   properties: {
@@ -37,6 +48,10 @@ const courseEntity = {
         },
         required: ['id', 'name', 'description'],
       },
+    },
+    topics: {
+      type: 'array',
+      items: courseTopicEntity,
     },
   },
   required: ['id', 'name', 'description'],

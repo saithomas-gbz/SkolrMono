@@ -8,6 +8,7 @@ export type CourseEntity = {
   subjectId: string | null;
   subject: SubjectEntity | null;
   relatedCourses: Array<{ id: string; name: string; description: string }>;
+  topics: Array<{ id: string; name: string; description: string; courseId: string }>;
 };
 
 export type CourseApiResponse = {

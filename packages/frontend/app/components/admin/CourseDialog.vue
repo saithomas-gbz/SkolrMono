@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="course ? 'Modifier le programme' : 'Nouveau programme'"
     modal
-    :style="{ width: '34rem' }"
+    :style="{ width: '38rem' }"
     @hide="resetForm"
   >
     <div class="form">
@@ -52,6 +52,45 @@
         />
       </div>
 
+      <div class="field">
+        <label>Sujets</label>
+        <div class="topics-list">
+          <div
+            v-for="topic in visibleExistingTopics"
+            :key="topic.id"
+            class="topic-chip"
+          >
+            <span>{{ topic.name }}</span>
+            <button type="button" class="chip-remove" @click="markDeleteTopic(topic.id)">×</button>
+          </div>
+          <div
+            v-for="(topic, i) in stagingTopics"
+            :key="`staging-${i}`"
+            class="topic-chip topic-chip--staging"
+          >
+            <span>{{ topic.name }}</span>
+            <button type="button" class="chip-remove" @click="removeStagingTopic(i)">×</button>
+          </div>
+          <p v-if="visibleExistingTopics.length === 0 && stagingTopics.length === 0" class="topics-empty">
+            Aucun sujet
+          </p>
+        </div>
+        <div class="topic-input-row">
+          <InputText
+            v-model="newTopicName"
+            placeholder="Nom du sujet (ex: Trigonométrie)"
+            class="topic-input"
+            @keyup.enter="addStagingTopic"
+          />
+          <Button
+            icon="pi pi-plus"
+            severity="secondary"
+            :disabled="!newTopicName.trim()"
+            @click="addStagingTopic"
+          />
+        </div>
+      </div>
+
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
     </div>
 
@@ -86,6 +125,7 @@ const emit = defineEmits<{
 const visible = defineModel<boolean>('visible', { default: false });
 
 const { createCourse, updateCourse, addRelatedCourse, removeRelatedCourse } = useCourse();
+const { createTopic, deleteTopic } = useTopic();
 
 const defaultForm = () => ({
   name: '',
@@ -97,6 +137,10 @@ const defaultForm = () => ({
 const form = reactive(defaultForm());
 const pending = ref(false);
 const error = ref<string | null>(null);
+
+const newTopicName = ref('');
+const stagingTopics = ref<Array<{ name: string }>>([]);
+const topicsToDeleteIds = ref<Set<string>>(new Set());
 
 const isFormValid = computed(() => form.name.trim() && form.description.trim());
 
@@ -110,6 +154,10 @@ const otherCourseOptions = computed(() =>
     .map((c) => ({ label: c.name, value: c.id })),
 );
 
+const visibleExistingTopics = computed(() =>
+  (props.course?.topics ?? []).filter((t) => !topicsToDeleteIds.value.has(t.id)),
+);
+
 watch(
   () => props.course,
   (c) => {
@@ -119,13 +167,34 @@ watch(
       form.subjectId = c.subjectId;
       form.relatedCourseIds = c.relatedCourses.map((r) => r.id);
     }
+    stagingTopics.value = [];
+    topicsToDeleteIds.value = new Set();
+    newTopicName.value = '';
   },
   { immediate: true },
 );
 
+function addStagingTopic() {
+  const name = newTopicName.value.trim();
+  if (!name) return;
+  stagingTopics.value.push({ name });
+  newTopicName.value = '';
+}
+
+function removeStagingTopic(index: number) {
+  stagingTopics.value.splice(index, 1);
+}
+
+function markDeleteTopic(id: string) {
+  topicsToDeleteIds.value = new Set([...topicsToDeleteIds.value, id]);
+}
+
 function resetForm() {
   Object.assign(form, defaultForm());
   error.value = null;
+  stagingTopics.value = [];
+  topicsToDeleteIds.value = new Set();
+  newTopicName.value = '';
 }
 
 async function submit() {
@@ -141,7 +210,6 @@ async function submit() {
         subjectId: form.subjectId ?? undefined,
       });
 
-      // Sync related courses: add new ones, remove removed ones
       const prev = new Set(props.course.relatedCourses.map((r) => r.id));
       const next = new Set(form.relatedCourseIds);
       const toAdd = form.relatedCourseIds.filter((id) => !prev.has(id));
@@ -150,6 +218,10 @@ async function submit() {
       await Promise.all([
         ...toAdd.map((id) => addRelatedCourse(savedCourse.id, id)),
         ...toRemove.map((id) => removeRelatedCourse(savedCourse.id, id)),
+        ...[...topicsToDeleteIds.value].map((id) => deleteTopic(id)),
+        ...stagingTopics.value.map((t) =>
+          createTopic({ name: t.name, description: '', courseId: savedCourse.id }),
+        ),
       ]);
     } else {
       savedCourse = await createCourse({
@@ -158,9 +230,12 @@ async function submit() {
         subjectId: form.subjectId ?? undefined,
       });
 
-      if (form.relatedCourseIds.length > 0) {
-        await Promise.all(form.relatedCourseIds.map((id) => addRelatedCourse(savedCourse.id, id)));
-      }
+      await Promise.all([
+        ...form.relatedCourseIds.map((id) => addRelatedCourse(savedCourse.id, id)),
+        ...stagingTopics.value.map((t) =>
+          createTopic({ name: t.name, description: '', courseId: savedCourse.id }),
+        ),
+      ]);
     }
 
     visible.value = false;
@@ -194,5 +269,62 @@ async function submit() {
 
 .w-full {
   width: 100%;
+}
+
+.topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-height: 2rem;
+  padding: 0.375rem 0;
+}
+
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--p-surface-100, #f1f5f9);
+  border: 1px solid var(--p-surface-300, #cbd5e1);
+  font-size: 0.8rem;
+}
+
+.topic-chip--staging {
+  background: var(--p-primary-50, #eff6ff);
+  border-color: var(--p-primary-200, #bfdbfe);
+  color: var(--p-primary-700, #1d4ed8);
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.chip-remove:hover {
+  opacity: 1;
+}
+
+.topics-empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, #64748b);
+  align-self: center;
+}
+
+.topic-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.topic-input {
+  flex: 1;
 }
 </style>

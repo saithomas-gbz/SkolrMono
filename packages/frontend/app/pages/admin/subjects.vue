@@ -71,7 +71,19 @@
                   size="small"
                 >
                   <Column field="name" header="Nom" />
-                  <Column field="description" header="Description" />
+                  <Column header="Sujets">
+                    <template #body="{ data }">
+                      <div v-if="data.topics.length > 0" class="tags">
+                        <Tag
+                          v-for="t in data.topics"
+                          :key="t.id"
+                          :value="t.name"
+                          severity="secondary"
+                        />
+                      </div>
+                      <span v-else class="muted">—</span>
+                    </template>
+                  </Column>
                   <Column header="Programmes liés">
                     <template #body="{ data }">
                       <div v-if="data.relatedCourses.length > 0" class="tags">
@@ -131,7 +143,19 @@
                 </div>
                 <DataTable :value="unassignedCourses" data-key="id" size="small">
                   <Column field="name" header="Nom" />
-                  <Column field="description" header="Description" />
+                  <Column header="Sujets">
+                    <template #body="{ data }">
+                      <div v-if="data.topics.length > 0" class="tags">
+                        <Tag
+                          v-for="t in data.topics"
+                          :key="t.id"
+                          :value="t.name"
+                          severity="secondary"
+                        />
+                      </div>
+                      <span v-else class="muted">—</span>
+                    </template>
+                  </Column>
                   <Column header="Programmes liés">
                     <template #body="{ data }">
                       <div v-if="data.relatedCourses.length > 0" class="tags">
