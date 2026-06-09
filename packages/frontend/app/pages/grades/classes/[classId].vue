@@ -79,7 +79,7 @@
                       v-if="gradeFor(student.userId, a.id)"
                       :class="gradeClass(gradeFor(student.userId, a.id)!.status)"
                     >
-                      {{ gradeDisplay(student.userId, a.id, a.maxScore) }}
+                      {{ gradeDisplay(student.userId, a.id) }}
                     </span>
                     <span v-else class="grade-missing">—</span>
                   </td>
@@ -128,7 +128,7 @@ function gradeFor(userId: string, assignmentId: string): GradebookGradeRef | und
   return gradebook.value?.grades[userId]?.[assignmentId];
 }
 
-function gradeDisplay(userId: string, assignmentId: string, maxScore: number): string {
+function gradeDisplay(userId: string, assignmentId: string): string {
   const g = gradeFor(userId, assignmentId);
   if (!g) return '—';
   if (g.status === 'GRADED' && g.value !== null) return String(g.value);

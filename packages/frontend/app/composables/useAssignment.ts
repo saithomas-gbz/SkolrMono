@@ -95,7 +95,7 @@ type AssignmentListApiResponse = { data: AssignmentEntity[]; message: string };
 type GradeGridApiResponse = { data: GradeGridData; message: string };
 type GradebookApiResponse = { data: GradebookData; message: string };
 
-export function averageGrades(rows: GradeGridRow[], maxScore: number): number | null {
+export function averageGrades(rows: GradeGridRow[]): number | null {
   const graded = rows.filter((r) => r.grade.status === 'GRADED' && r.grade.value !== null);
   if (graded.length === 0) return null;
   const sum = graded.reduce((acc, r) => acc + (r.grade.value ?? 0), 0);

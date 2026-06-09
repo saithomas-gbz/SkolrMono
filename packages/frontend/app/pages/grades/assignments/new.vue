@@ -151,7 +151,7 @@ definePageMeta({ middleware: ['auth'] });
 
 const router = useRouter();
 const { user } = useAuth();
-const { fetchAssignments, createAssignment, publishAssignment, normalizeApiError } = useAssignment();
+const { createAssignment, publishAssignment, normalizeApiError } = useAssignment();
 const { fetchClassesByTeacherId, fetchTeacherCourses } = useClass();
 
 interface ClassOption { label: string; value: string }

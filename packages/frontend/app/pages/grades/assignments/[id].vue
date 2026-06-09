@@ -117,7 +117,6 @@ import {
   useAssignment,
   type GradeGridData,
   type GradeStatus,
-  type AssignmentEntity,
 } from '~/composables/useAssignment';
 
 definePageMeta({ middleware: ['auth'] });
