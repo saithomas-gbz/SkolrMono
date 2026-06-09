@@ -8,12 +8,51 @@ const errorBody = {
   required: ['error'],
 } as const;
 
+const courseTopicEntity = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+    courseId: { type: 'string' },
+  },
+  required: ['id', 'name', 'description', 'courseId'],
+} as const;
+
+const courseSubjectEntity = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    description: { type: 'string' },
+  },
+  required: ['id', 'name', 'description'],
+} as const;
+
 const courseEntity = {
   type: 'object',
   properties: {
     id: { type: 'string' },
     name: { type: 'string' },
     description: { type: 'string' },
+    subjectId: { type: 'string', nullable: true },
+    subject: { ...courseSubjectEntity, nullable: true },
+    relatedCourses: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          description: { type: 'string' },
+        },
+        required: ['id', 'name', 'description'],
+      },
+    },
+    topics: {
+      type: 'array',
+      items: courseTopicEntity,
+    },
   },
   required: ['id', 'name', 'description'],
 } as const;
@@ -70,6 +109,7 @@ export const createCourseSchema = {
     properties: {
       name: { type: 'string' },
       description: { type: 'string' },
+      subjectId: { type: 'string' },
     },
     required: ['name', 'description'],
   },
@@ -94,6 +134,7 @@ export const updateCourseSchema = {
     properties: {
       name: { type: 'string' },
       description: { type: 'string' },
+      subjectId: { type: 'string' },
     },
     additionalProperties: false,
   },
@@ -145,6 +186,49 @@ export const massDeleteCoursesSchema = {
       required: ['message', 'count'],
     },
     400: errorBody,
+    500: errorBody,
+  },
+} as const;
+
+export const addRelatedCourseSchema = {
+  description: 'Link a course to another course',
+  tags: [courseTag],
+  params: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+    },
+    required: ['id'],
+  },
+  body: {
+    type: 'object',
+    properties: {
+      relatedCourseId: { type: 'string' },
+    },
+    required: ['relatedCourseId'],
+  },
+  response: {
+    200: courseResponse,
+    400: errorBody,
+    404: errorBody,
+    500: errorBody,
+  },
+} as const;
+
+export const removeRelatedCourseSchema = {
+  description: 'Unlink a course from another course',
+  tags: [courseTag],
+  params: {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      relatedId: { type: 'string' },
+    },
+    required: ['id', 'relatedId'],
+  },
+  response: {
+    200: courseResponse,
+    404: errorBody,
     500: errorBody,
   },
 } as const;

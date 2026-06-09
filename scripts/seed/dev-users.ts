@@ -22,6 +22,12 @@ const DEV_COURSE_IDS = {
   histoire: '33333333-3333-3333-3333-333333333305',
 } as const;
 
+const DEV_SUBJECT_IDS = {
+  sciences: 'AAAA0000-AAAA-AAAA-AAAA-AAAAAAAAAAAA',
+  lettres: 'BBBB0000-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+  sciencesHumaines: 'CCCC0000-CCCC-CCCC-CCCC-CCCCCCCCCCCC',
+} as const;
+
 export const DEV_TEACHER_PASSWORD = 'dev-teacher-123';
 export const DEV_STUDENT_PASSWORD = 'dev-student-123';
 
@@ -32,17 +38,52 @@ export const DEV_CLASSES: DevClass[] = [
   { id: DEV_CLASS_IDS.sciences6, name: '6ème Sciences', description: 'Classe de démonstration — collège' },
 ];
 
-type DevCourse = { id: string; name: string; description: string };
+type DevSubject = { id: string; name: string; description: string };
+
+export const DEV_SUBJECTS: DevSubject[] = [
+  { id: DEV_SUBJECT_IDS.sciences, name: 'Sciences', description: 'Matière sciences (maths, physique, SVT)' },
+  { id: DEV_SUBJECT_IDS.lettres, name: 'Lettres', description: 'Matière lettres (français, langues)' },
+  { id: DEV_SUBJECT_IDS.sciencesHumaines, name: 'Sciences Humaines', description: 'Matière sciences humaines (histoire, géo)' },
+];
+
+const DEV_TOPIC_IDS = {
+  trigonometrie: 'DDDD0000-DDDD-DDDD-DDDD-000000000001',
+  pythagore: 'DDDD0000-DDDD-DDDD-DDDD-000000000002',
+  algebre: 'DDDD0000-DDDD-DDDD-DDDD-000000000003',
+  physique: 'DDDD0000-DDDD-DDDD-DDDD-000000000004',
+  biologie: 'DDDD0000-DDDD-DDDD-DDDD-000000000005',
+  grammaire: 'DDDD0000-DDDD-DDDD-DDDD-000000000006',
+  conjugaison: 'DDDD0000-DDDD-DDDD-DDDD-000000000007',
+  prehistoire: 'DDDD0000-DDDD-DDDD-DDDD-000000000008',
+  antiquite: 'DDDD0000-DDDD-DDDD-DDDD-000000000009',
+} as const;
+
+type DevCourse = { id: string; name: string; description: string; subjectId?: string };
 
 export const DEV_COURSES: DevCourse[] = [
-  { id: DEV_COURSE_IDS.maths, name: 'Mathématiques', description: 'Cours de démonstration — maths' },
-  { id: DEV_COURSE_IDS.sciences, name: 'Sciences', description: 'Cours de démonstration — sciences' },
-  { id: DEV_COURSE_IDS.francais, name: 'Français', description: 'Cours de démonstration — français' },
+  { id: DEV_COURSE_IDS.maths, name: 'Mathématiques', description: 'Cours de démonstration — maths', subjectId: DEV_SUBJECT_IDS.sciences },
+  { id: DEV_COURSE_IDS.sciences, name: 'Sciences', description: 'Cours de démonstration — sciences', subjectId: DEV_SUBJECT_IDS.sciences },
+  { id: DEV_COURSE_IDS.francais, name: 'Français', description: 'Cours de démonstration — français', subjectId: DEV_SUBJECT_IDS.lettres },
   {
     id: DEV_COURSE_IDS.histoire,
     name: 'Histoire-Géographie',
     description: 'Cours de démonstration — histoire-géo',
+    subjectId: DEV_SUBJECT_IDS.sciencesHumaines,
   },
+];
+
+type DevTopic = { id: string; name: string; description: string; courseId: string };
+
+export const DEV_TOPICS: DevTopic[] = [
+  { id: DEV_TOPIC_IDS.trigonometrie, name: 'Trigonométrie', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.pythagore, name: 'Théorème de Pythagore', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.algebre, name: 'Algèbre', description: '', courseId: DEV_COURSE_IDS.maths },
+  { id: DEV_TOPIC_IDS.physique, name: 'Physique', description: '', courseId: DEV_COURSE_IDS.sciences },
+  { id: DEV_TOPIC_IDS.biologie, name: 'Biologie', description: '', courseId: DEV_COURSE_IDS.sciences },
+  { id: DEV_TOPIC_IDS.grammaire, name: 'Grammaire', description: '', courseId: DEV_COURSE_IDS.francais },
+  { id: DEV_TOPIC_IDS.conjugaison, name: 'Conjugaison', description: '', courseId: DEV_COURSE_IDS.francais },
+  { id: DEV_TOPIC_IDS.prehistoire, name: 'Préhistoire', description: '', courseId: DEV_COURSE_IDS.histoire },
+  { id: DEV_TOPIC_IDS.antiquite, name: 'Antiquité', description: '', courseId: DEV_COURSE_IDS.histoire },
 ];
 
 type DevTeacher = { id: string; email: string; name: string; classIds: string[] };
