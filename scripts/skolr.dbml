@@ -1,0 +1,283 @@
+// ============================================================
+// SKOLR — Schéma de base de données
+// Architecture microservices — une BDD par service
+// ============================================================
+
+
+// ============================================================
+// AUTH SERVICE — PostgreSQL Users
+// ============================================================
+
+Enum role {
+  USER
+  TEACHER
+  STAFF
+  ADMIN
+  PARENT [note: 'Rôle géré via RBAC, pas de service dédié']
+}
+
+Table users_auth {
+  id             uuid        [pk, default: `uuid_generate_v4()`]
+  email          varchar     [unique, not null]
+  password       varchar     [note: 'null si OAuth']
+  name           varchar
+  image          varchar
+  role           role        [default: 'USER']
+  oauth_provider varchar
+  oauth_id       varchar
+  created_at     timestamp   [default: `now()`]
+  updated_at     timestamp
+}
+
+Table accounts {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  user_id     uuid      [not null, ref: > users_auth.id]
+  provider    varchar   [not null, note: 'google | local']
+  provider_id varchar   [not null]
+  created_at  timestamp [default: `now()`]
+}
+
+
+// ============================================================
+// CLASS SERVICE — PostgreSQL Class
+// ============================================================
+
+Table classes {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table class_teachers {
+  id           uuid    [pk, default: `uuid_generate_v4()`]
+  class_id     uuid    [not null, ref: > classes.id]
+  teacher_id   uuid    [not null, note: 'copie locale → users_auth.id']
+  is_principal boolean [default: false]
+}
+
+Table courses {
+  id          uuid    [pk, default: `uuid_generate_v4()`]
+  name        varchar [not null]
+  description varchar
+}
+
+Table class_teacher_courses {
+  class_teacher_id uuid [ref: > class_teachers.id]
+  course_id        uuid [ref: > courses.id]
+}
+
+Table class_students {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  class_id   uuid      [not null, ref: > classes.id]
+  student_id uuid      [not null, note: 'copie locale → users_auth.id']
+  joined_at  timestamp [default: `now()`]
+}
+
+
+// ============================================================
+// GRADE SERVICE — PostgreSQL Grades
+// ============================================================
+
+Table users_grade {
+  id       uuid    [pk, default: `uuid_generate_v4()`]
+  name     varchar [not null]
+  email    varchar [unique, not null, note: 'copie locale depuis auth-service']
+  class_id uuid    [not null, ref: > classes_grade.id]
+}
+
+Table classes_grade {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table subjects {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table courses_grade {
+  id          uuid    [pk, default: `uuid_generate_v4()`]
+  name        varchar [not null]
+  description varchar
+  subject_id  uuid    [ref: > subjects.id, note: 'nullable']
+}
+
+Table course_relations {
+  course_id         uuid [ref: > courses_grade.id]
+  related_course_id uuid [ref: > courses_grade.id, note: 'auto-relation many-to-many']
+}
+
+Table topics {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  course_id   uuid      [not null, ref: > courses_grade.id]
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table grades {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  user_id    uuid      [not null, ref: > users_grade.id]
+  class_id   uuid      [not null, ref: > classes_grade.id]
+  course_id  uuid      [not null, ref: > courses_grade.id]
+  value      float     [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+
+// ============================================================
+// PLANNING SERVICE — PostgreSQL Planning
+// ============================================================
+
+Enum absence_role {
+  STUDENT
+  TEACHER
+}
+
+Table sessions {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  class_id        uuid      [not null, note: 'copie locale → classes.id']
+  course_id       uuid      [not null, note: 'copie locale → courses.id']
+  teacher_id      uuid      [not null, note: 'copie locale → users_auth.id']
+  room            varchar
+  start_at        timestamp [not null]
+  end_at          timestamp [not null]
+  recurrence_rule varchar   [note: 'iCal RRULE format']
+  created_at      timestamp [default: `now()`]
+  updated_at      timestamp
+}
+
+Table absences {
+  id         uuid        [pk, default: `uuid_generate_v4()`]
+  session_id uuid        [not null, ref: > sessions.id]
+  user_id    uuid        [not null, note: 'copie locale → users_auth.id']
+  role       absence_role [not null]
+  justified  boolean     [default: false]
+  reason     varchar
+  created_at timestamp   [default: `now()`]
+  updated_at timestamp
+}
+
+
+// ============================================================
+// MESSAGE SERVICE — PostgreSQL Messages
+// ============================================================
+
+Table conversations {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  title      varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+Table conversation_participants {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  conversation_id uuid      [not null, ref: > conversations.id]
+  user_id         uuid      [not null, note: 'copie locale → users_auth.id']
+  joined_at       timestamp [default: `now()`]
+}
+
+Table messages {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  conversation_id uuid      [not null, ref: > conversations.id]
+  sender_id       uuid      [not null, note: 'copie locale → users_auth.id']
+  content         text      [not null]
+  read            boolean   [default: false]
+  created_at      timestamp [default: `now()`]
+}
+
+Table users_message {
+  id    uuid    [pk, default: `uuid_generate_v4()`]
+  name  varchar [not null]
+  email varchar [unique, not null, note: 'copie locale depuis auth-service']
+}
+
+
+// ============================================================
+// NOTIFICATION SERVICE
+// ============================================================
+
+Enum notification_type {
+  EMAIL
+  SMS
+  PUSH
+}
+
+Enum notification_channel {
+  ABSENCE    [note: 'absence.detected → planning-service']
+  MESSAGE    [note: 'message.received → message-service']
+  GRADE      [note: 'grade.added → grade-service']
+  ENROLLMENT [note: 'student.enrolled → class-service']
+}
+
+Table notifications {
+  id         uuid                  [pk, default: `uuid_generate_v4()`]
+  user_id    uuid                  [not null, note: 'copie locale → users_auth.id']
+  type       notification_type     [not null]
+  channel    notification_channel  [not null]
+  title      varchar               [not null]
+  body       text                  [not null]
+  read       boolean               [default: false]
+  created_at timestamp             [default: `now()`]
+}
+
+Table users_notification {
+  id    uuid    [pk, default: `uuid_generate_v4()`]
+  name  varchar [not null]
+  email varchar [unique, not null, note: 'copie locale depuis auth-service']
+}
+
+
+// ============================================================
+// TABLE GROUPS (par service / BDD)
+// ============================================================
+
+TableGroup "Auth Service — PostgreSQL Users" {
+  users_auth
+  accounts
+}
+
+TableGroup "Class Service — PostgreSQL Class" {
+  classes
+  class_teachers
+  courses
+  class_teacher_courses
+  class_students
+}
+
+TableGroup "Grade Service — PostgreSQL Grades" {
+  users_grade
+  classes_grade
+  subjects
+  courses_grade
+  course_relations
+  topics
+  grades
+}
+
+TableGroup "Planning Service — PostgreSQL Planning" {
+  sessions
+  absences
+}
+
+TableGroup "Message Service — PostgreSQL Messages" {
+  conversations
+  conversation_participants
+  messages
+  users_message
+}
+
+TableGroup "Notification Service" {
+  notifications
+  users_notification
+}
