@@ -4,6 +4,11 @@ import db from '../db';
 import type { FastifyRequest, FastifyReply, RouteGenericInterface } from 'fastify';
 import type { ClassData } from '../controllers/classController';
 
+mock.module('@skolr/rabbitmq', () => ({
+  publish: mock(),
+  ROUTING_KEYS: { STUDENT_ENROLLED: 'student.enrolled' },
+}));
+
 mock.module('../generated/prisma/client', () => ({
   PrismaClient: class {
     class = {

@@ -6,6 +6,11 @@ import type { CreateGradeBody, UpdateGradeBody } from '../controllers/gradeContr
 
 const teacherTeachesCourseMock = mock();
 
+mock.module('@skolr/rabbitmq', () => ({
+  publish: mock(),
+  ROUTING_KEYS: { GRADE_CREATED: 'grade.created' },
+}));
+
 mock.module('../lib/classServiceClient', () => ({
   teacherTeachesCourse: teacherTeachesCourseMock,
 }));
