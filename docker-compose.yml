@@ -1,4 +1,22 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: skolr_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-skolr}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-skolr}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
+
   postgres:
     image: postgres:15-alpine
     container_name: skolr_postgres
@@ -105,10 +123,13 @@ services:
     container_name: skolr_class_service
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?schema=public
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-skolr}:${RABBITMQ_PASSWORD:-skolr}@rabbitmq:5672
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     depends_on:
       postgres-class:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -127,6 +148,7 @@ services:
       - PORT=${GRADE_SERVICE_PORT:-3007}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?schema=public
       - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-skolr}:${RABBITMQ_PASSWORD:-skolr}@rabbitmq:5672
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
@@ -135,6 +157,8 @@ services:
       postgres-grade:
         condition: service_healthy
       class-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${GRADE_SERVICE_PORT:-3007}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -152,12 +176,15 @@ services:
     environment:
       - PORT=${PLANNING_SERVICE_PORT:-3008}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-skolr}:${RABBITMQ_PASSWORD:-skolr}@rabbitmq:5672
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
       - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
     depends_on:
       postgres-planning:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PLANNING_SERVICE_PORT:-3008}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -191,6 +218,30 @@ services:
         condition: service_healthy
       planning-services:
         condition: service_healthy
+    networks:
+      - skolr_network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./packages/notification-service/Dockerfile
+    container_name: skolr_notification_service
+    environment:
+      - PORT=${NOTIFICATION_SERVICE_PORT:-3009}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-skolr}:${RABBITMQ_PASSWORD:-skolr}@rabbitmq:5672
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-3009}:${NOTIFICATION_SERVICE_PORT:-3009}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${NOTIFICATION_SERVICE_PORT:-3009}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - skolr_network
 

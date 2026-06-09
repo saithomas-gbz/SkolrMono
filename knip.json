@@ -10,6 +10,18 @@
     "packages/class-service": {
       "project": ["src/**/*.ts"]
     },
+    "packages/grade-service": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/planning-services": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/notification-service": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/rabbitmq": {
+      "project": ["src/**/*.ts"]
+    },
     "packages/frontend": {
       "project": ["app/**/*.{vue,ts,tsx,jsx}", "server/**/*.ts"],
       "ignoreDependencies": ["vue", "vue-router", "chart.js"]
