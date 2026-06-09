@@ -13,10 +13,6 @@ import {
 const devClasses = DEV_CLASSES;
 const devCourses = DEV_COURSES;
 
-/**
- * Utilisateurs grade-service : tous les élèves inscrits (aligné class-service).
- * `classId` = la classe de l'élève (contrainte grade-service : 1 élève → 1 classe).
- */
 const devGradeUsers = DEV_STUDENTS.map((s) => ({
   id: s.id,
   name: s.name,
@@ -24,25 +20,101 @@ const devGradeUsers = DEV_STUDENTS.map((s) => ({
   classId: s.classId,
 }));
 
-/**
- * Notes déterministes : 2 notes par élève, sur 2 cours, dans la classe de l'élève.
- * Valeurs reproductibles (pas d'aléatoire) pour des seeds idempotents.
- */
-const devGrades = devGradeUsers.flatMap((student, i) =>
-  [0, 1].map((k) => {
-    const course = devCourses[(i + k) % devCourses.length]!;
-    const raw = 8 + ((i * 3 + k * 7) % 12) + (k === 0 ? 0 : 0.5);
-    const value = Math.min(20, Math.max(0, Number(raw.toFixed(1))));
-    return {
-      userId: student.id,
-      classId: student.classId,
-      courseId: course.id,
-      value,
-    };
-  }),
-);
+const CLASS_CM2A = DEV_CLASSES[0]!.id;
+const CLASS_6EME = DEV_CLASSES[1]!.id;
+const COURSE_MATHS = DEV_COURSES[0]!.id;
+const COURSE_SCIENCES = DEV_COURSES[1]!.id;
+const COURSE_FRANCAIS = DEV_COURSES[2]!.id;
+const COURSE_HISTOIRE = DEV_COURSES[3]!.id;
+const TEACHER_ID = DEV_USER_IDS.teacher;
 
-const devGradeUserIds = [...devGradeUsers.map((u) => u.id), DEV_USER_IDS.teacher];
+const DEV_ASSIGNMENT_IDS = {
+  cm2a_maths_ctrl1: 'EEEE0001-EEEE-EEEE-EEEE-000000000001',
+  cm2a_maths_ctrl2: 'EEEE0001-EEEE-EEEE-EEEE-000000000002',
+  cm2a_francais_dict: 'EEEE0001-EEEE-EEEE-EEEE-000000000003',
+  sci6_sciences_tp1: 'EEEE0002-EEEE-EEEE-EEEE-000000000004',
+  sci6_histoire_ctrl: 'EEEE0002-EEEE-EEEE-EEEE-000000000005',
+  cm2a_maths_draft: 'EEEE0001-EEEE-EEEE-EEEE-000000000006',
+} as const;
+
+const devAssignments = [
+  {
+    id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl1,
+    title: 'Contrôle chapitre 1 — Fractions',
+    classId: CLASS_CM2A,
+    courseId: COURSE_MATHS,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-05-15T08:00:00Z'),
+    maxScore: 20,
+    coefficient: 1,
+    status: 'CLOSED' as const,
+  },
+  {
+    id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl2,
+    title: 'Contrôle chapitre 2 — Géométrie',
+    classId: CLASS_CM2A,
+    courseId: COURSE_MATHS,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-06-01T08:00:00Z'),
+    maxScore: 20,
+    coefficient: 2,
+    status: 'PUBLISHED' as const,
+  },
+  {
+    id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict,
+    title: 'Dictée n°3',
+    classId: CLASS_CM2A,
+    courseId: COURSE_FRANCAIS,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-06-05T10:00:00Z'),
+    maxScore: 10,
+    coefficient: 1,
+    status: 'PUBLISHED' as const,
+  },
+  {
+    id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1,
+    title: 'TP — Observation au microscope',
+    classId: CLASS_6EME,
+    courseId: COURSE_SCIENCES,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-05-20T14:00:00Z'),
+    maxScore: 20,
+    coefficient: 1,
+    status: 'CLOSED' as const,
+  },
+  {
+    id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl,
+    title: 'Contrôle — Préhistoire',
+    classId: CLASS_6EME,
+    courseId: COURSE_HISTOIRE,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-06-08T09:00:00Z'),
+    maxScore: 20,
+    coefficient: 1,
+    status: 'PUBLISHED' as const,
+  },
+  {
+    id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft,
+    title: 'Contrôle chapitre 3 — Brouillon',
+    classId: CLASS_CM2A,
+    courseId: COURSE_MATHS,
+    teacherId: TEACHER_ID,
+    assignedAt: new Date('2026-06-20T08:00:00Z'),
+    maxScore: 20,
+    coefficient: 1,
+    status: 'DRAFT' as const,
+  },
+];
+
+function gradeStatusForIndex(i: number): 'GRADED' | 'ABSENT' | 'PENDING' {
+  if (i % 7 === 0) return 'ABSENT';
+  if (i % 5 === 0) return 'PENDING';
+  return 'GRADED';
+}
+
+function gradeValueForIndex(i: number, maxScore: number): number {
+  return Math.min(maxScore, Math.max(0, Number((maxScore * 0.4 + ((i * 3 + 7) % (maxScore * 0.6 + 1))).toFixed(1))));
+}
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -85,7 +157,7 @@ async function main() {
       });
     }
 
-    // Link Maths ↔ Sciences as related courses (bidirectional via connect)
+    // Link Maths ↔ Sciences as related courses
     const [mathsCourse, sciencesCourse] = devCourses;
     if (mathsCourse && sciencesCourse) {
       await prisma.course.update({
@@ -94,16 +166,8 @@ async function main() {
       });
     }
 
-    await prisma.grade.deleteMany({
-      where: {
-        userId: { in: [...devGradeUserIds] },
-      },
-    });
-
-    await prisma.user.deleteMany({
-      where: { id: DEV_USER_IDS.teacher },
-    });
-
+    // Upsert students
+    await prisma.user.deleteMany({ where: { id: DEV_USER_IDS.teacher } });
     for (const spec of devGradeUsers) {
       await prisma.user.upsert({
         where: { id: spec.id },
@@ -112,16 +176,49 @@ async function main() {
       });
     }
 
-    for (const spec of devGrades) {
-      await prisma.grade.create({ data: spec });
+    // Upsert assignments
+    await prisma.grade.deleteMany({
+      where: { assignmentId: { in: Object.values(DEV_ASSIGNMENT_IDS) } },
+    });
+    for (const spec of devAssignments) {
+      await prisma.assignment.upsert({
+        where: { id: spec.id },
+        create: spec,
+        update: { title: spec.title, status: spec.status, assignedAt: spec.assignedAt },
+      });
     }
 
-    console.log('Seed grade-service: dev classes, subjects, courses, topics, users, and grades ready.');
+    // Create grades for published/closed assignments
+    const publishedAssignments = devAssignments.filter((a) => a.status !== 'DRAFT');
+    let gradeCount = 0;
+    for (const assignment of publishedAssignments) {
+      const students = devGradeUsers.filter((u) => u.classId === assignment.classId);
+      for (let i = 0; i < students.length; i++) {
+        const student = students[i]!;
+        const status = gradeStatusForIndex(i);
+        const value = status === 'GRADED' ? gradeValueForIndex(i, assignment.maxScore) : null;
+        await prisma.grade.upsert({
+          where: { assignmentId_userId: { assignmentId: assignment.id, userId: student.id } },
+          create: {
+            assignmentId: assignment.id,
+            userId: student.id,
+            classId: assignment.classId,
+            courseId: assignment.courseId,
+            status,
+            value,
+          },
+          update: { status, value },
+        });
+        gradeCount++;
+      }
+    }
+
+    console.log('Seed grade-service: dev classes, subjects, courses, topics, users, assignments and grades ready.');
     console.log(
-      `  • ${DEV_SUBJECTS.length} matières, ${devCourses.length} cours, ${DEV_TOPICS.length} sujets, ${devGradeUsers.length} élèves, ${devGrades.length} notes`,
+      `  • ${DEV_SUBJECTS.length} matières, ${devCourses.length} cours, ${DEV_TOPICS.length} sujets, ${devGradeUsers.length} élèves`,
     );
     console.log(
-      '\nList grades: GET http://localhost:3007/grades (or via gateway GET http://localhost:3001/grade/grades)',
+      `  • ${devAssignments.length} devoirs (${publishedAssignments.length} publiés/clôturés, 1 brouillon), ${gradeCount} notes`,
     );
   } finally {
     await prisma.$disconnect();

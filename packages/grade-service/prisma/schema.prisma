@@ -13,6 +13,19 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum GradeStatus {
+  PENDING
+  GRADED
+  ABSENT
+  EXEMPT
+}
+
 model User {
   id      String  @id @unique @default(uuid())
   name    String
@@ -23,13 +36,14 @@ model User {
 }
 
 model Class {
-  id          String   @id @unique @default(uuid())
+  id          String       @id @unique @default(uuid())
   name        String
   description String
   students    User[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   grades      Grade[]
+  assignments Assignment[]
 }
 
 model Subject {
@@ -42,15 +56,16 @@ model Subject {
 }
 
 model Course {
-  id               String    @id @unique @default(uuid())
+  id               String       @id @unique @default(uuid())
   name             String
   description      String
   subjectId        String?
-  subject          Subject?  @relation(fields: [subjectId], references: [id])
-  relatedCourses   Course[]  @relation("CourseRelations")
-  relatedCoursesOf Course[]  @relation("CourseRelations")
+  subject          Subject?     @relation(fields: [subjectId], references: [id])
+  relatedCourses   Course[]     @relation("CourseRelations")
+  relatedCoursesOf Course[]     @relation("CourseRelations")
   grades           Grade[]
   topics           Topic[]
+  assignments      Assignment[]
 }
 
 model Topic {
@@ -63,15 +78,43 @@ model Topic {
   updatedAt   DateTime @updatedAt
 }
 
+model Assignment {
+  id          String           @id @default(uuid())
+  title       String
+  description String?
+  classId     String
+  class       Class            @relation(fields: [classId], references: [id])
+  courseId    String
+  course      Course           @relation(fields: [courseId], references: [id])
+  teacherId   String
+  assignedAt  DateTime
+  dueAt       DateTime?
+  maxScore    Float            @default(20)
+  coefficient Float            @default(1)
+  status      AssignmentStatus @default(DRAFT)
+  grades      Grade[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([classId, courseId])
+  @@index([assignedAt])
+}
+
 model Grade {
-  id        String   @id @unique @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  class     Class    @relation(fields: [classId], references: [id])
-  classId   String
-  course    Course   @relation(fields: [courseId], references: [id])
-  courseId  String
-  value     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String      @id @unique @default(uuid())
+  assignmentId String
+  assignment   Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  classId      String
+  class        Class       @relation(fields: [classId], references: [id])
+  courseId     String
+  course       Course      @relation(fields: [courseId], references: [id])
+  status       GradeStatus @default(PENDING)
+  value        Float?
+  comment      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([assignmentId, userId])
 }

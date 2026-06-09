@@ -48,6 +48,14 @@
         >
           Absences
         </NuxtLink>
+        <NuxtLink
+          v-if="isTeacher"
+          class="sidebar-link"
+          to="/grades/assignments/new"
+          @click="isSidebarOpen = false"
+        >
+          Carnet de notes
+        </NuxtLink>
         <template v-if="isAdmin">
           <div class="sidebar-section">Administration</div>
           <NuxtLink class="sidebar-link" to="/admin/subjects" @click="isSidebarOpen = false">

@@ -63,13 +63,22 @@
         </Column>
         <Column header="Actions">
           <template #body="{ data }">
-            <Button
-              label="Gérer les notes"
-              icon="pi pi-pencil"
-              size="small"
-              outlined
-              @click="openGradeDialog(data)"
-            />
+            <div class="action-buttons">
+              <Button
+                label="Gérer les notes"
+                icon="pi pi-pencil"
+                size="small"
+                outlined
+                @click="openGradeDialog(data)"
+              />
+              <NuxtLink
+                v-if="selectedClassId"
+                :to="`/grades/classes/${selectedClassId}`"
+                class="p-button p-button-sm p-button-text"
+              >
+                Carnet
+              </NuxtLink>
+            </div>
           </template>
         </Column>
       </DataTable>
@@ -245,5 +254,11 @@ function openGradeDialog(row: StudentRow) {
 
 .students-table {
   font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>

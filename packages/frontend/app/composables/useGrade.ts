@@ -25,10 +25,13 @@ export type GradeCourse = {
 /** Aligné sur `gradeOpenApi` (`gradeEntity`). */
 export type GradeEntity = {
   id: string;
+  assignmentId: string;
   userId: string;
   classId: string;
   courseId: string;
-  value: number;
+  status: 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
+  value: number | null;
+  comment: string | null;
   createdAt: string;
   updatedAt: string;
   user?: GradeUser;
@@ -52,15 +55,20 @@ export type CourseListApiResponse = {
 };
 
 export type CreateGradeBody = {
+  assignmentId: string;
   userId: string;
   classId: string;
   courseId: string;
-  value: number;
+  value?: number;
+  status?: 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
+  comment?: string;
   teacherId: string;
 };
 
 export type UpdateGradeBody = {
-  value: number;
+  value?: number;
+  status?: 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
+  comment?: string;
 };
 
 export type HistogramBucket = {
@@ -70,12 +78,13 @@ export type HistogramBucket = {
   count: number;
 };
 
-export function averageGradeValues(grades: Pick<GradeEntity, 'value'>[]): number | null {
-  if (grades.length === 0) {
+export function averageGradeValues(grades: Pick<GradeEntity, 'value' | 'status'>[]): number | null {
+  const graded = grades.filter((g) => g.status === 'GRADED' && g.value !== null);
+  if (graded.length === 0) {
     return null;
   }
-  const sum = grades.reduce((acc, grade) => acc + grade.value, 0);
-  return sum / grades.length;
+  const sum = graded.reduce((acc, grade) => acc + (grade.value ?? 0), 0);
+  return sum / graded.length;
 }
 
 /**
@@ -102,7 +111,7 @@ export function histogramBuckets(
 
   for (const grade of grades) {
     const value = grade.value;
-    if (value < min || value > max) {
+    if (value === null || value === undefined || value < min || value > max) {
       continue;
     }
     const index =
