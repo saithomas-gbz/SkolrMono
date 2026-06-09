@@ -43,17 +43,20 @@ const gradeEntity = {
   type: 'object',
   properties: {
     id: { type: 'string' },
+    assignmentId: { type: 'string' },
     userId: { type: 'string' },
     classId: { type: 'string' },
     courseId: { type: 'string' },
-    value: { type: 'number' },
+    status: { type: 'string', enum: ['PENDING', 'GRADED', 'ABSENT', 'EXEMPT'] },
+    value: { type: 'number', nullable: true },
+    comment: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
     user: gradeUser,
     class: gradeClass,
     course: gradeCourse,
   },
-  required: ['id', 'userId', 'classId', 'courseId', 'value', 'createdAt', 'updatedAt'],
+  required: ['id', 'assignmentId', 'userId', 'classId', 'courseId', 'status', 'createdAt', 'updatedAt'],
 } as const;
 
 const gradeResponse = {
@@ -133,18 +136,21 @@ export const getGradesByUserIdSchema = {
 } as const;
 
 export const createGradeSchema = {
-  description: 'Create a grade for a user in a class',
+  description: 'Create a grade for a user in a class (linked to an assignment)',
   tags: [gradeTag],
   body: {
     type: 'object',
     properties: {
+      assignmentId: { type: 'string' },
       userId: { type: 'string' },
       classId: { type: 'string' },
       courseId: { type: 'string' },
       value: { type: 'number' },
+      status: { type: 'string', enum: ['PENDING', 'GRADED', 'ABSENT', 'EXEMPT'] },
+      comment: { type: 'string' },
       teacherId: { type: 'string' },
     },
-    required: ['userId', 'classId', 'courseId', 'value', 'teacherId'],
+    required: ['assignmentId', 'userId', 'classId', 'courseId', 'teacherId'],
   },
   response: {
     201: gradeResponse,
@@ -156,7 +162,7 @@ export const createGradeSchema = {
 } as const;
 
 export const updateGradeSchema = {
-  description: 'Update a grade value',
+  description: 'Update a grade value, status or comment',
   tags: [gradeTag],
   params: {
     type: 'object',
@@ -169,8 +175,9 @@ export const updateGradeSchema = {
     type: 'object',
     properties: {
       value: { type: 'number' },
+      status: { type: 'string', enum: ['PENDING', 'GRADED', 'ABSENT', 'EXEMPT'] },
+      comment: { type: 'string' },
     },
-    required: ['value'],
     additionalProperties: false,
   },
   response: {

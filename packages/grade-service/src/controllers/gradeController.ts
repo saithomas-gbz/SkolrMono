@@ -9,15 +9,20 @@ const gradeInclude = {
 } as const;
 
 export interface CreateGradeBody {
+  assignmentId: string;
   userId: string;
   classId: string;
   courseId: string;
-  value: number;
+  value?: number;
+  status?: string;
+  comment?: string;
   teacherId: string;
 }
 
 export interface UpdateGradeBody {
-  value: number;
+  value?: number;
+  status?: string;
+  comment?: string;
 }
 
 export default {
@@ -87,10 +92,15 @@ export default {
     reply: FastifyReply,
   ) => {
     try {
-      const { userId, classId, courseId, value, teacherId } = request.body;
+      const { assignmentId, userId, classId, courseId, value, status, comment, teacherId } = request.body;
 
       if (!teacherId) {
         return reply.status(400).send({ error: 'teacherId is required' });
+      }
+
+      const assignment = await db.assignment.findUnique({ where: { id: assignmentId } });
+      if (!assignment) {
+        return reply.status(404).send({ error: 'Assignment not found' });
       }
 
       const user = await db.user.findUnique({ where: { id: userId } });
@@ -120,7 +130,15 @@ export default {
       }
 
       const grade = await db.grade.create({
-        data: { userId, classId, courseId, value },
+        data: {
+          assignmentId,
+          userId,
+          classId,
+          courseId,
+          value: value ?? null,
+          status: (status ?? 'GRADED') as 'GRADED',
+          comment: comment ?? null,
+        },
         include: gradeInclude,
       });
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });
@@ -136,7 +154,7 @@ export default {
   ) => {
     try {
       const { id } = request.params;
-      const { value } = request.body;
+      const { value, status, comment } = request.body;
 
       const existing = await db.grade.findUnique({ where: { id } });
       if (!existing) {
@@ -145,7 +163,11 @@ export default {
 
       const grade = await db.grade.update({
         where: { id },
-        data: { value },
+        data: {
+          ...(value !== undefined ? { value } : {}),
+          ...(status !== undefined ? { status: status as 'GRADED' } : {}),
+          ...(comment !== undefined ? { comment } : {}),
+        },
         include: gradeInclude,
       });
       return reply.status(200).send({ data: grade, message: 'Grade updated successfully' });

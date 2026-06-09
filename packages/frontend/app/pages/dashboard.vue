@@ -3,6 +3,19 @@
     <!-- TEACHER / STAFF : effectifs par classe + distribution des notes -->
     <template v-if="isTeacher">
       <Card>
+        <template #title>
+          <div class="card-title-row">
+            <span>Carnet de notes</span>
+            <NuxtLink to="/grades/assignments/new" class="card-link">+ Nouveau devoir →</NuxtLink>
+          </div>
+        </template>
+        <template #content>
+          <p class="dashboard-hint">
+            Créez un devoir, saisissez les notes de tous vos élèves en une fois et consultez le carnet matriciel par classe.
+          </p>
+        </template>
+      </Card>
+      <Card>
         <template #title>Effectifs par classe</template>
         <template #content>
           <ChartClassesChart :initial-class-id="initialClassId" />
@@ -121,6 +134,13 @@ const isStudent = computed(() => hasRole('USER'));
 
 .admin-full-width {
   flex: 1 1 100%;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .card-link {

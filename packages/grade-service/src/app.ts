@@ -8,6 +8,7 @@ import gradeRoutes from './routes/gradeRoutes';
 import courseRoutes from './routes/courseRoutes';
 import subjectRoutes from './routes/subjectRoutes';
 import topicRoutes from './routes/topicRoutes';
+import assignmentRoutes from './routes/assignmentRoutes';
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ async function buildApp() {
       servers: [{ url: `http://localhost:${gradePort}`, description: 'Grade Service (direct)' }],
       tags: [
         { name: 'grade', description: 'Grade services api' },
+        { name: 'assignment', description: 'Assignment (devoir) management api' },
         { name: 'course', description: 'Course management api' },
         { name: 'subject', description: 'Subject management api' },
         { name: 'topic', description: 'Topic management api' },
@@ -42,6 +44,7 @@ async function buildApp() {
   });
 
   await app.register(gradeRoutes);
+  await app.register(assignmentRoutes);
   await app.register(courseRoutes);
   await app.register(subjectRoutes);
   await app.register(topicRoutes);

@@ -13,6 +13,7 @@ mock.module('../lib/classServiceClient', () => ({
 mock.module('../generated/prisma/client', () => ({
   PrismaClient: class {
     grade = { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() };
+    assignment = { findUnique: mock() };
     user = { findUnique: mock() };
     class = { findUnique: mock() };
     course = { findUnique: mock() };
@@ -27,6 +28,9 @@ mock.module('../db', () => ({
       create: mock(),
       update: mock(),
       delete: mock(),
+    },
+    assignment: {
+      findUnique: mock(),
     },
     user: {
       findUnique: mock(),
@@ -48,6 +52,9 @@ const prismaMock = db as {
     update: ReturnType<typeof mock>;
     delete: ReturnType<typeof mock>;
   };
+  assignment: {
+    findUnique: ReturnType<typeof mock>;
+  };
   user: {
     findUnique: ReturnType<typeof mock>;
   };
@@ -61,10 +68,13 @@ const prismaMock = db as {
 
 const sampleGrade = {
   id: 'grade-1',
+  assignmentId: 'assignment-1',
   userId: 'user-1',
   classId: 'class-1',
   courseId: 'course-1',
+  status: 'GRADED',
   value: 15.5,
+  comment: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   user: {
@@ -107,6 +117,7 @@ describe('GradeController', () => {
     prismaMock.grade.create.mockReset();
     prismaMock.grade.update.mockReset();
     prismaMock.grade.delete.mockReset();
+    prismaMock.assignment.findUnique.mockReset();
     prismaMock.user.findUnique.mockReset();
     prismaMock.class.findUnique.mockReset();
     prismaMock.course.findUnique.mockReset();
@@ -188,6 +199,7 @@ describe('GradeController', () => {
 
   describe('createGrade', () => {
     const body: CreateGradeBody = {
+      assignmentId: 'assignment-1',
       userId: 'user-1',
       classId: 'class-1',
       courseId: 'course-1',
@@ -196,6 +208,7 @@ describe('GradeController', () => {
     };
 
     it('should create a grade', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
@@ -210,7 +223,16 @@ describe('GradeController', () => {
       });
     });
 
+    it('should return 404 when assignment is missing', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue(null);
+      const req = createMockRequest<{ Body: CreateGradeBody }>({ body });
+      await gradeController.createGrade(req, mockReply);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+      expect(mockReply.send).toHaveBeenCalledWith({ error: 'Assignment not found' });
+    });
+
     it('should return 404 when user is missing', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue(null);
       const req = createMockRequest<{ Body: CreateGradeBody }>({ body });
       await gradeController.createGrade(req, mockReply);
@@ -219,6 +241,7 @@ describe('GradeController', () => {
     });
 
     it('should return 404 when class is missing', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue(null);
       const req = createMockRequest<{ Body: CreateGradeBody }>({ body });
@@ -228,6 +251,7 @@ describe('GradeController', () => {
     });
 
     it('should return 404 when course is missing', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue(null);
@@ -238,6 +262,7 @@ describe('GradeController', () => {
     });
 
     it('should return 400 when user does not belong to class', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'other-class' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
@@ -248,6 +273,7 @@ describe('GradeController', () => {
     });
 
     it('should return 403 when teacher cannot grade the course', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
