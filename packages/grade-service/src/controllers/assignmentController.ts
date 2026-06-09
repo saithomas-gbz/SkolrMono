@@ -3,7 +3,7 @@ import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
-export type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
+type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
 
 export interface CreateAssignmentBody {
   title: string;
@@ -38,14 +38,14 @@ export interface BatchUpdateGradesBody {
   entries: BatchGradeEntry[];
 }
 
-export interface AssignmentQuerystring {
+interface AssignmentQuerystring {
   classId?: string;
   courseId?: string;
   teacherId?: string;
   status?: AssignmentStatus;
 }
 
-export interface GradebookQuerystring {
+interface GradebookQuerystring {
   courseId?: string;
 }
 
