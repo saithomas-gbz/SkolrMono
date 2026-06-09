@@ -89,6 +89,37 @@ services:
       retries: 5
     networks:
       - skolr_network
+  postgres-message:
+    image: postgres:15-alpine
+    container_name: skolr_message_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_MESSAGE_DB:-skolr_message}
+    ports:
+      - "${POSTGRES_MESSAGE_PORT:-5436}:5432"
+    volumes:
+      - postgres_message_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
+  redis:
+    image: redis:7-alpine
+    container_name: skolr_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - skolr_network
+
   auth-service:
     build:
       context: .
@@ -103,10 +134,13 @@ services:
       - GOOGLE_CALLBACK_URI=${GOOGLE_CALLBACK_URI:-http://localhost:3000/login/google/callback}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - REDIS_URL=redis://redis:6379
     ports:
       - "${AUTH_SERVICE_PORT:-3000}:3000"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -245,6 +279,33 @@ services:
     networks:
       - skolr_network
 
+  message-service:
+    build:
+      context: .
+      dockerfile: ./packages/message-service/Dockerfile
+    container_name: skolr_message_service
+    environment:
+      - PORT=${MESSAGE_SERVICE_PORT:-3010}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-message:5432/${POSTGRES_MESSAGE_DB:-skolr_message}?schema=public
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-skolr}:${RABBITMQ_PASSWORD:-skolr}@rabbitmq:5672
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${MESSAGE_SERVICE_PORT:-3010}:${MESSAGE_SERVICE_PORT:-3010}"
+    depends_on:
+      postgres-message:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${MESSAGE_SERVICE_PORT:-3010}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
+
   frontend:
     build:
       context: ./packages/frontend
@@ -362,6 +423,7 @@ volumes:
   postgres_class_data:
   postgres_grade_data:
   postgres_planning_data:
+  postgres_message_data:
   grafana_data:
   prometheus_data:
 

@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import bcrypt from 'bcrypt';
+import { setRefreshToken } from '../lib/redis';
 
 interface GoogleOAuthProfile {
   id: string;
@@ -33,11 +34,17 @@ const authController = {
 
       const token = request.server.jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
-        { expiresIn: '1h' }
+        { expiresIn: '15m' }
       );
 
-        return reply.send({
+      const refreshToken = crypto.randomUUID();
+      try {
+        await setRefreshToken(refreshToken, user.id, 7 * 24 * 3600);
+      } catch { /* Redis unavailable — token still issued */ }
+
+      return reply.send({
         token,
+        refreshToken,
         user: { id: user.id, email: user.email, name: user.name, role: user.role }
       });
     } catch (error) {
@@ -68,11 +75,17 @@ const authController = {
 
       const token = request.server.jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
-        { expiresIn: '1h' }
+        { expiresIn: '15m' }
       );
+
+      const refreshToken = crypto.randomUUID();
+      try {
+        await setRefreshToken(refreshToken, user.id, 7 * 24 * 3600);
+      } catch { /* Redis unavailable — token still issued */ }
 
       return reply.status(201).send({
         token,
+        refreshToken,
         user: { id: user.id, email: user.email, name: user.name, role: user.role }
       });
     } catch (error) {

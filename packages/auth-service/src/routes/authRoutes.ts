@@ -6,6 +6,7 @@ import {
   loginRouteSchema,
   registerRouteSchema,
 } from '../schemas/authOpenApi';
+import { getRefreshToken, deleteRefreshToken } from '../lib/redis';
 
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -25,6 +26,35 @@ interface GoogleUserInfo {
 const authRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/login', { schema: loginRouteSchema }, authController.login);
   fastify.post('/register', { schema: registerRouteSchema }, authController.register);
+
+  fastify.post('/refresh', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { refreshToken } = request.body as { refreshToken: string };
+    if (!refreshToken) {
+      return reply.status(400).send({ error: 'Missing refreshToken' });
+    }
+    const userId = await getRefreshToken(refreshToken);
+    if (!userId) {
+      return reply.status(401).send({ error: 'Invalid or expired refresh token' });
+    }
+    const user = await db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return reply.status(401).send({ error: 'User not found' });
+    }
+    const token = fastify.jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      { expiresIn: '15m' }
+    );
+    return reply.send({ token });
+  });
+
+  fastify.post('/logout', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { refreshToken } = request.body as { refreshToken: string };
+    if (!refreshToken) {
+      return reply.status(400).send({ error: 'Missing refreshToken' });
+    }
+    await deleteRefreshToken(refreshToken);
+    return reply.send({ message: 'Logged out' });
+  });
 
   fastify.get(
     '/login/google/callback',
