@@ -1,0 +1,22 @@
+{
+  "name": "notification-service",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch run src/app.ts",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node",
+    "start": "bun run ./dist/app.js"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@skolr/rabbitmq": "workspace:*",
+    "@sentry/node": "^10.56.0",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.8.2"
+  }
+}
