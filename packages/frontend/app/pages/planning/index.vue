@@ -3,7 +3,7 @@
     <Card class="calendar-card">
       <template #title>
         <div class="card-header">
-          <span>Emploi du temps</span>
+          <span>{{ $t('planning.title') }}</span>
           <div class="card-header-actions">
             <Select
               v-if="isAdmin"
@@ -11,13 +11,13 @@
               :options="classOptions"
               option-label="label"
               option-value="value"
-              placeholder="Toutes les classes"
+              :placeholder="$t('planning.all_classes')"
               show-clear
               class="filter-select"
             />
             <Button
               v-if="canEdit"
-              label="Ajouter"
+              :label="$t('planning.add')"
               icon="pi pi-plus"
               size="small"
               @click="openCreateDialog(null)"
@@ -30,7 +30,7 @@
 
         <div v-else-if="pending" class="loading">
           <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-          <span>Chargement…</span>
+          <span>{{ $t('planning.loading') }}</span>
         </div>
 
         <PlanningWeeklyCalendar

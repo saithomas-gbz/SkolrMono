@@ -9,8 +9,8 @@ definePageMeta({
     <AuthRegisterForm />
 
     <p class="sub">
-      Déjà inscrit ?
-      <NuxtLink to="/auth/login" class="link">Se connecter</NuxtLink>
+      {{ $t('auth.register.already_registered') }}
+      <NuxtLink to="/auth/login" class="link">{{ $t('auth.register.sign_in') }}</NuxtLink>
     </p>
   </div>
 </template>

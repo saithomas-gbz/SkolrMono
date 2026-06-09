@@ -4,11 +4,11 @@
 
     <div v-else-if="pending" class="loading">
       <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-      <span>Chargement…</span>
+      <span>{{ $t('common.loading') }}</span>
     </div>
 
     <div v-else-if="rows.length === 0" class="empty">
-      <p>Aucune absence enregistrée.</p>
+      <p>{{ $t('planning.absences.no_absences') }}</p>
     </div>
 
     <DataTable
@@ -21,27 +21,27 @@
       removable-sort
       class="table"
     >
-      <Column field="sessionDate" header="Session" sortable>
+      <Column field="sessionDate" :header="$t('planning.absences.session')" sortable>
         <template #body="{ data }">{{ data.sessionDate }}</template>
       </Column>
-      <Column field="userId" header="Utilisateur (ID)" />
-      <Column field="justified" header="Justifiée" sortable>
+      <Column field="userId" :header="$t('planning.absences.user_id')" />
+      <Column field="justified" :header="$t('planning.absences.justified')" sortable>
         <template #body="{ data }">
           <Tag
-            :value="data.justified ? 'Oui' : 'Non'"
+            :value="data.justified ? $t('common.yes') : $t('common.no')"
             :severity="data.justified ? 'success' : 'warn'"
           />
         </template>
       </Column>
-      <Column field="reason" header="Motif">
+      <Column field="reason" :header="$t('planning.absences.reason')">
         <template #body="{ data }">{{ data.reason ?? '—' }}</template>
       </Column>
-      <Column header="Actions">
+      <Column :header="$t('common.actions')">
         <template #body="{ data }">
           <div class="row-actions">
             <Button
               v-if="!data.justified"
-              label="Justifier"
+              :label="$t('planning.absences.justify')"
               icon="pi pi-check"
               size="small"
               severity="success"
@@ -53,7 +53,7 @@
               size="small"
               severity="danger"
               text
-              aria-label="Supprimer"
+              :aria-label="$t('planning.absences.delete')"
               @click="remove(data.id)"
             />
           </div>

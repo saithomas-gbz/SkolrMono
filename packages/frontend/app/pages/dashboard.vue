@@ -5,30 +5,28 @@
       <Card>
         <template #title>
           <div class="card-title-row">
-            <span>Carnet de notes</span>
-            <NuxtLink to="/grades/assignments/new" class="card-link">+ Nouveau devoir →</NuxtLink>
+            <span>{{ $t('dashboard.gradebook_title') }}</span>
+            <NuxtLink to="/grades/assignments/new" class="card-link">{{ $t('dashboard.new_assignment') }}</NuxtLink>
           </div>
         </template>
         <template #content>
-          <p class="dashboard-hint">
-            Créez un devoir, saisissez les notes de tous vos élèves en une fois et consultez le carnet matriciel par classe.
-          </p>
+          <p class="dashboard-hint">{{ $t('dashboard.gradebook_hint') }}</p>
         </template>
       </Card>
       <Card>
-        <template #title>Effectifs par classe</template>
+        <template #title>{{ $t('dashboard.class_enrollment') }}</template>
         <template #content>
           <ChartClassesChart :initial-class-id="initialClassId" />
         </template>
       </Card>
       <Card>
-        <template #title>Distribution des notes</template>
+        <template #title>{{ $t('dashboard.grade_distribution') }}</template>
         <template #content>
           <ChartGradesChart :initial-class-id="initialClassId" />
         </template>
       </Card>
       <Card>
-        <template #title>Mes élèves</template>
+        <template #title>{{ $t('dashboard.my_students') }}</template>
         <template #content>
           <TablesTeacherClassStudentTable />
         </template>
@@ -41,27 +39,27 @@
         <AdminKpiCards />
       </div>
       <Card>
-        <template #title>Effectifs par classe</template>
+        <template #title>{{ $t('dashboard.class_enrollment') }}</template>
         <template #content>
           <ChartClassesChart :initial-class-id="initialClassId" />
         </template>
       </Card>
       <Card>
-        <template #title>Distribution globale des notes</template>
+        <template #title>{{ $t('dashboard.global_grade_distribution') }}</template>
         <template #content>
           <ChartGradesChart :initial-class-id="initialClassId" />
         </template>
       </Card>
       <Card>
-        <template #title>Absences récentes (7 jours)</template>
+        <template #title>{{ $t('dashboard.recent_absences') }}</template>
         <template #content>
           <AdminAbsencesWidget />
         </template>
       </Card>
       <Card class="admin-full-width">
         <template #title>
-          <span>Aperçu des élèves</span>
-          <NuxtLink to="/admin/students" class="card-link">Voir tout →</NuxtLink>
+          <span>{{ $t('dashboard.student_overview') }}</span>
+          <NuxtLink to="/admin/students" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
         </template>
         <template #content>
           <AdminClassStudentTable :initial-class-id="initialClassId" />
@@ -72,19 +70,19 @@
     <!-- USER (élève) : mes classes + évolution personnelle + distribution personnelle -->
     <template v-else-if="isStudent">
       <Card>
-        <template #title>Mes classes</template>
+        <template #title>{{ $t('dashboard.my_classes') }}</template>
         <template #content>
           <StudentClassList />
         </template>
       </Card>
       <Card>
-        <template #title>Évolution de mes notes</template>
+        <template #title>{{ $t('dashboard.grade_progress') }}</template>
         <template #content>
           <ChartGradesTrendChart />
         </template>
       </Card>
       <Card>
-        <template #title>Répartition de mes notes</template>
+        <template #title>{{ $t('dashboard.grade_repartition') }}</template>
         <template #content>
           <ChartGradesChart />
         </template>
@@ -94,9 +92,9 @@
     <!-- Fallback : session chargée mais rôle inconnu -->
     <template v-else>
       <Card>
-        <template #title>Tableau de bord</template>
+        <template #title>{{ $t('dashboard.title') }}</template>
         <template #content>
-          <p class="dashboard-hint">Connexion en cours…</p>
+          <p class="dashboard-hint">{{ $t('dashboard.connecting') }}</p>
         </template>
       </Card>
     </template>

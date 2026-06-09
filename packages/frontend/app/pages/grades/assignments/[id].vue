@@ -3,18 +3,18 @@
     <Card>
       <template #title>
         <div class="card-header">
-          <span>{{ assignment?.title ?? 'Grille de notation' }}</span>
+          <span>{{ assignment?.title ?? $t('grades.assignment.default_title') }}</span>
           <div class="header-actions">
             <NuxtLink
               v-if="assignment"
               :to="`/grades/classes/${assignment.classId}?courseId=${assignment.courseId}`"
               class="p-button p-button-text p-button-sm"
             >
-              Voir le carnet
+              {{ $t('grades.assignment.see_gradebook') }}
             </NuxtLink>
             <Button
               v-if="assignment?.status === 'PUBLISHED'"
-              label="Clôturer"
+              :label="$t('grades.assignment.close')"
               icon="pi pi-lock"
               severity="secondary"
               outlined
@@ -38,17 +38,15 @@
 
         <div v-if="pending" class="loading">
           <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-          <span>Chargement…</span>
+          <span>{{ $t('common.loading') }}</span>
         </div>
 
         <template v-else-if="gridData">
           <div class="grid-toolbar">
-            <span class="grade-counter">
-              {{ gridData.gradedCount }} / {{ gridData.totalCount }} noté{{ gridData.totalCount > 1 ? 's' : '' }}
-            </span>
+            <span class="grade-counter">{{ gradedCountLabel }}</span>
             <Button
               v-if="assignment?.status !== 'CLOSED'"
-              label="Enregistrer tout"
+              :label="$t('grades.assignment.save_all')"
               icon="pi pi-check"
               :loading="saving"
               :disabled="!hasPendingChanges"
@@ -65,8 +63,8 @@
             :sort-order="1"
             removable-sort
           >
-            <Column field="name" header="Élève" sortable style="min-width: 12rem" />
-            <Column header="Statut" style="width: 12rem">
+            <Column field="name" :header="$t('grades.assignment.student')" sortable style="min-width: 12rem" />
+            <Column :header="$t('grades.assignment.status')" style="width: 12rem">
               <template #body="{ data }">
                 <Select
                   v-model="localRows[data.userId].status"
@@ -79,7 +77,7 @@
                 />
               </template>
             </Column>
-            <Column header="Note" style="width: 10rem">
+            <Column :header="$t('grades.assignment.grade')" style="width: 10rem">
               <template #body="{ data }">
                 <InputNumber
                   v-if="localRows[data.userId].status === 'GRADED'"
@@ -94,11 +92,11 @@
                 <span v-else class="grade-na">—</span>
               </template>
             </Column>
-            <Column header="Commentaire" style="min-width: 14rem">
+            <Column :header="$t('grades.assignment.comment')" style="min-width: 14rem">
               <template #body="{ data }">
                 <InputText
                   v-model="localRows[data.userId].comment"
-                  placeholder="Appréciation"
+                  :placeholder="$t('grades.assignment.comment_placeholder')"
                   class="comment-input"
                   :disabled="assignment?.status === 'CLOSED'"
                   @input="markDirty(data.userId)"
@@ -121,6 +119,7 @@ import {
 
 definePageMeta({ middleware: ['auth'] });
 
+const { t } = useI18n();
 const route = useRoute();
 const id = computed(() => route.params.id as string);
 
@@ -147,15 +146,26 @@ const hasPendingChanges = computed(() => dirtyUsers.value.size > 0);
 
 const rows = computed(() => gridData.value?.rows ?? []);
 
-const gradeStatusOptions = [
-  { label: 'Noté', value: 'GRADED' },
-  { label: 'En attente', value: 'PENDING' },
-  { label: 'Absent', value: 'ABSENT' },
-  { label: 'Dispensé', value: 'EXEMPT' },
-];
+const gradeStatusOptions = computed(() => [
+  { label: t('grades.assignment.graded'), value: 'GRADED' },
+  { label: t('grades.assignment.pending'), value: 'PENDING' },
+  { label: t('grades.assignment.absent'), value: 'ABSENT' },
+  { label: t('grades.assignment.exempt'), value: 'EXEMPT' },
+]);
+
+const gradedCountLabel = computed(() => {
+  if (!gridData.value) return '';
+  const { gradedCount: graded, totalCount: total } = gridData.value;
+  return t('grades.assignment.graded_count', { graded, total }, total);
+});
 
 function statusLabel(s: string) {
-  return { DRAFT: 'Brouillon', PUBLISHED: 'Publié', CLOSED: 'Clôturé' }[s] ?? s;
+  const map: Record<string, string> = {
+    DRAFT: t('grades.assignment.draft'),
+    PUBLISHED: t('grades.assignment.published'),
+    CLOSED: t('grades.assignment.closed'),
+  };
+  return map[s] ?? s;
 }
 
 function statusSeverity(s: string) {

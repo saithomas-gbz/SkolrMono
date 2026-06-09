@@ -1,59 +1,59 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    :header="course ? 'Modifier le programme' : 'Nouveau programme'"
+    :header="course ? $t('admin.course_dialog.edit') : $t('admin.course_dialog.new')"
     modal
     :style="{ width: '38rem' }"
     @hide="resetForm"
   >
     <div class="form">
       <div class="field">
-        <label for="cd-name">Nom</label>
-        <InputText id="cd-name" v-model="form.name" class="w-full" placeholder="Ex: Algèbre linéaire" />
+        <label for="cd-name">{{ $t('common.name') }}</label>
+        <InputText id="cd-name" v-model="form.name" class="w-full" :placeholder="$t('admin.course_dialog.name_placeholder')" />
       </div>
 
       <div class="field">
-        <label for="cd-description">Description</label>
+        <label for="cd-description">{{ $t('common.description') }}</label>
         <Textarea
           id="cd-description"
           v-model="form.description"
           class="w-full"
           rows="3"
-          placeholder="Description du programme"
+          :placeholder="$t('admin.course_dialog.description_placeholder')"
           auto-resize
         />
       </div>
 
       <div class="field">
-        <label for="cd-subject">Matière</label>
+        <label for="cd-subject">{{ $t('admin.course_dialog.subject') }}</label>
         <Select
           id="cd-subject"
           v-model="form.subjectId"
           :options="subjectOptions"
           option-label="label"
           option-value="value"
-          placeholder="Aucune matière"
+          :placeholder="$t('admin.course_dialog.no_subject')"
           show-clear
           class="w-full"
         />
       </div>
 
       <div class="field">
-        <label for="cd-related">Programmes liés</label>
+        <label for="cd-related">{{ $t('admin.course_dialog.linked_programs') }}</label>
         <MultiSelect
           id="cd-related"
           v-model="form.relatedCourseIds"
           :options="otherCourseOptions"
           option-label="label"
           option-value="value"
-          placeholder="Sélectionner des programmes"
+          :placeholder="$t('admin.course_dialog.select_programs')"
           display="chip"
           class="w-full"
         />
       </div>
 
       <div class="field">
-        <label>Sujets</label>
+        <label>{{ $t('admin.course_dialog.topics') }}</label>
         <div class="topics-list">
           <div
             v-for="topic in visibleExistingTopics"
@@ -72,13 +72,13 @@
             <button type="button" class="chip-remove" @click="removeStagingTopic(i)">×</button>
           </div>
           <p v-if="visibleExistingTopics.length === 0 && stagingTopics.length === 0" class="topics-empty">
-            Aucun sujet
+            {{ $t('admin.course_dialog.no_topics') }}
           </p>
         </div>
         <div class="topic-input-row">
           <InputText
             v-model="newTopicName"
-            placeholder="Nom du sujet (ex: Trigonométrie)"
+            :placeholder="$t('admin.course_dialog.topic_placeholder')"
             class="topic-input"
             @keyup.enter="addStagingTopic"
           />
@@ -95,9 +95,9 @@
     </div>
 
     <template #footer>
-      <Button label="Annuler" severity="secondary" text @click="visible = false" />
+      <Button :label="$t('common.cancel')" severity="secondary" text @click="visible = false" />
       <Button
-        :label="course ? 'Enregistrer' : 'Créer'"
+        :label="course ? $t('common.save') : $t('common.create')"
         :loading="pending"
         :disabled="!isFormValid"
         @click="submit"

@@ -1,11 +1,11 @@
 <template>
   <div class="page">
     <Card>
-      <template #title>Mes élèves</template>
+      <template #title>{{ $t('teacher.students_title') }}</template>
       <template #content>
         <TablesTeacherClassStudentTable v-if="isTeacher" />
         <Message v-else severity="warn" :closable="false">
-          Cette page est réservée aux enseignants.
+          {{ $t('teacher.restricted') }}
         </Message>
       </template>
     </Card>

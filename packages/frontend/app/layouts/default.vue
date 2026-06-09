@@ -5,7 +5,7 @@
         <div class="brand">
           <Button
             class="menu-button"
-            label="Menu"
+            :label="$t('nav.menu')"
             severity="secondary"
             text
             @click="isSidebarOpen = true"
@@ -15,11 +15,11 @@
       </template>
     </Menubar>
 
-    <Sidebar v-model:visible="isSidebarOpen" header="Navigation" position="left">
+    <Sidebar v-model:visible="isSidebarOpen" :header="$t('nav.navigation')" position="left">
       <nav class="sidebar-nav">
-        <NuxtLink class="sidebar-link" to="/" @click="isSidebarOpen = false">Accueil</NuxtLink>
+        <NuxtLink class="sidebar-link" to="/" @click="isSidebarOpen = false">{{ $t('nav.home') }}</NuxtLink>
         <NuxtLink class="sidebar-link" to="/dashboard" @click="isSidebarOpen = false">
-          Tableau de bord
+          {{ $t('nav.dashboard') }}
         </NuxtLink>
         <NuxtLink
           v-if="isTeacher"
@@ -27,7 +27,7 @@
           to="/teacher/students"
           @click="isSidebarOpen = false"
         >
-          Mes élèves
+          {{ $t('nav.my_students') }}
         </NuxtLink>
         <NuxtLink
           v-if="isAdmin"
@@ -35,10 +35,10 @@
           to="/admin/students"
           @click="isSidebarOpen = false"
         >
-          Élèves (établissement)
+          {{ $t('nav.school_students') }}
         </NuxtLink>
         <NuxtLink class="sidebar-link" to="/planning" @click="isSidebarOpen = false">
-          Emploi du temps
+          {{ $t('nav.schedule') }}
         </NuxtLink>
         <NuxtLink
           v-if="isTeacher || isAdmin"
@@ -46,7 +46,7 @@
           to="/planning/absences"
           @click="isSidebarOpen = false"
         >
-          Absences
+          {{ $t('nav.absences') }}
         </NuxtLink>
         <NuxtLink
           v-if="isTeacher"
@@ -54,16 +54,16 @@
           to="/grades/assignments/new"
           @click="isSidebarOpen = false"
         >
-          Carnet de notes
+          {{ $t('nav.gradebook') }}
         </NuxtLink>
         <template v-if="isAdmin">
-          <div class="sidebar-section">Administration</div>
+          <div class="sidebar-section">{{ $t('nav.administration') }}</div>
           <NuxtLink class="sidebar-link" to="/admin/subjects" @click="isSidebarOpen = false">
-            Matières &amp; Programmes
+            {{ $t('nav.subjects') }}
           </NuxtLink>
         </template>
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
-          Déconnexion
+          {{ $t('nav.logout') }}
         </button>
       </nav>
     </Sidebar>
@@ -80,6 +80,7 @@
 <script setup lang="ts">
 import type { MenuItem } from 'primevue/menuitem';
 
+const { t } = useI18n();
 const isSidebarOpen = ref(false);
 const { isLoggedIn, clearSession, hasRole } = useAuth();
 
@@ -89,37 +90,37 @@ const isAdmin = computed(() => hasRole('ADMIN'));
 const items = computed<MenuItem[]>(() => {
   const menu: MenuItem[] = [
     {
-      label: 'Accueil',
+      label: t('nav.home'),
       command: () => navigateTo('/'),
     },
     {
-      label: 'Tableau de bord',
+      label: t('nav.dashboard'),
       command: () => navigateTo('/dashboard'),
     },
   ];
 
   if (isTeacher.value) {
     menu.push({
-      label: 'Mes élèves',
+      label: t('nav.my_students'),
       command: () => navigateTo('/teacher/students'),
     });
   }
 
   if (isAdmin.value) {
     menu.push({
-      label: 'Élèves (établissement)',
+      label: t('nav.school_students'),
       command: () => navigateTo('/admin/students'),
     });
   }
 
-  menu.push({ label: 'Emploi du temps', command: () => navigateTo('/planning') });
+  menu.push({ label: t('nav.schedule'), command: () => navigateTo('/planning') });
 
   if (isTeacher.value || isAdmin.value) {
-    menu.push({ label: 'Absences', command: () => navigateTo('/planning/absences') });
+    menu.push({ label: t('nav.absences'), command: () => navigateTo('/planning/absences') });
   }
 
   if (isAdmin.value) {
-    menu.push({ label: 'Matières & Programmes', command: () => navigateTo('/admin/subjects') });
+    menu.push({ label: t('nav.subjects'), command: () => navigateTo('/admin/subjects') });
   }
 
   return menu;

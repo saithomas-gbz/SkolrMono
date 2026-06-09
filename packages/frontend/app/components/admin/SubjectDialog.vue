@@ -1,25 +1,25 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    :header="subject ? 'Modifier la matière' : 'Nouvelle matière'"
+    :header="subject ? $t('admin.subject_dialog.edit') : $t('admin.subject_dialog.new')"
     modal
     :style="{ width: '30rem' }"
     @hide="resetForm"
   >
     <div class="form">
       <div class="field">
-        <label for="sd-name">Nom</label>
-        <InputText id="sd-name" v-model="form.name" class="w-full" placeholder="Ex: Mathématiques" />
+        <label for="sd-name">{{ $t('common.name') }}</label>
+        <InputText id="sd-name" v-model="form.name" class="w-full" :placeholder="$t('admin.subject_dialog.name_placeholder')" />
       </div>
 
       <div class="field">
-        <label for="sd-description">Description</label>
+        <label for="sd-description">{{ $t('common.description') }}</label>
         <Textarea
           id="sd-description"
           v-model="form.description"
           class="w-full"
           rows="3"
-          placeholder="Description de la matière"
+          :placeholder="$t('admin.subject_dialog.description_placeholder')"
           auto-resize
         />
       </div>
@@ -28,9 +28,9 @@
     </div>
 
     <template #footer>
-      <Button label="Annuler" severity="secondary" text @click="visible = false" />
+      <Button :label="$t('common.cancel')" severity="secondary" text @click="visible = false" />
       <Button
-        :label="subject ? 'Enregistrer' : 'Créer'"
+        :label="subject ? $t('common.save') : $t('common.create')"
         :loading="pending"
         :disabled="!isFormValid"
         @click="submit"

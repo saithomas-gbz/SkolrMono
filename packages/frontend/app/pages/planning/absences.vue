@@ -1,18 +1,18 @@
 <template>
   <div class="page">
     <Card>
-      <template #title>Gestion des absences</template>
+      <template #title>{{ $t('planning.absences.title') }}</template>
       <template #content>
         <Message v-if="!canAccess" severity="warn" :closable="false">
-          Cette page est réservée aux enseignants et administrateurs.
+          {{ $t('planning.absences.restricted') }}
         </Message>
 
         <template v-else>
           <TabView>
-            <TabPanel header="Élèves">
+            <TabPanel :header="$t('planning.absences.students_tab')">
               <PlanningAbsenceTable :filters="{ role: 'STUDENT' }" />
             </TabPanel>
-            <TabPanel header="Professeurs">
+            <TabPanel :header="$t('planning.absences.teachers_tab')">
               <PlanningAbsenceTable :filters="{ role: 'TEACHER' }" />
             </TabPanel>
           </TabView>

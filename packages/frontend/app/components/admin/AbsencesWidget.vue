@@ -4,18 +4,18 @@
 
     <div v-else-if="pending" class="widget-loading">
       <ProgressSpinner style="width: 1.5rem; height: 1.5rem" stroke-width="4" />
-      <span>Chargement…</span>
+      <span>{{ $t('common.loading') }}</span>
     </div>
 
     <div v-else-if="recentAbsences.length === 0" class="widget-empty">
-      <p>Aucune absence ces 7 derniers jours.</p>
+      <p>{{ $t('admin.absences_widget.no_absences') }}</p>
     </div>
 
     <ul v-else class="absence-list">
       <li v-for="absence in recentAbsences" :key="absence.id" class="absence-item">
         <span class="absence-date">{{ formatDate(absence.createdAt) }}</span>
         <Tag
-          :value="absence.justified ? 'Justifiée' : 'Non justifiée'"
+          :value="absence.justified ? $t('admin.absences_widget.justified') : $t('admin.absences_widget.not_justified')"
           :severity="absence.justified ? 'success' : 'warn'"
           class="absence-tag"
         />
@@ -23,7 +23,7 @@
     </ul>
 
     <div class="widget-footer">
-      <NuxtLink to="/planning/absences" class="widget-link">Voir tout →</NuxtLink>
+      <NuxtLink to="/planning/absences" class="widget-link">{{ $t('admin.absences_widget.see_all') }}</NuxtLink>
     </div>
   </div>
 </template>

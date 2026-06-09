@@ -3,8 +3,8 @@
     <Card>
       <template #title>
         <div class="card-header">
-          <span>Matières &amp; Programmes</span>
-          <Button label="Nouvelle matière" icon="pi pi-plus" size="small" @click="openSubjectDialog(null)" />
+          <span>{{ $t('admin.subjects_title') }}</span>
+          <Button :label="$t('admin.new_subject')" icon="pi pi-plus" size="small" @click="openSubjectDialog(null)" />
         </div>
       </template>
 
@@ -13,7 +13,7 @@
 
         <div v-else-if="pending" class="loading">
           <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-          <span>Chargement…</span>
+          <span>{{ $t('admin.loading') }}</span>
         </div>
 
         <template v-else>
@@ -34,7 +34,7 @@
                 <div class="content-toolbar">
                   <div class="content-toolbar-actions">
                     <Button
-                      label="Ajouter un programme"
+                      :label="$t('admin.add_program')"
                       icon="pi pi-plus"
                       size="small"
                       @click="openCourseDialog(null, subject.id)"
@@ -45,7 +45,7 @@
                       text
                       rounded
                       size="small"
-                      aria-label="Modifier la matière"
+                      :aria-label="$t('admin.edit_subject')"
                       @click="openSubjectDialog(subject)"
                     />
                     <Button
@@ -54,7 +54,7 @@
                       text
                       rounded
                       size="small"
-                      aria-label="Supprimer la matière"
+                      :aria-label="$t('admin.delete_subject')"
                       :loading="deletingSubjectId === subject.id"
                       @click="removeSubject(subject.id)"
                     />
@@ -62,7 +62,7 @@
                 </div>
 
                 <p v-if="coursesForSubject(subject.id).length === 0" class="empty-courses">
-                  Aucun programme dans cette matière.
+                  {{ $t('admin.no_programs') }}
                 </p>
                 <DataTable
                   v-else
@@ -70,8 +70,8 @@
                   data-key="id"
                   size="small"
                 >
-                  <Column field="name" header="Nom" />
-                  <Column header="Sujets">
+                  <Column field="name" :header="$t('common.name')" />
+                  <Column :header="$t('admin.topics')">
                     <template #body="{ data }">
                       <div v-if="data.topics.length > 0" class="tags">
                         <Tag
@@ -84,7 +84,7 @@
                       <span v-else class="muted">—</span>
                     </template>
                   </Column>
-                  <Column header="Programmes liés">
+                  <Column :header="$t('admin.linked_programs')">
                     <template #body="{ data }">
                       <div v-if="data.relatedCourses.length > 0" class="tags">
                         <Tag
@@ -127,14 +127,14 @@
             <!-- Programmes sans matière -->
             <AccordionPanel v-if="unassignedCourses.length > 0" value="__unassigned__">
               <AccordionHeader>
-                <span class="subject-name muted">Sans matière</span>
+                <span class="subject-name muted">{{ $t('admin.no_subject') }}</span>
                 <span class="subject-count">{{ unassignedCourses.length }} programme(s)</span>
               </AccordionHeader>
               <AccordionContent>
                 <div class="content-toolbar">
                   <div class="content-toolbar-actions">
                     <Button
-                      label="Ajouter un programme"
+                      :label="$t('admin.add_program')"
                       icon="pi pi-plus"
                       size="small"
                       @click="openCourseDialog(null, null)"
@@ -142,8 +142,8 @@
                   </div>
                 </div>
                 <DataTable :value="unassignedCourses" data-key="id" size="small">
-                  <Column field="name" header="Nom" />
-                  <Column header="Sujets">
+                  <Column field="name" :header="$t('common.name')" />
+                  <Column :header="$t('admin.topics')">
                     <template #body="{ data }">
                       <div v-if="data.topics.length > 0" class="tags">
                         <Tag
@@ -156,7 +156,7 @@
                       <span v-else class="muted">—</span>
                     </template>
                   </Column>
-                  <Column header="Programmes liés">
+                  <Column :header="$t('admin.linked_programs')">
                     <template #body="{ data }">
                       <div v-if="data.relatedCourses.length > 0" class="tags">
                         <Tag
@@ -198,7 +198,7 @@
           </Accordion>
 
           <p v-if="subjects.length === 0 && unassignedCourses.length === 0" class="empty">
-            Aucune matière créée. Commencez par ajouter une matière.
+            {{ $t('admin.no_subjects') }}
           </p>
         </template>
       </template>
