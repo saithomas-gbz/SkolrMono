@@ -16,7 +16,7 @@ export type CourseApiResponse = {
   message: string;
 };
 
-export type CourseListApiResponse = {
+type CourseListApiResponse = {
   data: CourseEntity[];
   message: string;
 };

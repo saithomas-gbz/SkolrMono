@@ -1,13 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 
-export interface CreateTopicBody {
+interface CreateTopicBody {
   name: string;
   description: string;
   courseId: string;
 }
 
-export interface UpdateTopicBody {
+interface UpdateTopicBody {
   name?: string;
   description?: string;
 }

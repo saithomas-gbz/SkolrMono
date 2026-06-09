@@ -6,7 +6,7 @@ const errorBody = {
   required: ['error'],
 } as const;
 
-export const topicEntity = {
+const topicEntity = {
   type: 'object',
   properties: {
     id: { type: 'string' },

@@ -1,4 +1,4 @@
-export type TopicEntity = {
+type TopicEntity = {
   id: string;
   name: string;
   description: string;
