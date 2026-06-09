@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { randomUUID } from 'crypto';
 import { RESERVED_CLASS_PATH_IDS, sendListOk } from '../lib/listResponse';
+import { publish, ROUTING_KEYS } from '@skolr/rabbitmq';
 
 export interface ClassData {
   name: string;
@@ -155,6 +156,17 @@ export default {
           students: true,
         },
       });
+
+      const enrolledAt = new Date().toISOString();
+      for (const studentId of studentIds) {
+        void publish(ROUTING_KEYS.STUDENT_ENROLLED, {
+          studentId,
+          classId: newClass.id,
+          className: newClass.name,
+          enrolledAt,
+        });
+      }
+
       return reply.status(201).send({ data: newClass, message: 'Class created successfully' });
     } catch (error) {
       request.log.error(error);
@@ -225,6 +237,17 @@ export default {
           students: true,
         },
       });
+
+      const enrolledAt = new Date().toISOString();
+      for (const studentId of studentIds) {
+        void publish(ROUTING_KEYS.STUDENT_ENROLLED, {
+          studentId,
+          classId: id,
+          className: updatedClass.name,
+          enrolledAt,
+        });
+      }
+
       return reply.status(200).send({ data: updatedClass, message: 'Class updated successfully' });
     } catch (error) {
       request.log.error(error);

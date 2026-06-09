@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { publish, ROUTING_KEYS } from '@skolr/rabbitmq';
 
 const gradeInclude = {
   user: true,
@@ -141,6 +142,19 @@ export default {
         },
         include: gradeInclude,
       });
+
+      void publish(ROUTING_KEYS.GRADE_CREATED, {
+        gradeId: grade.id,
+        assignmentId,
+        userId,
+        classId,
+        courseId,
+        value,
+        status,
+        teacherId,
+        createdAt: grade.createdAt.toISOString(),
+      });
+
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });
     } catch (error) {
       request.log.error(error);

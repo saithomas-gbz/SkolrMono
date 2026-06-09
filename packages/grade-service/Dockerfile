@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY package.json tsconfig.json ./
 
+COPY packages/rabbitmq/ ./packages/rabbitmq/
 COPY packages/grade-service/ ./packages/grade-service/
 
 WORKDIR /app/packages/grade-service

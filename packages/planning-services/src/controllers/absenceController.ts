@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import type { AbsenceRole } from '../generated/prisma/client';
+import { publish, ROUTING_KEYS } from '@skolr/rabbitmq';
 
 type AbsenceFilters = {
   sessionId?: string;
@@ -62,6 +63,17 @@ export async function createAbsence(
   const absence = await db.absence.create({
     data: { sessionId, userId, role, justified: justified ?? false, reason },
   });
+
+  void publish(ROUTING_KEYS.ABSENCE_CREATED, {
+    absenceId: absence.id,
+    sessionId,
+    userId,
+    role,
+    justified: absence.justified,
+    reason: absence.reason ?? undefined,
+    createdAt: absence.createdAt.toISOString(),
+  });
+
   return reply.status(201).send(absence);
 }
 
