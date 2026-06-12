@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import type { AbsenceRole } from '../generated/prisma/client';
+import { publish } from '@skolr/rabbitmq';
 
 type AbsenceFilters = {
   sessionId?: string;
@@ -62,6 +63,15 @@ export async function createAbsence(
   const absence = await db.absence.create({
     data: { sessionId, userId, role, justified: justified ?? false, reason },
   });
+
+  publish('absence.created', {
+    absenceId: absence.id,
+    sessionId: absence.sessionId,
+    userId: absence.userId,
+    role: absence.role,
+    justified: absence.justified,
+  }).catch((err) => req.log.warn({ err }, 'Failed to publish absence.created'));
+
   return reply.status(201).send(absence);
 }
 
