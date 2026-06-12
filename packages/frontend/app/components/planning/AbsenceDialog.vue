@@ -1,7 +1,7 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    header="Déclarer une absence"
+    :header="$t('planning.absence_dialog.title')"
     modal
     :style="{ width: '28rem' }"
     @hide="reset"
@@ -11,18 +11,18 @@
         v-if="session"
         class="session-info"
       >
-        <span class="session-info-label">Session</span>
+        <span class="session-info-label">{{ $t('planning.absence_dialog.session') }}</span>
         <span>{{ formatDatetime(session.startAt) }} – {{ formatTime(session.endAt) }}</span>
-        <span v-if="session.room" class="session-room">Salle {{ session.room }}</span>
+        <span v-if="session.room" class="session-room">{{ $t('planning.absences.session') }} {{ session.room }}</span>
       </div>
 
       <div class="field">
-        <label for="ab-user">Utilisateur (ID)</label>
-        <InputText id="ab-user" v-model="form.userId" class="w-full" placeholder="UUID de l'élève ou du prof" />
+        <label for="ab-user">{{ $t('planning.absence_dialog.user_id') }}</label>
+        <InputText id="ab-user" v-model="form.userId" class="w-full" :placeholder="$t('planning.absence_dialog.user_placeholder')" />
       </div>
 
       <div class="field">
-        <label for="ab-role">Rôle</label>
+        <label for="ab-role">{{ $t('planning.absence_dialog.role') }}</label>
         <Select
           id="ab-role"
           v-model="form.role"
@@ -34,7 +34,7 @@
       </div>
 
       <div class="field">
-        <label for="ab-reason">Motif (optionnel)</label>
+        <label for="ab-reason">{{ $t('planning.absence_dialog.reason_optional') }}</label>
         <Textarea id="ab-reason" v-model="form.reason" class="w-full" rows="2" auto-resize />
       </div>
 
@@ -42,8 +42,8 @@
     </div>
 
     <template #footer>
-      <Button label="Annuler" severity="secondary" text @click="visible = false" />
-      <Button label="Enregistrer" :loading="pending" :disabled="!isValid" @click="submit" />
+      <Button :label="$t('common.cancel')" severity="secondary" text @click="visible = false" />
+      <Button :label="$t('common.save')" :loading="pending" :disabled="!isValid" @click="submit" />
     </template>
   </Dialog>
 </template>
@@ -56,12 +56,13 @@ const props = defineProps<{ session: Session | null }>();
 const emit = defineEmits<{ (e: 'saved'): void }>();
 const visible = defineModel<boolean>('visible', { default: false });
 
+const { t } = useI18n();
 const { createAbsence } = usePlanning();
 
-const roleOptions = [
-  { label: 'Élève', value: 'STUDENT' },
-  { label: 'Professeur', value: 'TEACHER' },
-];
+const roleOptions = computed(() => [
+  { label: t('planning.absence_dialog.student'), value: 'STUDENT' },
+  { label: t('planning.absence_dialog.teacher'), value: 'TEACHER' },
+]);
 
 const form = reactive({ userId: '', role: 'STUDENT' as 'STUDENT' | 'TEACHER', reason: '' });
 const pending = ref(false);

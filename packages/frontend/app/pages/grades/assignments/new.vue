@@ -1,72 +1,67 @@
 <template>
   <div class="page">
     <Card>
-      <template #title>Nouveau devoir</template>
+      <template #title>{{ $t('grades.new_assignment.title') }}</template>
       <template #content>
         <Message v-if="submitError" severity="error" :closable="false" class="form-message">
           {{ submitError }}
         </Message>
 
         <form class="assignment-form" @submit.prevent="handleSubmit">
-          <!-- Titre -->
           <div class="field">
-            <label for="title" class="field-label">Intitulé *</label>
+            <label for="title" class="field-label">{{ $t('grades.new_assignment.label') }}</label>
             <InputText
               id="title"
               v-model="form.title"
-              placeholder="ex. Contrôle chapitre 3"
+              :placeholder="$t('grades.new_assignment.label_placeholder')"
               class="field-input"
               required
             />
           </div>
 
-          <!-- Description -->
           <div class="field">
-            <label for="description" class="field-label">Description</label>
+            <label for="description" class="field-label">{{ $t('grades.new_assignment.description') }}</label>
             <Textarea
               id="description"
               v-model="form.description"
               rows="2"
-              placeholder="Instructions, barème détaillé…"
+              :placeholder="$t('grades.new_assignment.description_placeholder')"
               class="field-input"
             />
           </div>
 
-          <!-- Classe -->
           <div class="field">
-            <label for="classId" class="field-label">Classe *</label>
+            <label for="classId" class="field-label">{{ $t('grades.new_assignment.class') }}</label>
             <Select
               id="classId"
               v-model="form.classId"
               :options="classOptions"
               option-label="label"
               option-value="value"
-              placeholder="Choisir une classe"
+              :placeholder="$t('grades.new_assignment.choose_class')"
               class="field-input"
               :loading="classesPending"
               @change="onClassChange"
             />
           </div>
 
-          <!-- Cours -->
           <div class="field">
-            <label for="courseId" class="field-label">Programme *</label>
+            <label for="courseId" class="field-label">{{ $t('grades.new_assignment.course') }}</label>
             <Select
               id="courseId"
               v-model="form.courseId"
               :options="courseOptions"
               option-label="label"
               option-value="value"
-              placeholder="Choisir un programme"
+              :placeholder="$t('grades.new_assignment.choose_course')"
               class="field-input"
               :disabled="!form.classId"
               :loading="coursesPending"
             />
           </div>
 
-          <!-- Date du devoir -->
           <div class="field">
-            <label for="assignedAt" class="field-label">Date du devoir *</label>
+            <label for="assignedAt" class="field-label">{{ $t('grades.new_assignment.date') }}</label>
             <DatePicker
               id="assignedAt"
               v-model="form.assignedAt"
@@ -76,9 +71,8 @@
             />
           </div>
 
-          <!-- Date limite (optionnel) -->
           <div class="field">
-            <label for="dueAt" class="field-label">Date limite (optionnel)</label>
+            <label for="dueAt" class="field-label">{{ $t('grades.new_assignment.due_date') }}</label>
             <DatePicker
               id="dueAt"
               v-model="form.dueAt"
@@ -89,10 +83,9 @@
             />
           </div>
 
-          <!-- Barème + Coefficient -->
           <div class="field-row">
             <div class="field">
-              <label for="maxScore" class="field-label">Barème</label>
+              <label for="maxScore" class="field-label">{{ $t('grades.new_assignment.max_score') }}</label>
               <InputNumber
                 id="maxScore"
                 v-model="form.maxScore"
@@ -103,7 +96,7 @@
               />
             </div>
             <div class="field">
-              <label for="coefficient" class="field-label">Coefficient</label>
+              <label for="coefficient" class="field-label">{{ $t('grades.new_assignment.coefficient') }}</label>
               <InputNumber
                 id="coefficient"
                 v-model="form.coefficient"
@@ -116,10 +109,9 @@
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="form-actions">
             <Button
-              label="Enregistrer brouillon"
+              :label="$t('grades.new_assignment.save_draft')"
               icon="pi pi-save"
               severity="secondary"
               outlined
@@ -129,7 +121,7 @@
               @click="handleSubmit('draft')"
             />
             <Button
-              label="Publier"
+              :label="$t('grades.new_assignment.publish')"
               icon="pi pi-send"
               type="button"
               :loading="saving === 'publish'"

@@ -6,6 +6,8 @@
 
 <script setup lang="ts">
 import FullCalendar from '@fullcalendar/vue3';
+
+const { t } = useI18n();
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { CalendarOptions, EventClickArg } from '@fullcalendar/core';
@@ -85,7 +87,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     center: 'title',
     right: '',
   },
-  buttonText: { today: "Aujourd'hui", prev: '‹', next: '›' },
+  buttonText: { today: t('planning.today'), prev: '‹', next: '›' },
   events: events.value,
   eventContent: (arg) => {
     const { courseName, teacherName, session } = arg.event.extendedProps as {

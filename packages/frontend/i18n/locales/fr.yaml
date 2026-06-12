@@ -1,0 +1,238 @@
+common:
+  cancel: Annuler
+  save: Enregistrer
+  create: Créer
+  add: Ajouter
+  name: Nom
+  email: Email
+  description: Description
+  actions: Actions
+  loading: "Chargement…"
+  yes: Oui
+  no: Non
+  class: Classe
+  choose_class: Choisir une classe
+
+nav:
+  menu: Menu
+  navigation: Navigation
+  home: Accueil
+  dashboard: Tableau de bord
+  my_students: Mes élèves
+  school_students: "Élèves (établissement)"
+  schedule: Emploi du temps
+  absences: Absences
+  gradebook: Carnet de notes
+  subjects: "Matières & Programmes"
+  administration: Administration
+  logout: Déconnexion
+
+auth:
+  email: Email
+  password: Mot de passe
+  login:
+    title: Connexion
+    submit: Se connecter
+    no_account: Pas encore de compte ?
+    create_account: Créer un compte
+  register:
+    title: Inscription
+    submit: "S'inscrire"
+    name_optional: Nom (optionnel)
+    already_registered: Déjà inscrit ?
+    sign_in: Se connecter
+  validation:
+    email_required: "L'email est requis."
+    email_invalid: Email invalide.
+    password_required: Le mot de passe est requis.
+    password_min: Au moins 6 caractères.
+
+dashboard:
+  title: Tableau de bord
+  connecting: "Connexion en cours…"
+  gradebook_title: Carnet de notes
+  new_assignment: "+ Nouveau devoir →"
+  gradebook_hint: "Créez un devoir, saisissez les notes de tous vos élèves en une fois et consultez le carnet matriciel par classe."
+  class_enrollment: Effectifs par classe
+  grade_distribution: Distribution des notes
+  my_students: Mes élèves
+  global_grade_distribution: Distribution globale des notes
+  recent_absences: "Absences récentes (7 jours)"
+  student_overview: Aperçu des élèves
+  see_all: "Voir tout →"
+  my_classes: Mes classes
+  grade_progress: Évolution de mes notes
+  grade_repartition: Répartition de mes notes
+
+admin:
+  students_title: "Élèves de l'établissement"
+  subjects_title: "Matières & Programmes"
+  new_subject: Nouvelle matière
+  add_program: Ajouter un programme
+  edit_subject: Modifier la matière
+  delete_subject: Supprimer la matière
+  no_programs: Aucun programme dans cette matière.
+  no_subjects: "Aucune matière créée. Commencez par ajouter une matière."
+  loading: "Chargement…"
+  topics: Sujets
+  linked_programs: Programmes liés
+  no_subject: Sans matière
+  loading_classes: "Chargement des classes…"
+  no_classes: "Aucune classe dans l'établissement."
+  loading_students: "Chargement des élèves…"
+  no_students: Aucun élève dans cette classe.
+  joined_on: Inscrit le
+  kpi:
+    loading: "Chargement des indicateurs…"
+    students: Élèves
+    classes: Classes
+    subjects: Matières
+    absences: "Absences (7 jours)"
+  absences_widget:
+    no_absences: "Aucune absence ces 7 derniers jours."
+    justified: Justifiée
+    not_justified: Non justifiée
+    see_all: "Voir tout →"
+  subject_dialog:
+    edit: Modifier la matière
+    new: Nouvelle matière
+    name_placeholder: "Ex: Mathématiques"
+    description_placeholder: Description de la matière
+  course_dialog:
+    edit: Modifier le programme
+    new: Nouveau programme
+    name_placeholder: "Ex: Algèbre linéaire"
+    description_placeholder: Description du programme
+    subject: Matière
+    no_subject: Aucune matière
+    linked_programs: Programmes liés
+    select_programs: Sélectionner des programmes
+    topics: Sujets
+    no_topics: Aucun sujet
+    topic_placeholder: "Nom du sujet (ex: Trigonométrie)"
+
+planning:
+  title: Emploi du temps
+  all_classes: Toutes les classes
+  add: Ajouter
+  loading: "Chargement…"
+  today: "Aujourd'hui"
+  absences:
+    title: Gestion des absences
+    restricted: "Cette page est réservée aux enseignants et administrateurs."
+    students_tab: Élèves
+    teachers_tab: Professeurs
+    session: Session
+    user_id: Utilisateur (ID)
+    justified: Justifiée
+    reason: Motif
+    no_absences: Aucune absence enregistrée.
+    justify: Justifier
+    delete: Supprimer
+  absence_dialog:
+    title: Déclarer une absence
+    session: Session
+    user_id: Utilisateur (ID)
+    user_placeholder: "UUID de l'élève ou du prof"
+    role: Rôle
+    reason_optional: Motif (optionnel)
+    student: Élève
+    teacher: Professeur
+  session_dialog:
+    edit: Modifier la session
+    new: Nouvelle session
+    course_id: Cours (ID)
+    course_placeholder: UUID du cours
+    teacher_id: Professeur (ID)
+    teacher_placeholder: UUID du professeur
+    room: Salle
+    room_placeholder: "Ex: B204"
+    start: Début
+    end: Fin
+    recurrence: Récurrence
+    recurrence_none: Aucune
+    recurrence_weekly: Hebdomadaire
+    recurrence_biweekly: Bi-hebdomadaire
+
+grades:
+  gradebook:
+    title: Carnet de notes
+    new_assignment: "+ Nouveau devoir"
+    course_filter: Programme
+    all_courses: Tous les programmes
+    loading: "Chargement du carnet…"
+    no_assignments: Aucun devoir publié pour cette classe.
+    no_assignments_course: Aucun devoir publié pour ce programme.
+    student: Élève
+    average: Moyenne
+  assignment:
+    default_title: Grille de notation
+    see_gradebook: Voir le carnet
+    close: Clôturer
+    save_all: Enregistrer tout
+    student: Élève
+    status: Statut
+    grade: Note
+    comment: Commentaire
+    comment_placeholder: Appréciation
+    graded: Noté
+    pending: En attente
+    absent: Absent
+    exempt: Dispensé
+    draft: Brouillon
+    published: Publié
+    closed: Clôturé
+    graded_count: "{graded} / {total} noté | {graded} / {total} notés"
+  new_assignment:
+    title: Nouveau devoir
+    label: "Intitulé *"
+    label_placeholder: "ex. Contrôle chapitre 3"
+    description: Description
+    description_placeholder: "Instructions, barème détaillé…"
+    class: "Classe *"
+    choose_class: Choisir une classe
+    course: "Programme *"
+    choose_course: Choisir un programme
+    date: "Date du devoir *"
+    due_date: Date limite (optionnel)
+    max_score: Barème
+    coefficient: Coefficient
+    save_draft: Enregistrer brouillon
+    publish: Publier
+
+teacher:
+  students_title: Mes élèves
+  restricted: "Cette page est réservée aux enseignants."
+  class_student_table:
+    loading_classes: "Chargement de vos classes…"
+    invalid_session: "Session invalide : identifiant utilisateur manquant."
+    no_class: "Vous n'enseignez dans aucune classe."
+    contact_admin: "Contactez un administrateur si c'est une erreur."
+    loading_students: "Chargement des élèves…"
+    no_students: Aucun élève dans cette classe.
+    joined_on: Inscrit le
+    manage_grades: Gérer les notes
+    gradebook: Carnet
+
+student:
+  class_list:
+    loading: "Chargement de vos classes…"
+    invalid_session: "Session invalide : identifiant utilisateur manquant."
+    no_class: "Vous n'êtes inscrit(e) dans aucune classe."
+    contact_admin: "Contactez un administrateur si c'est une erreur."
+    teacher_count: "{count} prof | {count} profs"
+    student_count: "{count} élève | {count} élèves"
+  grade_dialog:
+    student: Élève
+    choose_student: Choisir un élève
+    existing_grades: Notes existantes
+    loading_grades: "Chargement des notes…"
+    no_grades: Aucune note pour cet élève dans cette classe.
+    add_grade: Ajouter une note
+    choose_course: Choisir un programme
+    grade_label: Note /20
+    confirm_delete: "Supprimer ?"
+    edit_grade: Modifier la note
+    delete_grade: Supprimer la note
+    header: "Notes — {name}"
+    header_fallback: Notes

@@ -6,16 +6,16 @@
 
     <div v-else-if="pending" class="list-loading">
       <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-      <span>Chargement de vos classes…</span>
+      <span>{{ $t('student.class_list.loading') }}</span>
     </div>
 
     <div v-else-if="!userId" class="list-empty">
-      <p>Session invalide : identifiant utilisateur manquant.</p>
+      <p>{{ $t('student.class_list.invalid_session') }}</p>
     </div>
 
     <div v-else-if="classes.length === 0" class="list-empty">
-      <p>Vous n'êtes inscrit(e) dans aucune classe.</p>
-      <p class="list-empty-hint">Contactez un administrateur si c'est une erreur.</p>
+      <p>{{ $t('student.class_list.no_class') }}</p>
+      <p class="list-empty-hint">{{ $t('student.class_list.contact_admin') }}</p>
     </div>
 
     <ul v-else class="class-items">
@@ -24,12 +24,12 @@
         <span v-if="cls.description" class="class-desc">{{ cls.description }}</span>
         <div class="class-meta">
           <Tag
-            :value="`${cls.classTeachers?.length ?? 0} prof${(cls.classTeachers?.length ?? 0) !== 1 ? 's' : ''}`"
+            :value="teacherCountLabel(cls.classTeachers?.length ?? 0)"
             severity="secondary"
             class="meta-tag"
           />
           <Tag
-            :value="`${cls.students?.length ?? 0} élève${(cls.students?.length ?? 0) !== 1 ? 's' : ''}`"
+            :value="studentCountLabel(cls.students?.length ?? 0)"
             severity="info"
             class="meta-tag"
           />
@@ -42,6 +42,7 @@
 <script setup lang="ts">
 import { normalizeApiError, type SkolrClass, type ClassesApiResponse } from '~/composables/useClass';
 
+const { t } = useI18n();
 const api = useApi();
 const { userId } = useAuth();
 
@@ -65,6 +66,14 @@ const classes = computed(() => classesResponse.value?.data ?? []);
 const fetchError = computed(() =>
   classesError.value ? normalizeApiError(classesError.value) : null,
 );
+
+function teacherCountLabel(n: number): string {
+  return t('student.class_list.teacher_count', { count: n }, n);
+}
+
+function studentCountLabel(n: number): string {
+  return t('student.class_list.student_count', { count: n }, n);
+}
 </script>
 
 <style scoped>

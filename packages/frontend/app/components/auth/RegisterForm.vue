@@ -1,10 +1,10 @@
 <template>
   <Card class="card">
-    <template #title>Inscription</template>
+    <template #title>{{ $t('auth.register.title') }}</template>
     <template #content>
       <div class="form auth-form-fields">
         <div class="field">
-          <label for="register-email">Email</label>
+          <label for="register-email">{{ $t('auth.email') }}</label>
           <InputText
             id="register-email"
             v-model="email"
@@ -19,7 +19,7 @@
         </div>
 
         <div class="field">
-          <label for="register-password">Mot de passe</label>
+          <label for="register-password">{{ $t('auth.password') }}</label>
           <Password
             id="register-password"
             v-model="password"
@@ -36,7 +36,7 @@
         </div>
 
         <div class="field">
-          <label for="register-name">Nom <span class="optional">(optionnel)</span></label>
+          <label for="register-name">{{ $t('auth.register.name_optional') }}</label>
           <InputText
             id="register-name"
             v-model="name"
@@ -53,7 +53,7 @@
     </template>
     <template #footer>
       <div class="footer-actions">
-        <Button :loading="loading" label="S'inscrire" @click="submit" />
+        <Button :loading="loading" :label="$t('auth.register.submit')" @click="submit" />
       </div>
     </template>
   </Card>
@@ -70,6 +70,7 @@ const emit = defineEmits<{
   success: [payload: AuthSuccess];
 }>();
 
+const { t } = useI18n();
 const { register } = useAuth();
 const router = useRouter();
 
@@ -87,20 +88,20 @@ function validate(): boolean {
   passwordError.value = null;
 
   if (!credentialPolicy.satisfiesEmailNonEmpty.value) {
-    emailError.value = "L'email est requis.";
+    emailError.value = t('auth.validation.email_required');
     return false;
   }
   if (!credentialPolicy.satisfiesEmailFormat.value) {
-    emailError.value = 'Email invalide.';
+    emailError.value = t('auth.validation.email_invalid');
     return false;
   }
 
   if (!credentialPolicy.satisfiesPasswordNonEmpty.value) {
-    passwordError.value = 'Le mot de passe est requis.';
+    passwordError.value = t('auth.validation.password_required');
     return false;
   }
   if (!credentialPolicy.satisfiesPasswordMinLength.value) {
-    passwordError.value = 'Au moins 6 caractères.';
+    passwordError.value = t('auth.validation.password_min');
     return false;
   }
 
@@ -144,11 +145,6 @@ async function submit() {
 .field {
   display: grid;
   gap: 0.35rem;
-}
-
-.optional {
-  font-weight: normal;
-  opacity: 0.75;
 }
 
 .footer-actions {

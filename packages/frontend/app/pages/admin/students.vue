@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <Card>
-      <template #title>Élèves de l'établissement</template>
+      <template #title>{{ $t('admin.students_title') }}</template>
       <template #content>
         <AdminClassStudentTable :initial-class-id="initialClassId" />
       </template>

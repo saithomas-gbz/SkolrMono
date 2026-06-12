@@ -15,6 +15,7 @@
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
     "@fullcalendar/vue3": "^6.1.20",
+    "@nuxtjs/i18n": "^10.4.0",
     "@primevue/nuxt-module": "^4.5.5",
     "@sentry/nuxt": "^10.56.0",
     "chart.js": "^4.5.1",

@@ -10,14 +10,14 @@
     <div v-if="activeStudent" class="grade-dialog">
       <!-- Sélecteur d'élève -->
       <section class="dialog-section">
-        <label for="grade-student-select" class="section-title">Élève</label>
+        <label for="grade-student-select" class="section-title">{{ $t('student.grade_dialog.student') }}</label>
         <Select
           id="grade-student-select"
           v-model="selectedStudentId"
           :options="studentOptions"
           option-label="label"
           option-value="value"
-          placeholder="Choisir un élève"
+          :placeholder="$t('student.grade_dialog.choose_student')"
           class="student-select"
         />
         <p class="dialog-subtitle">{{ activeStudent.email }}</p>
@@ -25,17 +25,17 @@
 
       <!-- Notes existantes -->
       <section class="dialog-section">
-        <h4 class="section-title">Notes existantes</h4>
+        <h4 class="section-title">{{ $t('student.grade_dialog.existing_grades') }}</h4>
 
         <Message v-if="gradesError" severity="error" :closable="false">{{ gradesError }}</Message>
 
         <div v-else-if="gradesPending" class="dialog-loading">
           <ProgressSpinner style="width: 1.5rem; height: 1.5rem" stroke-width="4" />
-          <span>Chargement des notes…</span>
+          <span>{{ $t('student.grade_dialog.loading_grades') }}</span>
         </div>
 
         <p v-else-if="grades.length === 0" class="dialog-empty">
-          Aucune note pour cet élève dans cette classe.
+          {{ $t('student.grade_dialog.no_grades') }}
         </p>
 
         <ul v-else class="grade-list">
@@ -50,8 +50,8 @@
                 show-buttons
                 class="grade-input"
               />
-              <Button label="Enregistrer" size="small" :loading="saving" @click="submitEdit(grade.id)" />
-              <Button label="Annuler" size="small" text severity="secondary" @click="cancelEdit" />
+              <Button :label="$t('common.save')" size="small" :loading="saving" @click="submitEdit(grade.id)" />
+              <Button :label="$t('common.cancel')" size="small" text severity="secondary" @click="cancelEdit" />
             </template>
 
             <template v-else>
@@ -60,13 +60,13 @@
                 icon="pi pi-pencil"
                 size="small"
                 text
-                aria-label="Modifier la note"
+                :aria-label="$t('student.grade_dialog.edit_grade')"
                 @click="startEdit(grade)"
               />
               <template v-if="confirmingId === grade.id">
-                <span class="confirm-text">Supprimer&nbsp;?</span>
-                <Button label="Oui" size="small" severity="danger" :loading="deleting" @click="submitDelete(grade.id)" />
-                <Button label="Non" size="small" text severity="secondary" @click="confirmingId = null" />
+                <span class="confirm-text">{{ $t('student.grade_dialog.confirm_delete') }}</span>
+                <Button :label="$t('common.yes')" size="small" severity="danger" :loading="deleting" @click="submitDelete(grade.id)" />
+                <Button :label="$t('common.no')" size="small" text severity="secondary" @click="confirmingId = null" />
               </template>
               <Button
                 v-else
@@ -74,7 +74,7 @@
                 size="small"
                 text
                 severity="danger"
-                aria-label="Supprimer la note"
+                :aria-label="$t('student.grade_dialog.delete_grade')"
                 @click="confirmingId = grade.id"
               />
             </template>
@@ -84,7 +84,7 @@
 
       <!-- Ajouter une note -->
       <section class="dialog-section">
-        <h4 class="section-title">Ajouter une note</h4>
+        <h4 class="section-title">{{ $t('student.grade_dialog.add_grade') }}</h4>
 
         <Message v-if="createError" severity="error" :closable="false">{{ createError }}</Message>
 
@@ -94,19 +94,19 @@
             :options="courseOptions"
             option-label="label"
             option-value="value"
-            placeholder="Choisir un programme"
+            :placeholder="$t('student.grade_dialog.choose_course')"
             class="create-course"
           />
           <InputNumber
             v-model="newValue"
             :min="0"
             :max="20"
-            placeholder="Note /20"
+            :placeholder="$t('student.grade_dialog.grade_label')"
             show-buttons
             class="grade-input"
           />
           <Button
-            label="Ajouter"
+            :label="$t('common.add')"
             icon="pi pi-plus"
             :loading="creating"
             :disabled="!canCreate"
@@ -140,6 +140,7 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
+const { t } = useI18n();
 const { fetchGradesByUserId, createGrade, updateGrade, deleteGrade } = useGrade();
 const { fetchTeacherCourses } = useClass();
 const { user } = useAuth();
@@ -149,7 +150,6 @@ const courses = ref<GradeCourse[]>([]);
 const gradesPending = ref(false);
 const gradesError = ref<string | null>(null);
 
-// Liste des élèves disponibles dans le dialog (toute la classe, ou à défaut l'élève fourni).
 const studentList = computed<DialogStudent[]>(() => {
   if (props.students && props.students.length > 0) {
     return props.students;
@@ -168,7 +168,9 @@ const activeStudent = computed<DialogStudent | null>(
 );
 
 const dialogHeader = computed(() =>
-  activeStudent.value ? `Notes — ${activeStudent.value.name}` : 'Notes',
+  activeStudent.value
+    ? t('student.grade_dialog.header', { name: activeStudent.value.name })
+    : t('student.grade_dialog.header_fallback'),
 );
 
 const courseOptions = computed(() =>
@@ -209,7 +211,6 @@ async function loadTeacherCourses() {
   }
 }
 
-// À l'ouverture : (ré)initialise l'élève sélectionné sur celui de la ligne cliquée.
 watch(
   () => props.visible,
   (isVisible) => {
@@ -223,7 +224,6 @@ watch(
   { immediate: true },
 );
 
-// Recharge les notes quand l'élève sélectionné ou la classe change (dialog ouvert).
 watch(
   () => [props.visible, selectedStudentId.value, props.classId],
   () => {

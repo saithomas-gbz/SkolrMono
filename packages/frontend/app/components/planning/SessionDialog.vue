@@ -1,43 +1,43 @@
 <template>
   <Dialog
     v-model:visible="visible"
-    :header="session ? 'Modifier la session' : 'Nouvelle session'"
+    :header="session ? $t('planning.session_dialog.edit') : $t('planning.session_dialog.new')"
     modal
     :style="{ width: '32rem' }"
     @hide="resetForm"
   >
     <div class="session-form">
       <div class="field">
-        <label for="sd-class">Classe</label>
+        <label for="sd-class">{{ $t('common.class') }}</label>
         <Select
           id="sd-class"
           v-model="form.classId"
           :options="classOptions"
           option-label="label"
           option-value="value"
-          placeholder="Choisir une classe"
+          :placeholder="$t('common.choose_class')"
           class="w-full"
         />
       </div>
 
       <div class="field">
-        <label for="sd-course">Cours (ID)</label>
-        <InputText id="sd-course" v-model="form.courseId" class="w-full" placeholder="UUID du cours" />
+        <label for="sd-course">{{ $t('planning.session_dialog.course_id') }}</label>
+        <InputText id="sd-course" v-model="form.courseId" class="w-full" :placeholder="$t('planning.session_dialog.course_placeholder')" />
       </div>
 
       <div class="field">
-        <label for="sd-teacher">Professeur (ID)</label>
-        <InputText id="sd-teacher" v-model="form.teacherId" class="w-full" placeholder="UUID du professeur" />
+        <label for="sd-teacher">{{ $t('planning.session_dialog.teacher_id') }}</label>
+        <InputText id="sd-teacher" v-model="form.teacherId" class="w-full" :placeholder="$t('planning.session_dialog.teacher_placeholder')" />
       </div>
 
       <div class="field">
-        <label for="sd-room">Salle</label>
-        <InputText id="sd-room" v-model="form.room" class="w-full" placeholder="Ex: B204" />
+        <label for="sd-room">{{ $t('planning.session_dialog.room') }}</label>
+        <InputText id="sd-room" v-model="form.room" class="w-full" :placeholder="$t('planning.session_dialog.room_placeholder')" />
       </div>
 
       <div class="field-row">
         <div class="field">
-          <label for="sd-start">Début</label>
+          <label for="sd-start">{{ $t('planning.session_dialog.start') }}</label>
           <DatePicker
             id="sd-start"
             v-model="form.startAt"
@@ -48,7 +48,7 @@
           />
         </div>
         <div class="field">
-          <label for="sd-end">Fin</label>
+          <label for="sd-end">{{ $t('planning.session_dialog.end') }}</label>
           <DatePicker
             id="sd-end"
             v-model="form.endAt"
@@ -61,14 +61,14 @@
       </div>
 
       <div class="field">
-        <label for="sd-recurrence">Récurrence</label>
+        <label for="sd-recurrence">{{ $t('planning.session_dialog.recurrence') }}</label>
         <Select
           id="sd-recurrence"
           v-model="form.recurrenceRule"
           :options="recurrenceOptions"
           option-label="label"
           option-value="value"
-          placeholder="Aucune"
+          :placeholder="$t('planning.session_dialog.recurrence_none')"
           class="w-full"
         />
       </div>
@@ -77,9 +77,9 @@
     </div>
 
     <template #footer>
-      <Button label="Annuler" severity="secondary" text @click="visible = false" />
+      <Button :label="$t('common.cancel')" severity="secondary" text @click="visible = false" />
       <Button
-        :label="session ? 'Enregistrer' : 'Créer'"
+        :label="session ? $t('common.save') : $t('common.create')"
         :loading="pending"
         :disabled="!isFormValid"
         @click="submit"
@@ -105,13 +105,14 @@ const emit = defineEmits<{
 
 const visible = defineModel<boolean>('visible', { default: false });
 
+const { t } = useI18n();
 const { createSession, updateSession } = usePlanning();
 
-const recurrenceOptions = [
-  { label: 'Aucune', value: '' },
-  { label: 'Hebdomadaire', value: 'WEEKLY' },
-  { label: 'Bi-hebdomadaire', value: 'BIWEEKLY' },
-];
+const recurrenceOptions = computed(() => [
+  { label: t('planning.session_dialog.recurrence_none'), value: '' },
+  { label: t('planning.session_dialog.recurrence_weekly'), value: 'WEEKLY' },
+  { label: t('planning.session_dialog.recurrence_biweekly'), value: 'BIWEEKLY' },
+]);
 
 const classOptions = computed(() =>
   props.classes.map((c) => ({ label: c.name, value: c.id })),

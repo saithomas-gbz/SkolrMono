@@ -6,28 +6,28 @@
 
     <div v-else-if="pending" class="table-loading">
       <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-      <span>Chargement de vos classes…</span>
+      <span>{{ $t('teacher.class_student_table.loading_classes') }}</span>
     </div>
 
     <div v-else-if="!userId" class="table-empty">
-      <p>Session invalide : identifiant utilisateur manquant.</p>
+      <p>{{ $t('teacher.class_student_table.invalid_session') }}</p>
     </div>
 
     <div v-else-if="classes.length === 0" class="table-empty">
-      <p>Vous n'enseignez dans aucune classe.</p>
-      <p class="table-empty-hint">Contactez un administrateur si c'est une erreur.</p>
+      <p>{{ $t('teacher.class_student_table.no_class') }}</p>
+      <p class="table-empty-hint">{{ $t('teacher.class_student_table.contact_admin') }}</p>
     </div>
 
     <template v-else>
       <div class="table-toolbar">
-        <label for="teacher-class-select" class="toolbar-label">Classe</label>
+        <label for="teacher-class-select" class="toolbar-label">{{ $t('common.class') }}</label>
         <Select
           id="teacher-class-select"
           v-model="selectedClassId"
           :options="classOptions"
           option-label="label"
           option-value="value"
-          placeholder="Choisir une classe"
+          :placeholder="$t('common.choose_class')"
         />
       </div>
 
@@ -37,11 +37,11 @@
 
       <div v-else-if="studentsPending" class="table-loading">
         <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-        <span>Chargement des élèves…</span>
+        <span>{{ $t('teacher.class_student_table.loading_students') }}</span>
       </div>
 
       <div v-else-if="rows.length === 0" class="table-empty">
-        <p>Aucun élève dans cette classe.</p>
+        <p>{{ $t('teacher.class_student_table.no_students') }}</p>
       </div>
 
       <DataTable
@@ -54,18 +54,18 @@
         :sort-order="1"
         removable-sort
       >
-        <Column field="name" header="Nom" sortable />
-        <Column field="email" header="Email" sortable />
-        <Column field="joinedAt" header="Inscrit le" sortable>
+        <Column field="name" :header="$t('common.name')" sortable />
+        <Column field="email" :header="$t('common.email')" sortable />
+        <Column field="joinedAt" :header="$t('teacher.class_student_table.joined_on')" sortable>
           <template #body="{ data }">
             {{ formatDate(data.joinedAt) }}
           </template>
         </Column>
-        <Column header="Actions">
+        <Column :header="$t('common.actions')">
           <template #body="{ data }">
             <div class="action-buttons">
               <Button
-                label="Gérer les notes"
+                :label="$t('teacher.class_student_table.manage_grades')"
                 icon="pi pi-pencil"
                 size="small"
                 outlined
@@ -76,7 +76,7 @@
                 :to="`/grades/classes/${selectedClassId}`"
                 class="p-button p-button-sm p-button-text"
               >
-                Carnet
+                {{ $t('teacher.class_student_table.gradebook') }}
               </NuxtLink>
             </div>
           </template>

@@ -2,25 +2,25 @@
   <div class="kpi-cards">
     <div v-if="pending" class="kpi-loading">
       <ProgressSpinner style="width: 1.5rem; height: 1.5rem" stroke-width="4" />
-      <span>Chargement des indicateurs…</span>
+      <span>{{ $t('admin.kpi.loading') }}</span>
     </div>
 
     <template v-else>
       <div class="kpi-card">
         <span class="kpi-value">{{ kpis.students ?? '—' }}</span>
-        <span class="kpi-label">Élèves</span>
+        <span class="kpi-label">{{ $t('admin.kpi.students') }}</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-value">{{ kpis.classes ?? '—' }}</span>
-        <span class="kpi-label">Classes</span>
+        <span class="kpi-label">{{ $t('admin.kpi.classes') }}</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-value">{{ kpis.courses ?? '—' }}</span>
-        <span class="kpi-label">Matières</span>
+        <span class="kpi-label">{{ $t('admin.kpi.subjects') }}</span>
       </div>
       <div class="kpi-card">
         <span class="kpi-value">{{ kpis.absences ?? '—' }}</span>
-        <span class="kpi-label">Absences (7 jours)</span>
+        <span class="kpi-label">{{ $t('admin.kpi.absences') }}</span>
       </div>
     </template>
   </div>

@@ -6,23 +6,23 @@
 
     <div v-else-if="pending" class="table-loading">
       <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-      <span>Chargement des classes…</span>
+      <span>{{ $t('admin.loading_classes') }}</span>
     </div>
 
     <div v-else-if="classes.length === 0" class="table-empty">
-      <p>Aucune classe dans l'établissement.</p>
+      <p>{{ $t('admin.no_classes') }}</p>
     </div>
 
     <template v-else>
       <div class="table-toolbar">
-        <label for="admin-class-select" class="toolbar-label">Classe</label>
+        <label for="admin-class-select" class="toolbar-label">{{ $t('common.class') }}</label>
         <Select
           id="admin-class-select"
           v-model="selectedClassId"
           :options="classOptions"
           option-label="label"
           option-value="value"
-          placeholder="Choisir une classe"
+          :placeholder="$t('common.choose_class')"
         />
       </div>
 
@@ -32,11 +32,11 @@
 
       <div v-else-if="studentsPending" class="table-loading">
         <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-        <span>Chargement des élèves…</span>
+        <span>{{ $t('admin.loading_students') }}</span>
       </div>
 
       <div v-else-if="rows.length === 0" class="table-empty">
-        <p>Aucun élève dans cette classe.</p>
+        <p>{{ $t('admin.no_students') }}</p>
       </div>
 
       <DataTable
@@ -49,9 +49,9 @@
         :sort-order="1"
         removable-sort
       >
-        <Column field="name" header="Nom" sortable />
-        <Column field="email" header="Email" sortable />
-        <Column field="joinedAt" header="Inscrit le" sortable>
+        <Column field="name" :header="$t('common.name')" sortable />
+        <Column field="email" :header="$t('common.email')" sortable />
+        <Column field="joinedAt" :header="$t('admin.joined_on')" sortable>
           <template #body="{ data }">
             {{ formatDate(data.joinedAt) }}
           </template>

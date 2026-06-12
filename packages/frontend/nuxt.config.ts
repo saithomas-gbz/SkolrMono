@@ -19,7 +19,12 @@ export default defineNuxtConfig({
     },
   },
 
-  modules: ["@primevue/nuxt-module", "@sentry/nuxt/module"],
+  modules: ["@primevue/nuxt-module", "@sentry/nuxt/module", "@nuxtjs/i18n"],
+
+  i18n: {
+    defaultLocale: "fr",
+    locales: [{ code: "fr", file: "fr.yaml", language: "fr-FR" }],
+  },
 
   sentry: {
     sourceMapsUploadOptions: {

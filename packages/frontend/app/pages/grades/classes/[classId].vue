@@ -3,25 +3,24 @@
     <Card>
       <template #title>
         <div class="card-header">
-          <span>Carnet de notes</span>
+          <span>{{ $t('grades.gradebook.title') }}</span>
           <NuxtLink
             :to="`/grades/assignments/new`"
             class="p-button p-button-sm"
           >
-            + Nouveau devoir
+            {{ $t('grades.gradebook.new_assignment') }}
           </NuxtLink>
         </div>
       </template>
       <template #content>
-        <!-- Filtre cours -->
         <div class="toolbar">
-          <label class="toolbar-label">Programme</label>
+          <label class="toolbar-label">{{ $t('grades.gradebook.course_filter') }}</label>
           <Select
             v-model="selectedCourseId"
             :options="courseOptions"
             option-label="label"
             option-value="value"
-            placeholder="Tous les programmes"
+            :placeholder="$t('grades.gradebook.all_courses')"
             show-clear
             class="course-select"
             @change="load"
@@ -33,23 +32,23 @@
 
         <div v-if="pending" class="loading">
           <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-          <span>Chargement du carnet…</span>
+          <span>{{ $t('grades.gradebook.loading') }}</span>
         </div>
 
         <div v-else-if="!gradebook" class="empty">
-          <p>Aucun devoir publié pour cette classe.</p>
+          <p>{{ $t('grades.gradebook.no_assignments') }}</p>
         </div>
 
         <template v-else>
           <div v-if="gradebook.assignments.length === 0" class="empty">
-            <p>Aucun devoir publié{{ selectedCourseId ? ' pour ce programme' : '' }}.</p>
+            <p>{{ selectedCourseId ? $t('grades.gradebook.no_assignments_course') : $t('grades.gradebook.no_assignments') }}</p>
           </div>
 
           <div v-else class="matrix-wrapper">
             <table class="matrix-table">
               <thead>
                 <tr>
-                  <th class="col-student">Élève</th>
+                  <th class="col-student">{{ $t('grades.gradebook.student') }}</th>
                   <th
                     v-for="a in gradebook.assignments"
                     :key="a.id"
@@ -60,7 +59,7 @@
                       <span class="assignment-meta">{{ formatDate(a.assignedAt) }} · /{{ a.maxScore }}</span>
                     </NuxtLink>
                   </th>
-                  <th class="col-avg">Moyenne</th>
+                  <th class="col-avg">{{ $t('grades.gradebook.average') }}</th>
                 </tr>
               </thead>
               <tbody>
