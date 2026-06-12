@@ -53,6 +53,18 @@ services:
       retries: 5
     networks:
       - skolr_network
+  rabbitmq:
+    image: rabbitmq:management:alpine
+    container_name: skolr_rabbitmq
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
