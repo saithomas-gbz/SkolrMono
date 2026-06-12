@@ -152,7 +152,7 @@ export default {
         value,
         status,
         teacherId,
-        createdAt: grade.createdAt.toISOString(),
+        createdAt: new Date(grade.createdAt).toISOString(),
       });
 
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });
