@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { publish } from '@skolr/rabbitmq';
 
 const gradeInclude = {
   user: true,
@@ -141,6 +142,15 @@ export default {
         },
         include: gradeInclude,
       });
+
+      publish('grade.created', {
+        gradeId: grade.id,
+        studentId: grade.userId,
+        classId: grade.classId,
+        courseId: grade.courseId,
+        value: grade.value,
+      }).catch((err) => request.log.warn({ err }, 'Failed to publish grade.created'));
+
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });
     } catch (error) {
       request.log.error(error);

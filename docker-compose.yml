@@ -53,6 +53,26 @@ services:
       retries: 5
     networks:
       - skolr_network
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: skolr_rabbitmq
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - skolr_network
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
@@ -85,10 +105,13 @@ services:
       - GOOGLE_CALLBACK_URI=${GOOGLE_CALLBACK_URI:-http://localhost:3000/login/google/callback}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${AUTH_SERVICE_PORT:-3000}:3000"
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -107,8 +130,11 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?schema=public
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     depends_on:
       postgres-class:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -129,12 +155,15 @@ services:
       - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${GRADE_SERVICE_PORT:-3007}:${GRADE_SERVICE_PORT:-3007}"
     depends_on:
       postgres-grade:
         condition: service_healthy
       class-service:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${GRADE_SERVICE_PORT:-3007}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -154,10 +183,13 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
     depends_on:
       postgres-planning:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PLANNING_SERVICE_PORT:-3008}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -311,6 +343,8 @@ volumes:
   postgres_class_data:
   postgres_grade_data:
   postgres_planning_data:
+  rabbitmq_data:
+  rabbitmq_log:
   grafana_data:
   prometheus_data:
 

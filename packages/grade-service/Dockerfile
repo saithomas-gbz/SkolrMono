@@ -1,8 +1,9 @@
 FROM oven/bun:latest
 WORKDIR /app
 
-COPY package.json tsconfig.json ./
+COPY package.json bun.lock tsconfig.json ./
 
+COPY packages/rabbitmq/ ./packages/rabbitmq/
 COPY packages/grade-service/ ./packages/grade-service/
 
 WORKDIR /app/packages/grade-service

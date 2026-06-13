@@ -101,7 +101,7 @@ function createMockRequest<RouteGeneric extends RouteGenericInterface = RouteGen
   return {
     body: (overrides.body ?? {}) as FastifyRequest<RouteGeneric>['body'],
     params: (overrides.params ?? {}) as FastifyRequest<RouteGeneric>['params'],
-    log: { error: mock() },
+    log: { error: mock(), warn: mock() },
   } as FastifyRequest<RouteGeneric>;
 }
 

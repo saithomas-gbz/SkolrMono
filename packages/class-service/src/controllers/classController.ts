@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { randomUUID } from 'crypto';
 import { RESERVED_CLASS_PATH_IDS, sendListOk } from '../lib/listResponse';
+import { publish } from '@skolr/rabbitmq';
 
 export interface ClassData {
   name: string;
@@ -225,6 +226,13 @@ export default {
           students: true,
         },
       });
+
+      for (const studentId of studentIds) {
+        publish('student.enrolled', { studentId, classId: id }).catch((err) =>
+          request.log.warn({ err }, 'Failed to publish student.enrolled'),
+        );
+      }
+
       return reply.status(200).send({ data: updatedClass, message: 'Class updated successfully' });
     } catch (error) {
       request.log.error(error);

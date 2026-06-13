@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import bcrypt from 'bcrypt';
+import { publish } from '@skolr/rabbitmq';
 
 interface GoogleOAuthProfile {
   id: string;
@@ -70,6 +71,13 @@ const authController = {
         { userId: user.id, email: user.email, role: user.role },
         { expiresIn: '1h' }
       );
+
+      publish('user.created', {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      }).catch((err) => request.log.warn({ err }, 'Failed to publish user.created'));
 
       return reply.status(201).send({
         token,
