@@ -73,6 +73,24 @@ services:
       start_period: 30s
     networks:
       - skolr_network
+  postgres-notification:
+    image: postgres:15-alpine
+    container_name: skolr_notification_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_NOTIFICATION_DB:-skolr_notification}
+    ports:
+      - "${POSTGRES_NOTIFICATION_PORT:-5436}:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
@@ -199,6 +217,39 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./packages/notification-service/Dockerfile
+    container_name: skolr_notification_service
+    environment:
+      - PORT=${NOTIFICATION_SERVICE_PORT:-3009}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-notification:5432/${POSTGRES_NOTIFICATION_DB:-skolr_notification}?schema=public
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-3009}:${NOTIFICATION_SERVICE_PORT:-3009}"
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      class-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${NOTIFICATION_SERVICE_PORT:-3009}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -210,6 +261,7 @@ services:
       - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
       - GRADE_SERVICE_URL=${GRADE_SERVICE_URL:-http://grade-service:3007}
       - PLANNING_SERVICE_URL=${PLANNING_SERVICE_URL:-http://planning-services:3008}
+      - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:3009}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
@@ -222,6 +274,8 @@ services:
       grade-service:
         condition: service_healthy
       planning-services:
+        condition: service_healthy
+      notification-service:
         condition: service_healthy
     networks:
       - skolr_network
@@ -343,6 +397,7 @@ volumes:
   postgres_class_data:
   postgres_grade_data:
   postgres_planning_data:
+  postgres_notification_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:
