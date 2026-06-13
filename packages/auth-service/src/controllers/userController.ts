@@ -30,19 +30,24 @@ const userController = {
 
   getUsersByIds: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { ids } = request.query as { ids?: string };
+      const { ids, role } = request.query as { ids?: string; role?: string };
 
       const idList = (ids ?? '')
         .split(',')
         .map((id) => id.trim())
         .filter((id) => id.length > 0);
 
-      if (idList.length === 0) {
+      const where = {
+        ...(idList.length > 0 ? { id: { in: idList } } : {}),
+        ...(role ? { role: role as Role } : {}),
+      };
+
+      if (idList.length === 0 && !role) {
         return reply.send({ data: [] });
       }
 
       const users = await db.user.findMany({
-        where: { id: { in: idList } },
+        where,
         omit: { password: true },
       });
 
