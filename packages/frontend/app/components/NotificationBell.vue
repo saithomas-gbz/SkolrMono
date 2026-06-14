@@ -1,19 +1,38 @@
 <template>
-  <div class="notification-bell" ref="bellRef">
-    <button class="bell-button" :aria-label="`Notifications (${unreadCount} non lues)`" @click="toggle">
-      <i class="pi pi-bell"></i>
-      <span v-if="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
-    </button>
+  <div
+    ref="bellRef"
+    class="notification-bell"
+  >
+    <OverlayBadge
+      :value="badgeValue ?? undefined"
+      severity="danger"
+    >
+      <Button
+        text
+        rounded
+        icon="pi pi-bell"
+        :aria-label="$t('notifications.aria_label', { count: unreadCount })"
+        @click="toggle"
+      />
+    </OverlayBadge>
 
     <div v-if="open" class="dropdown">
       <div class="dropdown-header">
-        <span class="dropdown-title">Notifications</span>
-        <button v-if="unreadCount > 0" class="mark-all-btn" :disabled="loading" @click="markAllAsRead">
-          Tout marquer comme lu
-        </button>
+        <span class="dropdown-title">{{ $t('notifications.title') }}</span>
+        <Button
+          v-if="unreadCount > 0"
+          text
+          size="small"
+          :disabled="loading"
+          :label="$t('notifications.mark_all_read')"
+          @click="markAllAsRead"
+        />
       </div>
 
-      <div v-if="notifications.length === 0" class="empty">Aucune notification</div>
+      <div v-if="notifications.length === 0" class="empty">
+        <i class="pi pi-inbox" />
+        <span>{{ $t('notifications.empty') }}</span>
+      </div>
 
       <ul v-else class="notif-list">
         <li
@@ -33,14 +52,26 @@
 </template>
 
 <script setup lang="ts">
-import type { Notification } from '~/composables/useNotifications';
+import type { Notification } from "~/composables/useNotifications";
 
 const { isLoggedIn } = useAuth();
-const { notifications, unreadCount, loading, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } =
-  useNotifications();
+const {
+  notifications,
+  unreadCount,
+  loading,
+  fetchNotifications,
+  fetchUnreadCount,
+  markAsRead,
+  markAllAsRead,
+} = useNotifications();
 
 const open = ref(false);
 const bellRef = ref<HTMLElement | null>(null);
+
+const badgeValue = computed<string | null>(() => {
+  if (unreadCount.value <= 0) return null;
+  return unreadCount.value > 99 ? "99+" : String(unreadCount.value);
+});
 
 function toggle() {
   open.value = !open.value;
@@ -52,7 +83,10 @@ async function handleClick(notif: Notification) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  return new Date(iso).toLocaleString("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 function onClickOutside(e: MouseEvent) {
@@ -68,46 +102,18 @@ onMounted(() => {
     fetchUnreadCount();
     pollInterval = setInterval(fetchUnreadCount, 30_000);
   }
-  document.addEventListener('click', onClickOutside);
+  document.addEventListener("click", onClickOutside);
 });
 
 onUnmounted(() => {
   if (pollInterval) clearInterval(pollInterval);
-  document.removeEventListener('click', onClickOutside);
+  document.removeEventListener("click", onClickOutside);
 });
 </script>
 
 <style scoped>
 .notification-bell {
   position: relative;
-}
-
-.bell-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  position: relative;
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  background: var(--p-red-500, #ef4444);
-  color: #fff;
-  border-radius: 9999px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 0.2rem;
-  line-height: 1;
 }
 
 .dropdown {
@@ -136,23 +142,12 @@ onUnmounted(() => {
   font-size: 0.9rem;
 }
 
-.mark-all-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.75rem;
-  color: var(--p-primary-500, #6366f1);
-  padding: 0;
-}
-
-.mark-all-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   padding: 1.5rem 1rem;
-  text-align: center;
   color: var(--p-text-muted-color, #94a3b8);
   font-size: 0.875rem;
 }
@@ -166,6 +161,9 @@ onUnmounted(() => {
 }
 
 .notif-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   padding: 0.75rem 1rem;
   cursor: pointer;
   border-bottom: 1px solid var(--p-surface-100, #f1f5f9);
@@ -191,13 +189,11 @@ onUnmounted(() => {
 .notif-title {
   font-weight: 600;
   font-size: 0.85rem;
-  margin-bottom: 0.2rem;
 }
 
 .notif-body {
   font-size: 0.8rem;
   color: var(--p-text-muted-color, #64748b);
-  margin-bottom: 0.25rem;
 }
 
 .notif-date {
