@@ -34,6 +34,10 @@ export default defineNuxtConfig({
     },
   },
 
+  css: [
+    'primeicons/primeicons.css'
+  ],
+
   primevue: {
     options: {
       theme: {

@@ -1,7 +1,7 @@
 <template>
   <div class="notification-bell" ref="bellRef">
     <button class="bell-button" :aria-label="`Notifications (${unreadCount} non lues)`" @click="toggle">
-      <span class="bell-icon">🔔</span>
+      <i class="pi pi-bell"></i>
       <span v-if="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
     </button>
 
