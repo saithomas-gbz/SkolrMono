@@ -10,6 +10,9 @@
     "packages/class-service": {
       "project": ["src/**/*.ts"]
     },
+    "packages/message-service": {
+      "project": ["src/**/*.ts", "prisma/**/*.ts"]
+    },
     "packages/frontend": {
       "project": ["app/**/*.{vue,ts,tsx,jsx}", "server/**/*.ts"],
       "ignoreDependencies": ["vue-router", "chart.js", "primeicons"]
