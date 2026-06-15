@@ -176,6 +176,7 @@ async function build() {
   await gateway.register(import('./routes/grade'));
   await gateway.register(import('./routes/planning'));
   await gateway.register(import('./routes/notification'));
+  await gateway.register(import('./routes/message'));
 
   await gateway.register(fastifySwaggerUi, {
     routePrefix: '/docs',
