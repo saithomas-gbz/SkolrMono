@@ -13,6 +13,9 @@
           <span class="brand-name">Skolr</span>
         </div>
       </template>
+      <template #end>
+        <NotificationBell />
+      </template>
     </Menubar>
 
     <Sidebar v-model:visible="isSidebarOpen" :header="$t('nav.navigation')" position="left">

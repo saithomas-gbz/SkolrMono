@@ -214,6 +214,12 @@ teacher:
     manage_grades: Gérer les notes
     gradebook: Carnet
 
+notifications:
+  title: Notifications
+  aria_label: "Notifications ({count} non lues)"
+  mark_all_read: Tout marquer comme lu
+  empty: Aucune notification
+
 student:
   class_list:
     loading: "Chargement de vos classes…"
