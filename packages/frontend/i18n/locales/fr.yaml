@@ -24,6 +24,7 @@ nav:
   absences: Absences
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
+  messages: Messages
   administration: Administration
   logout: Déconnexion
 
@@ -213,6 +214,16 @@ teacher:
     joined_on: Inscrit le
     manage_grades: Gérer les notes
     gradebook: Carnet
+
+messages:
+  title: Messages
+  new_conversation: Nouvelle conversation
+  send: Envoyer
+  empty_conversations: Aucune conversation
+  empty_messages: Aucun message
+  placeholder: Écrire un message...
+  select_conversation: Sélectionnez une conversation
+  default_conversation_name: Conversation
 
 notifications:
   title: Notifications
