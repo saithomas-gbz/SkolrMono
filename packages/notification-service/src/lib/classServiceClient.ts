@@ -13,11 +13,6 @@ async function fetchClass(classId: string): Promise<ClassResponse['data'] | null
   return ((await response.json()) as ClassResponse).data;
 }
 
-async function getClassTeacherIds(classId: string): Promise<string[]> {
-  const data = await fetchClass(classId);
-  return data ? data.classTeachers.map((ct) => ct.teacherId) : [];
-}
-
 export async function getClassMemberIds(classId: string): Promise<string[]> {
   const data = await fetchClass(classId);
   if (!data) return [];
