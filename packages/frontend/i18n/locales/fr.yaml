@@ -221,9 +221,15 @@ messages:
   send: Envoyer
   empty_conversations: Aucune conversation
   empty_messages: Aucun message
-  placeholder: Écrire un message...
+  placeholder: Écrire un message… (Entrée pour envoyer)
   select_conversation: Sélectionnez une conversation
   default_conversation_name: Conversation
+  new_conversation_dialog:
+    title: Nouvelle conversation
+    name_label: Nom de la conversation (optionnel)
+    name_placeholder: "Ex : Suivi TP Maths"
+    participants_label: Participants
+    participants_placeholder: Choisir des participants
 
 notifications:
   title: Notifications

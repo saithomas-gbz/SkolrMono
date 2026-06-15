@@ -8,6 +8,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  TEACHER
+  STAFF
+  ADMIN
+}
+
 model Conversation {
   id           String                    @id @default(uuid())
   name         String?

@@ -1,3 +1,5 @@
+import { normalizeApiError } from '~/composables/useClass';
+
 export type Message = {
   id: string;
   conversationId: string;
@@ -28,14 +30,16 @@ export function useMessages() {
   const currentMessages = ref<Message[]>([]);
   const loading = ref(false);
   const sending = ref(false);
+  const error = ref<string | null>(null);
 
   async function fetchConversations(userId: string) {
     try {
+      error.value = null;
       loading.value = true;
       const response = await api<{ data: Conversation[] }>(`/message/conversations/user/${userId}`);
       conversations.value = response.data;
-    } catch (error) {
-      console.error('[useMessages] fetchConversations error', error);
+    } catch (e) {
+      error.value = normalizeApiError(e);
     } finally {
       loading.value = false;
     }
@@ -43,11 +47,12 @@ export function useMessages() {
 
   async function fetchMessages(conversationId: string) {
     try {
+      error.value = null;
       loading.value = true;
       const response = await api<{ data: Message[] }>(`/message/conversations/${conversationId}/messages`);
       currentMessages.value = response.data;
-    } catch (error) {
-      console.error('[useMessages] fetchMessages error', error);
+    } catch (e) {
+      error.value = normalizeApiError(e);
     } finally {
       loading.value = false;
     }
@@ -55,31 +60,27 @@ export function useMessages() {
 
   async function sendMessage(conversationId: string, content: string) {
     try {
+      error.value = null;
       sending.value = true;
       const response = await api<{ data: Message }>(`/message/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: { content },
       });
       currentMessages.value.push(response.data);
-    } catch (error) {
-      console.error('[useMessages] sendMessage error', error);
+    } catch (e) {
+      error.value = normalizeApiError(e);
     } finally {
       sending.value = false;
     }
   }
 
   async function createConversation(participantIds: string[], name?: string) {
-    try {
-      const response = await api<{ data: Conversation }>('/message/conversations', {
-        method: 'POST',
-        body: { name, participantIds },
-      });
-      conversations.value.unshift(response.data);
-      return response.data;
-    } catch (error) {
-      console.error('[useMessages] createConversation error', error);
-      return null;
-    }
+    const response = await api<{ data: Conversation }>('/message/conversations', {
+      method: 'POST',
+      body: { name, participantIds },
+    });
+    conversations.value.unshift(response.data);
+    return response.data;
   }
 
   return {
@@ -87,6 +88,7 @@ export function useMessages() {
     currentMessages,
     loading,
     sending,
+    error,
     fetchConversations,
     fetchMessages,
     sendMessage,

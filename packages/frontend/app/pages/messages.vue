@@ -1,9 +1,20 @@
 <template>
   <div class="messages-layout">
+    <!-- Panneau gauche : liste des conversations -->
     <div class="conversations-panel">
       <div class="panel-header">
         <h2 class="panel-title">{{ $t('messages.title') }}</h2>
+        <Button
+          icon="pi pi-plus"
+          :aria-label="$t('messages.new_conversation')"
+          severity="secondary"
+          text
+          rounded
+          @click="newConvVisible = true"
+        />
       </div>
+
+      <Message v-if="error" severity="error" :closable="false" class="panel-error">{{ error }}</Message>
 
       <div v-if="loading && conversations.length === 0" class="empty-state">
         <i class="pi pi-spin pi-spinner" />
@@ -17,47 +28,61 @@
           :key="conv.id"
           class="conversation-item"
           :class="{ active: selectedConversationId === conv.id }"
-          @click="selectConversation(conv.id)"
+          @click="selectConversation(conv)"
         >
-          <div class="conv-name">{{ conv.name ?? $t('messages.default_conversation_name') }}</div>
+          <div class="conv-name">{{ convDisplayName(conv) }}</div>
           <div v-if="conv.messages[0]" class="conv-preview">{{ conv.messages[0].content }}</div>
         </li>
       </ul>
     </div>
 
+    <!-- Panneau droit : chat -->
     <div class="chat-panel">
-      <template v-if="selectedConversationId">
-        <div v-if="loading" class="empty-state">
-          <i class="pi pi-spin pi-spinner" />
+      <template v-if="selectedConversation">
+        <div class="chat-header">
+          <span class="chat-title">{{ convDisplayName(selectedConversation) }}</span>
         </div>
-        <div v-else-if="currentMessages.length === 0" class="empty-state">
-          <p>{{ $t('messages.empty_messages') }}</p>
-        </div>
-        <ScrollPanel v-else class="messages-scroll">
-          <div class="messages-list">
+
+        <div class="messages-area">
+          <div v-if="loading" class="empty-state">
+            <i class="pi pi-spin pi-spinner" />
+          </div>
+          <div v-else-if="currentMessages.length === 0" class="empty-state">
+            <p>{{ $t('messages.empty_messages') }}</p>
+          </div>
+          <div v-else class="messages-list">
             <div
               v-for="msg in currentMessages"
               :key="msg.id"
-              class="message-bubble"
+              class="message-row"
               :class="{ own: msg.senderId === userId }"
             >
-              <span class="message-content">{{ msg.content }}</span>
+              <span v-if="msg.senderId !== userId" class="message-sender">
+                {{ senderName(msg.senderId) }}
+              </span>
+              <div class="message-bubble">
+                <span class="message-content">{{ msg.content }}</span>
+              </div>
+              <span class="message-time">{{ formatTime(msg.sentAt) }}</span>
             </div>
+            <div ref="messagesEnd" />
           </div>
-        </ScrollPanel>
+        </div>
 
         <div class="message-input-row">
-          <InputText
+          <Textarea
             v-model="newMessage"
             class="message-input"
             :placeholder="$t('messages.placeholder')"
-            @keyup.enter="handleSend"
+            :auto-resize="true"
+            rows="1"
+            @keydown.enter.exact.prevent="handleSend"
           />
           <Button
             icon="pi pi-send"
-            :label="$t('messages.send')"
             :loading="sending"
             :disabled="!newMessage.trim()"
+            :aria-label="$t('messages.send')"
             @click="handleSend"
           />
         </div>
@@ -66,32 +91,62 @@
         <p>{{ $t('messages.select_conversation') }}</p>
       </div>
     </div>
+
+    <MessagesNewConversationDialog
+      v-model:visible="newConvVisible"
+      @created="onConversationCreated"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import ScrollPanel from 'primevue/scrollpanel';
-import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
+import Message from 'primevue/message';
+import Textarea from 'primevue/textarea';
+import type { Conversation } from '~/composables/useMessages';
+import type { UserProfile } from '~/composables/useUser';
 
 definePageMeta({ middleware: 'auth' });
 
 const { userId } = useAuth();
-const { conversations, currentMessages, loading, sending, fetchConversations, fetchMessages, sendMessage } =
+const { conversations, currentMessages, loading, sending, error, fetchConversations, fetchMessages, sendMessage } =
   useMessages();
+const { fetchUsersByIds } = useUser();
 
 const selectedConversationId = ref<string | null>(null);
+const selectedConversation = computed(
+  () => conversations.value.find((c) => c.id === selectedConversationId.value) ?? null,
+);
 const newMessage = ref('');
+const newConvVisible = ref(false);
+const messagesEnd = ref<HTMLElement | null>(null);
+const userProfiles = ref(new Map<string, UserProfile>());
 
 onMounted(async () => {
   if (userId.value) {
     await fetchConversations(userId.value);
+    await resolveParticipants();
   }
 });
 
-async function selectConversation(id: string) {
-  selectedConversationId.value = id;
-  await fetchMessages(id);
+async function resolveParticipants() {
+  const allIds = [
+    ...new Set(conversations.value.flatMap((c) => c.participants.map((p) => p.userId))),
+  ].filter((id) => !userProfiles.value.has(id));
+  if (allIds.length === 0) return;
+  const profiles = await fetchUsersByIds(allIds);
+  profiles.forEach((p) => userProfiles.value.set(p.id, p));
+}
+
+async function selectConversation(conv: Conversation) {
+  selectedConversationId.value = conv.id;
+  await fetchMessages(conv.id);
+}
+
+async function onConversationCreated(conv: Conversation) {
+  selectedConversationId.value = conv.id;
+  await resolveParticipants();
+  await fetchMessages(conv.id);
 }
 
 async function handleSend() {
@@ -99,14 +154,37 @@ async function handleSend() {
   await sendMessage(selectedConversationId.value, newMessage.value.trim());
   newMessage.value = '';
 }
+
+watch(currentMessages, () => {
+  nextTick(() => messagesEnd.value?.scrollIntoView({ behavior: 'smooth' }));
+});
+
+function convDisplayName(conv: Conversation): string {
+  if (conv.name) return conv.name;
+  const otherParticipants = conv.participants
+    .filter((p) => p.userId !== userId.value)
+    .map((p) => {
+      const profile = userProfiles.value.get(p.userId);
+      return profile?.name ?? profile?.email ?? p.userId;
+    });
+  return otherParticipants.join(', ') || conv.id;
+}
+
+function senderName(senderId: string): string {
+  const profile = userProfiles.value.get(senderId);
+  return profile?.name ?? profile?.email ?? senderId;
+}
+
+function formatTime(sentAt: string): string {
+  return new Date(sentAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
 </script>
 
 <style scoped>
 .messages-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 0;
-  height: calc(100vh - 4rem);
+  height: calc(100vh - 5rem);
   border: 1px solid var(--p-surface-border, #e2e8f0);
   border-radius: 0.5rem;
   overflow: hidden;
@@ -120,14 +198,22 @@ async function handleSend() {
 }
 
 .panel-header {
-  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--p-surface-border, #e2e8f0);
+  flex-shrink: 0;
 }
 
 .panel-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.panel-error {
+  margin: 0.5rem;
 }
 
 .conversation-list {
@@ -160,7 +246,7 @@ async function handleSend() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
 }
 
 .chat-panel {
@@ -169,41 +255,78 @@ async function handleSend() {
   overflow: hidden;
 }
 
-.messages-scroll {
+.chat-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--p-surface-border, #e2e8f0);
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.messages-area {
   flex: 1;
-  padding: 1rem;
+  overflow-y: auto;
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 1rem;
 }
 
-.message-bubble {
+.message-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   max-width: 70%;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.75rem;
-  background: var(--p-surface-ground, #f8fafc);
-  align-self: flex-start;
 }
 
-.message-bubble.own {
+.message-row.own {
   align-self: flex-end;
+  align-items: flex-end;
+}
+
+.message-sender {
+  font-size: 0.7rem;
+  color: var(--p-text-muted-color, #94a3b8);
+  margin-bottom: 0.2rem;
+  padding: 0 0.25rem;
+}
+
+.message-bubble {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--p-surface-ground, #f1f5f9);
+  word-break: break-word;
+}
+
+.message-row.own .message-bubble {
   background: var(--p-primary-color, #3b82f6);
   color: white;
 }
 
+.message-time {
+  font-size: 0.65rem;
+  color: var(--p-text-muted-color, #94a3b8);
+  margin-top: 0.2rem;
+  padding: 0 0.25rem;
+}
+
 .message-input-row {
   display: flex;
+  align-items: flex-end;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--p-surface-border, #e2e8f0);
+  flex-shrink: 0;
 }
 
 .message-input {
   flex: 1;
+  resize: none;
+  max-height: 8rem;
+  overflow-y: auto;
 }
 
 .empty-state {
@@ -211,6 +334,7 @@ async function handleSend() {
   align-items: center;
   justify-content: center;
   flex: 1;
+  height: 100%;
   color: var(--p-text-muted-color, #94a3b8);
   padding: 2rem;
 }
