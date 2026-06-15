@@ -1,7 +1,7 @@
 import { getClassMemberIds } from './classServiceClient';
 import { getUserIdsByRole } from './authServiceClient';
 
-export type NotificationTarget =
+type NotificationTarget =
   | { userId: string }
   | { classId: string }
   | { role: string };
