@@ -32,29 +32,33 @@ export function useMessages() {
   const sending = ref(false);
   const error = ref<string | null>(null);
 
-  async function fetchConversations(userId: string) {
+  async function fetchConversations(userId: string, opts: { silent?: boolean } = {}) {
     try {
-      error.value = null;
-      loading.value = true;
+      if (!opts.silent) {
+        error.value = null;
+        loading.value = true;
+      }
       const response = await api<{ data: Conversation[] }>(`/message/conversations/user/${userId}`);
       conversations.value = response.data;
     } catch (e) {
-      error.value = normalizeApiError(e);
+      if (!opts.silent) error.value = normalizeApiError(e);
     } finally {
-      loading.value = false;
+      if (!opts.silent) loading.value = false;
     }
   }
 
-  async function fetchMessages(conversationId: string) {
+  async function fetchMessages(conversationId: string, opts: { silent?: boolean } = {}) {
     try {
-      error.value = null;
-      loading.value = true;
+      if (!opts.silent) {
+        error.value = null;
+        loading.value = true;
+      }
       const response = await api<{ data: Message[] }>(`/message/conversations/${conversationId}/messages`);
       currentMessages.value = response.data;
     } catch (e) {
-      error.value = normalizeApiError(e);
+      if (!opts.silent) error.value = normalizeApiError(e);
     } finally {
-      loading.value = false;
+      if (!opts.silent) loading.value = false;
     }
   }
 

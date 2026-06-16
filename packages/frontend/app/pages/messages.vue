@@ -122,11 +122,31 @@ const newConvVisible = ref(false);
 const messagesEnd = ref<HTMLElement | null>(null);
 const userProfiles = ref(new Map<string, UserProfile>());
 
+let messagesPoll: ReturnType<typeof setInterval> | null = null;
+let conversationsPoll: ReturnType<typeof setInterval> | null = null;
+
 onMounted(async () => {
   if (userId.value) {
     await fetchConversations(userId.value);
     await resolveParticipants();
   }
+
+  conversationsPoll = setInterval(async () => {
+    if (!userId.value) return;
+    await fetchConversations(userId.value, { silent: true });
+    await resolveParticipants();
+  }, 20_000);
+
+  messagesPoll = setInterval(() => {
+    if (selectedConversationId.value) {
+      fetchMessages(selectedConversationId.value, { silent: true });
+    }
+  }, 5_000);
+});
+
+onUnmounted(() => {
+  if (messagesPoll) clearInterval(messagesPoll);
+  if (conversationsPoll) clearInterval(conversationsPoll);
 });
 
 async function resolveParticipants() {
