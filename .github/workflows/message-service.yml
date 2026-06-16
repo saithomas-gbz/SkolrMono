@@ -1,0 +1,35 @@
+name: Message Service CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'packages/message-service/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'packages/message-service/**'
+    changes:
+      - 'packages/message-service/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Generate Prisma client
+      working-directory: packages/message-service
+      run: bunx prisma generate && ls src/generated/prisma/internal
+
+    - name: Build message-service
+      working-directory: packages/message-service
+      run: bun run build
+
+    - name: Build Docker image
+      run: docker build -f packages/message-service/Dockerfile -t message-service .

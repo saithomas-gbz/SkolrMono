@@ -30,8 +30,25 @@ export function useUser() {
     return response.data;
   }
 
+  async function fetchAllUsers() {
+    const roles = ['TEACHER', 'USER', 'STAFF', 'ADMIN'];
+    const responses = await Promise.all(
+      roles.map((role) =>
+        api<UsersApiResponse>('/auth/users', { query: { role } }).catch(() => ({ data: [] as UserProfile[] })),
+      ),
+    );
+    const allUsers = responses.flatMap((r) => r.data);
+    const seen = new Set<string>();
+    return allUsers.filter((u) => {
+      if (seen.has(u.id)) return false;
+      seen.add(u.id);
+      return true;
+    });
+  }
+
   return {
     fetchUsersByIds,
+    fetchAllUsers,
     normalizeApiError,
   };
 }

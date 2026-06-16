@@ -5,22 +5,19 @@ import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
-import notificationRoutes from './routes/notificationRoutes';
-import { startGradeConsumer } from './consumers/gradeConsumer';
-import { startAbsenceConsumer } from './consumers/absenceConsumer';
-import { startEnrollmentConsumer } from './consumers/enrollmentConsumer';
-import { startMessageConsumer } from './consumers/messageConsumer';
+import conversationRoutes from './routes/conversationRoutes';
+import messageRoutes from './routes/messageRoutes';
 
 dotenv.config();
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
-  serverName: 'notification-service',
+  serverName: 'message-service',
   tracesSampleRate: 1.0,
 });
 
-const port = Number(process.env.PORT || 3009);
+const port = Number(process.env.PORT || 3010);
 
 async function buildApp() {
   const app = Fastify({ logger: true });
@@ -29,12 +26,12 @@ async function buildApp() {
     openapi: {
       openapi: '3.1.0',
       info: {
-        title: 'Skolr Notification Service',
+        title: 'Skolr Message Service',
         version: '1.0.0',
-        description: 'Notification Service API',
+        description: 'Message Service API',
       },
-      servers: [{ url: `http://localhost:${port}`, description: 'Notification Service (direct)' }],
-      tags: [{ name: 'notification', description: 'Notifications API' }],
+      servers: [{ url: `http://localhost:${port}`, description: 'Message Service (direct)' }],
+      tags: [{ name: 'message', description: 'Messages API' }],
     },
   });
 
@@ -42,7 +39,8 @@ async function buildApp() {
     secret: process.env.JWT_SECRET!,
   });
 
-  await app.register(notificationRoutes);
+  await app.register(conversationRoutes);
+  await app.register(messageRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 
@@ -70,13 +68,7 @@ async function start() {
     const app = await buildApp();
     await app.ready();
     await app.listen({ port, host: '0.0.0.0' });
-    app.log.info(`Notification service running on port ${port}`);
-
-    await startGradeConsumer();
-    await startAbsenceConsumer();
-    await startEnrollmentConsumer();
-    await startMessageConsumer();
-    app.log.info('RabbitMQ consumers started');
+    app.log.info(`Message service running on port ${port}`);
   } catch (err) {
     console.error(err);
     process.exit(1);

@@ -40,6 +40,9 @@
         >
           {{ $t('nav.school_students') }}
         </NuxtLink>
+        <NuxtLink class="sidebar-link" to="/messages" @click="isSidebarOpen = false">
+          {{ $t('nav.messages') }}
+        </NuxtLink>
         <NuxtLink class="sidebar-link" to="/planning" @click="isSidebarOpen = false">
           {{ $t('nav.schedule') }}
         </NuxtLink>
@@ -116,6 +119,7 @@ const items = computed<MenuItem[]>(() => {
     });
   }
 
+  menu.push({ label: t('nav.messages'), command: () => navigateTo('/messages') });
   menu.push({ label: t('nav.schedule'), command: () => navigateTo('/planning') });
 
   if (isTeacher.value || isAdmin.value) {
