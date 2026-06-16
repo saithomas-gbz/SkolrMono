@@ -9,6 +9,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import { startGradeConsumer } from './consumers/gradeConsumer';
 import { startAbsenceConsumer } from './consumers/absenceConsumer';
 import { startEnrollmentConsumer } from './consumers/enrollmentConsumer';
+import { startMessageConsumer } from './consumers/messageConsumer';
 
 dotenv.config();
 
@@ -74,6 +75,7 @@ async function start() {
     await startGradeConsumer();
     await startAbsenceConsumer();
     await startEnrollmentConsumer();
+    await startMessageConsumer();
     app.log.info('RabbitMQ consumers started');
   } catch (err) {
     console.error(err);

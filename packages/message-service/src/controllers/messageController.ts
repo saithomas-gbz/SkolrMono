@@ -54,11 +54,18 @@ export default {
       },
     });
 
+    const participants = await db.conversationParticipant.findMany({
+      where: { conversationId: request.params.conversationId },
+      select: { userId: true },
+    });
+    const recipientIds = participants.map((p) => p.userId).filter((id) => id !== userId);
+
     await publish('message.received', {
       messageId: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
       content: message.content,
+      recipientIds,
     }).catch((err) => console.error('[message-service] RabbitMQ publish failed:', err));
 
     return reply.status(201).send({ data: message });
