@@ -78,7 +78,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 0;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .kpi-card {
@@ -90,20 +90,20 @@ onMounted(async () => {
   gap: 0.25rem;
   padding: 1.25rem 1rem;
   border-radius: 0.75rem;
-  background: var(--p-surface-50, #f8fafc);
-  border: 1px solid var(--p-surface-200, #e2e8f0);
+  background: var(--p-surface-50, var(--skolr-color-surface-hover));
+  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
 }
 
 .kpi-value {
   font-size: 2rem;
   font-weight: 700;
   line-height: 1;
-  color: var(--p-primary-color, #6366f1);
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
 }
 
 .kpi-label {
   font-size: 0.8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   text-align: center;
 }
 </style>

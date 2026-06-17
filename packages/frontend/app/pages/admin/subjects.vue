@@ -328,11 +328,11 @@ function openCourseDialog(course: CourseEntity | null, subjectId: string | null)
   align-items: center;
   gap: 0.75rem;
   min-height: 6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .empty {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 1rem 0;
 }
 
@@ -348,7 +348,7 @@ function openCourseDialog(course: CourseEntity | null, subjectId: string | null)
 .subject-count {
   font-size: 0.8rem;
   font-weight: 400;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .content-toolbar {
@@ -365,7 +365,7 @@ function openCourseDialog(course: CourseEntity | null, subjectId: string | null)
 }
 
 .empty-courses {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   font-size: 0.875rem;
   margin: 0 0 0.5rem;
 }
@@ -377,7 +377,7 @@ function openCourseDialog(course: CourseEntity | null, subjectId: string | null)
 }
 
 .muted {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .row-actions {

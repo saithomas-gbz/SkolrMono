@@ -80,6 +80,7 @@ import {
   type GradeEntity,
   type GradeListApiResponse,
 } from '~/composables/useGrade';
+import { CHART_PRIMARY } from '~/themes/tokens';
 
 const props = defineProps<{
   /** Pré-sélection (SSR) — ex. depuis `?classId=` sur `/dashboard`. */
@@ -189,19 +190,15 @@ async function refreshAll() {
   await Promise.all(tasks);
 }
 
-const BAR_FILL = '#6366f1';
-const BAR_HOVER = '#4f46e5';
-const BAR_BORDER = '#4338ca';
-
 const chartData = computed(() => ({
   labels: buckets.value.map((b) => b.label),
   datasets: [
     {
       label: 'Nombre de notes',
       data: buckets.value.map((b) => b.count),
-      backgroundColor: BAR_FILL,
-      hoverBackgroundColor: BAR_HOVER,
-      borderColor: BAR_BORDER,
+      backgroundColor: CHART_PRIMARY.fill,
+      hoverBackgroundColor: CHART_PRIMARY.hover,
+      borderColor: CHART_PRIMARY.border,
       borderWidth: 1,
     },
   ],
@@ -273,7 +270,7 @@ function roundScore(value: number): string {
 .chart-select-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-select-input {
@@ -284,7 +281,7 @@ function roundScore(value: number): string {
   margin: 0;
   flex: 1;
   font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-message {
@@ -296,13 +293,13 @@ function roundScore(value: number): string {
   align-items: center;
   gap: 0.75rem;
   min-height: 12rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-empty {
   padding: 0.5rem 0;
   min-height: 8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-empty p {
@@ -317,13 +314,13 @@ function roundScore(value: number): string {
   font-size: 0.85em;
   padding: 0.1em 0.35em;
   border-radius: 0.25rem;
-  background: var(--p-surface-100, #f1f5f9);
+  background: var(--p-surface-100, var(--skolr-color-surface-hover));
 }
 
 .chart-subtitle {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-canvas-wrap {
@@ -342,7 +339,7 @@ function roundScore(value: number): string {
 .api-message {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--p-text-color-secondary, #64748b);
+  color: var(--p-text-color-secondary, var(--skolr-color-text-muted));
   font-style: italic;
 }
 </style>

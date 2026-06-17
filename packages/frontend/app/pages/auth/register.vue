@@ -27,11 +27,11 @@ definePageMeta({
   margin: 0;
   text-align: center;
   font-size: 0.95rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .link {
-  color: var(--p-primary-color, #6366f1);
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
   font-weight: 600;
   text-decoration: none;
 }

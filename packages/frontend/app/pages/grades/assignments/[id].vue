@@ -273,7 +273,7 @@ watch(id, load, { immediate: true });
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 1.5rem 0;
 }
 
@@ -288,7 +288,7 @@ watch(id, load, { immediate: true });
 
 .grade-counter {
   font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .grade-table {
@@ -308,7 +308,7 @@ watch(id, load, { immediate: true });
 }
 
 .grade-na {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   font-size: 1.1rem;
 }
 </style>

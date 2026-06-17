@@ -1,0 +1,24 @@
+/**
+ * Tokens applicatifs Skolr — source unique de vérité pour la charte graphique.
+ * Cf. issue #55. Les composants Vue ne doivent jamais écrire de hex en dur :
+ * toujours `var(--skolr-*)` (ici) ou `var(--p-*)` (preset PrimeVue, app/themes/skolr.ts).
+ */
+:root {
+  --skolr-color-brand-navy: #12263a;
+  --skolr-color-brand-cream: #ede5a6;
+  --skolr-color-brand-green: #498467;
+
+  --skolr-color-text: #1a1a1a;
+  --skolr-color-text-muted: color-mix(in srgb, var(--skolr-color-text) 55%, transparent);
+
+  --skolr-color-page-bg: #faf8f0;
+  --skolr-color-surface-hover: color-mix(in srgb, var(--skolr-color-brand-navy) 5%, transparent);
+  --skolr-color-border: color-mix(in srgb, var(--skolr-color-brand-navy) 14%, transparent);
+
+  --skolr-font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+body {
+  background: var(--skolr-color-page-bg);
+  font-family: var(--skolr-font-family);
+}

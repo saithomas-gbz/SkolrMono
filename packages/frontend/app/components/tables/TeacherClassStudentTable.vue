@@ -104,6 +104,12 @@ type StudentRow = {
   joinedAt: string | null;
 };
 
+const props = defineProps<{
+  initialClassId?: string;
+}>();
+
+const route = useRoute();
+const router = useRouter();
 const api = useApi();
 const { userId } = useAuth();
 const { fetchUsersByIds } = useUser();
@@ -133,18 +139,46 @@ const classOptions = computed(() =>
   classes.value.map((cls) => ({ label: cls.name, value: cls.id })),
 );
 
-const selectedClassId = ref<string | null>(null);
+function resolveInitialClassId(): string | null {
+  const fromProp = props.initialClassId?.trim();
+  if (fromProp) return fromProp;
+  const q = route.query.classId;
+  if (typeof q === 'string' && q.trim()) return q.trim();
+  return null;
+}
+
+const selectedClassId = ref<string | null>(resolveInitialClassId());
 
 watch(
   classes,
   (list) => {
-    const stillExists = list.some((cls) => cls.id === selectedClassId.value);
-    if (!stillExists) {
+    const preferred = resolveInitialClassId();
+    const stillValid = list.some((cls) => cls.id === selectedClassId.value);
+    if (preferred && list.some((cls) => cls.id === preferred)) {
+      selectedClassId.value = preferred;
+    } else if (!selectedClassId.value || !stillValid) {
       selectedClassId.value = list[0]?.id ?? null;
     }
   },
   { immediate: true },
 );
+
+watch(selectedClassId, (id) => {
+  if (import.meta.server) {
+    return;
+  }
+  const current = typeof route.query.classId === 'string' ? route.query.classId : null;
+  if (id === current) {
+    return;
+  }
+  const nextQuery = { ...route.query };
+  if (id) {
+    nextQuery.classId = id;
+  } else {
+    delete nextQuery.classId;
+  }
+  router.replace({ query: nextQuery });
+});
 
 const selectedClass = computed(
   () => classes.value.find((cls) => cls.id === selectedClassId.value) ?? null,
@@ -235,13 +269,13 @@ function openGradeDialog(row: StudentRow) {
   align-items: center;
   gap: 0.75rem;
   min-height: 6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .table-empty {
   padding: 0.5rem 0;
   min-height: 6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .table-empty p {

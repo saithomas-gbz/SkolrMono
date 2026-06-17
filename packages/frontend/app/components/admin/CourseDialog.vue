@@ -285,15 +285,15 @@ async function submit() {
   gap: 0.3rem;
   padding: 0.2rem 0.5rem 0.2rem 0.6rem;
   border-radius: 999px;
-  background: var(--p-surface-100, #f1f5f9);
-  border: 1px solid var(--p-surface-300, #cbd5e1);
+  background: var(--p-surface-100, var(--skolr-color-surface-hover));
+  border: 1px solid var(--p-surface-300, var(--skolr-color-border));
   font-size: 0.8rem;
 }
 
 .topic-chip--staging {
-  background: var(--p-primary-50, #eff6ff);
-  border-color: var(--p-primary-200, #bfdbfe);
-  color: var(--p-primary-700, #1d4ed8);
+  background: var(--p-primary-50, var(--skolr-color-brand-green));
+  border-color: var(--p-primary-200, var(--skolr-color-brand-green));
+  color: var(--p-primary-700, var(--skolr-color-brand-green));
 }
 
 .chip-remove {
@@ -314,7 +314,7 @@ async function submit() {
 .topics-empty {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   align-self: center;
 }
 

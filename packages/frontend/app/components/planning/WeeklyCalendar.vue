@@ -12,6 +12,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { CalendarOptions, EventClickArg } from '@fullcalendar/core';
 import type { Session } from '~/composables/usePlanning';
+import { SUBJECT_PALETTE } from '~/themes/tokens';
 
 const props = defineProps<{
   sessions: Session[];
@@ -25,19 +26,10 @@ const emit = defineEmits<{
   (e: 'slot-click', date: Date): void;
 }>();
 
-// Palette de couleurs par matière (déterministe sur courseId)
-const PALETTE = [
-  { bg: '#3b82f6', border: '#2563eb' }, // bleu
-  { bg: '#10b981', border: '#059669' }, // vert
-  { bg: '#f59e0b', border: '#d97706' }, // ambre
-  { bg: '#8b5cf6', border: '#7c3aed' }, // violet
-  { bg: '#ec4899', border: '#db2777' }, // rose
-  { bg: '#ef4444', border: '#dc2626' }, // rouge
-];
-
+// Couleur par matière (déterministe sur courseId)
 function courseColor(courseId: string) {
   const hash = courseId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return PALETTE[hash % PALETTE.length]!;
+  return SUBJECT_PALETTE[hash % SUBJECT_PALETTE.length]!;
 }
 
 const events = computed(() =>

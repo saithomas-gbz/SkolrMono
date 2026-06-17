@@ -72,11 +72,11 @@ function formatDate(value: string) {
   align-items: center;
   gap: 0.75rem;
   min-height: 4rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .widget-empty {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 0.5rem 0;
 }
 
@@ -98,7 +98,7 @@ function formatDate(value: string) {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.4rem 0;
-  border-bottom: 1px solid var(--p-surface-100, #f1f5f9);
+  border-bottom: 1px solid var(--p-surface-100, var(--skolr-color-border));
   font-size: 0.9rem;
 }
 
@@ -118,7 +118,7 @@ function formatDate(value: string) {
 
 .widget-link {
   font-size: 0.9rem;
-  color: var(--p-primary-color, #6366f1);
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
   text-decoration: none;
 }
 
