@@ -1,6 +1,6 @@
 <template>
   <div v-if="isLoggedIn" class="app-shell">
-    <Menubar :model="items" class="app-topbar">
+    <Menubar class="app-topbar">
       <template #start>
         <div class="brand">
           <Button
@@ -10,64 +10,66 @@
             text
             @click="isSidebarOpen = true"
           />
-          <span class="brand-name">skolr<span class="brand-dot">.</span></span>
+          <NuxtLink to="/" class="brand-name">skolr<span class="brand-dot">.</span></NuxtLink>
         </div>
       </template>
       <template #end>
-        <NotificationBell />
+        <div class="topbar-shortcuts">
+          <Button
+            v-tooltip.bottom="$t('nav.messages')"
+            text
+            rounded
+            icon="pi pi-envelope"
+            :aria-label="$t('nav.messages')"
+            @click="navigateTo('/messages')"
+          />
+          <Button
+            v-tooltip.bottom="$t('nav.schedule')"
+            text
+            rounded
+            icon="pi pi-calendar"
+            :aria-label="$t('nav.schedule')"
+            @click="navigateTo('/planning')"
+          />
+          <Button
+            v-if="isTeacher"
+            v-tooltip.bottom="$t('nav.gradebook')"
+            text
+            rounded
+            icon="pi pi-book"
+            :aria-label="$t('nav.gradebook')"
+            @click="navigateTo('/grades/assignments/new')"
+          />
+          <NotificationBell />
+        </div>
       </template>
     </Menubar>
 
     <Sidebar v-model:visible="isSidebarOpen" :header="$t('nav.navigation')" position="left">
       <nav class="sidebar-nav">
-        <NuxtLink class="sidebar-link" to="/" @click="isSidebarOpen = false">{{ $t('nav.home') }}</NuxtLink>
-        <NuxtLink class="sidebar-link" to="/dashboard" @click="isSidebarOpen = false">
-          {{ $t('nav.dashboard') }}
-        </NuxtLink>
         <NuxtLink
-          v-if="isTeacher"
+          v-for="link in navLinks"
+          :key="link.to"
           class="sidebar-link"
-          to="/teacher/students"
+          :to="link.to"
           @click="isSidebarOpen = false"
         >
-          {{ $t('nav.my_students') }}
+          {{ link.label }}
         </NuxtLink>
-        <NuxtLink
-          v-if="isAdmin"
-          class="sidebar-link"
-          to="/admin/students"
-          @click="isSidebarOpen = false"
-        >
-          {{ $t('nav.school_students') }}
-        </NuxtLink>
-        <NuxtLink class="sidebar-link" to="/messages" @click="isSidebarOpen = false">
-          {{ $t('nav.messages') }}
-        </NuxtLink>
-        <NuxtLink class="sidebar-link" to="/planning" @click="isSidebarOpen = false">
-          {{ $t('nav.schedule') }}
-        </NuxtLink>
-        <NuxtLink
-          v-if="isTeacher || isAdmin"
-          class="sidebar-link"
-          to="/planning/absences"
-          @click="isSidebarOpen = false"
-        >
-          {{ $t('nav.absences') }}
-        </NuxtLink>
-        <NuxtLink
-          v-if="isTeacher"
-          class="sidebar-link"
-          to="/grades/assignments/new"
-          @click="isSidebarOpen = false"
-        >
-          {{ $t('nav.gradebook') }}
-        </NuxtLink>
-        <template v-if="isAdmin">
+
+        <template v-if="adminLinks.length">
           <div class="sidebar-section">{{ $t('nav.administration') }}</div>
-          <NuxtLink class="sidebar-link" to="/admin/subjects" @click="isSidebarOpen = false">
-            {{ $t('nav.subjects') }}
+          <NuxtLink
+            v-for="link in adminLinks"
+            :key="link.to"
+            class="sidebar-link"
+            :to="link.to"
+            @click="isSidebarOpen = false"
+          >
+            {{ link.label }}
           </NuxtLink>
         </template>
+
         <button type="button" class="sidebar-link sidebar-link-button" @click="signOut">
           {{ $t('nav.logout') }}
         </button>
@@ -84,7 +86,10 @@
 </template>
 
 <script setup lang="ts">
-import type { MenuItem } from 'primevue/menuitem';
+type NavLink = {
+  label: string;
+  to: string;
+};
 
 const { t } = useI18n();
 const isSidebarOpen = ref(false);
@@ -93,45 +98,37 @@ const { isLoggedIn, clearSession, hasRole } = useAuth();
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isAdmin = computed(() => hasRole('ADMIN'));
 
-const items = computed<MenuItem[]>(() => {
-  const menu: MenuItem[] = [
-    {
-      label: t('nav.home'),
-      command: () => navigateTo('/'),
-    },
-    {
-      label: t('nav.dashboard'),
-      command: () => navigateTo('/dashboard'),
-    },
+const navLinks = computed<NavLink[]>(() => {
+  const links: NavLink[] = [
+    { label: t('nav.home'), to: '/' },
+    { label: t('nav.dashboard'), to: '/dashboard' },
   ];
 
   if (isTeacher.value) {
-    menu.push({
-      label: t('nav.my_students'),
-      command: () => navigateTo('/teacher/students'),
-    });
+    links.push({ label: t('nav.my_students'), to: '/teacher/students' });
   }
 
   if (isAdmin.value) {
-    menu.push({
-      label: t('nav.school_students'),
-      command: () => navigateTo('/admin/students'),
-    });
+    links.push({ label: t('nav.school_students'), to: '/admin/students' });
   }
 
-  menu.push({ label: t('nav.messages'), command: () => navigateTo('/messages') });
-  menu.push({ label: t('nav.schedule'), command: () => navigateTo('/planning') });
+  links.push({ label: t('nav.messages'), to: '/messages' });
+  links.push({ label: t('nav.schedule'), to: '/planning' });
 
   if (isTeacher.value || isAdmin.value) {
-    menu.push({ label: t('nav.absences'), command: () => navigateTo('/planning/absences') });
+    links.push({ label: t('nav.absences'), to: '/planning/absences' });
   }
 
-  if (isAdmin.value) {
-    menu.push({ label: t('nav.subjects'), command: () => navigateTo('/admin/subjects') });
+  if (isTeacher.value) {
+    links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new' });
   }
 
-  return menu;
+  return links;
 });
+
+const adminLinks = computed<NavLink[]>(() =>
+  isAdmin.value ? [{ label: t('nav.subjects'), to: '/admin/subjects' }] : [],
+);
 
 async function signOut() {
   isSidebarOpen.value = false;
@@ -149,6 +146,9 @@ async function signOut() {
 
 .app-topbar {
   border-radius: 0;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .brand {
@@ -162,6 +162,7 @@ async function signOut() {
   font-weight: 700;
   letter-spacing: 0.2px;
   color: var(--skolr-color-brand-navy);
+  text-decoration: none;
 }
 
 .brand-dot {
@@ -171,6 +172,12 @@ async function signOut() {
 .menu-button {
   padding-left: 0.25rem;
   padding-right: 0.25rem;
+}
+
+.topbar-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .app-content {
