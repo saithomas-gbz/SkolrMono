@@ -12,6 +12,8 @@ common:
   no: Non
   class: Classe
   choose_class: Choisir une classe
+  teacher_count: "{count} prof | {count} profs"
+  student_count: "{count} élève | {count} élèves"
 
 nav:
   menu: Menu

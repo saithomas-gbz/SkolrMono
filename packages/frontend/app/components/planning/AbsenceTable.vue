@@ -148,12 +148,12 @@ function formatDatetime(iso: string) {
   align-items: center;
   gap: 0.75rem;
   min-height: 6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .empty {
   min-height: 6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .empty p {

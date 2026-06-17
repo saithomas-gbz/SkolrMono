@@ -46,6 +46,7 @@ import {
   type GradeEntity,
   type GradeListApiResponse,
 } from '~/composables/useGrade';
+import { CHART_PRIMARY, CHART_PRIMARY_AREA_FILL } from '~/themes/tokens';
 
 const api = useApi();
 const { userId } = useAuth();
@@ -88,19 +89,15 @@ const chartSubtitle = computed(() => {
   return count > 0 ? `${count} note(s)${avgLabel}` : null;
 });
 
-const LINE_COLOR = '#6366f1';
-const POINT_COLOR = '#4338ca';
-const FILL_COLOR = 'rgba(99,102,241,0.12)';
-
 const chartData = computed(() => ({
   labels: sortedGrades.value.map((g) => formatDate(g.createdAt)),
   datasets: [
     {
       label: 'Note /20',
       data: sortedGrades.value.map((g) => g.value),
-      borderColor: LINE_COLOR,
-      backgroundColor: FILL_COLOR,
-      pointBackgroundColor: POINT_COLOR,
+      borderColor: CHART_PRIMARY.fill,
+      backgroundColor: CHART_PRIMARY_AREA_FILL,
+      pointBackgroundColor: CHART_PRIMARY.border,
       pointRadius: 4,
       pointHoverRadius: 6,
       fill: true,
@@ -163,7 +160,7 @@ function formatDate(iso: string): string {
   margin: 0;
   flex: 1;
   font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-message {
@@ -175,13 +172,13 @@ function formatDate(iso: string): string {
   align-items: center;
   gap: 0.75rem;
   min-height: 12rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-empty {
   padding: 0.5rem 0;
   min-height: 8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-empty p {
@@ -191,7 +188,7 @@ function formatDate(iso: string): string {
 .chart-subtitle {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .chart-canvas-wrap {

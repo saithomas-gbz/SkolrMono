@@ -222,6 +222,6 @@ async function removeSession(id: string) {
   align-items: center;
   gap: 0.75rem;
   min-height: 8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 </style>

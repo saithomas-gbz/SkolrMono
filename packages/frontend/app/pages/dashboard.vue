@@ -16,7 +16,7 @@
       <Card>
         <template #title>{{ $t('dashboard.class_enrollment') }}</template>
         <template #content>
-          <ChartClassesChart :initial-class-id="initialClassId" />
+          <ChartClassesChart />
         </template>
       </Card>
       <Card>
@@ -41,7 +41,7 @@
       <Card>
         <template #title>{{ $t('dashboard.class_enrollment') }}</template>
         <template #content>
-          <ChartClassesChart :initial-class-id="initialClassId" />
+          <ChartClassesChart />
         </template>
       </Card>
       <Card>
@@ -145,7 +145,7 @@ const isStudent = computed(() => hasRole('USER'));
   float: right;
   font-size: 0.85rem;
   font-weight: 400;
-  color: var(--p-primary-color, #6366f1);
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
   text-decoration: none;
 }
 
@@ -156,6 +156,6 @@ const isStudent = computed(() => hasRole('USER'));
 .dashboard-hint {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 </style>

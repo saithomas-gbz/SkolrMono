@@ -205,7 +205,7 @@ function formatTime(sentAt: string): string {
   display: grid;
   grid-template-columns: 280px 1fr;
   height: calc(100vh - 5rem);
-  border: 1px solid var(--p-surface-border, #e2e8f0);
+  border: 1px solid var(--p-surface-border, var(--skolr-color-border));
   border-radius: 0.5rem;
   overflow: hidden;
 }
@@ -213,7 +213,7 @@ function formatTime(sentAt: string): string {
 .conversations-panel {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--p-surface-border, #e2e8f0);
+  border-right: 1px solid var(--p-surface-border, var(--skolr-color-border));
   overflow: hidden;
 }
 
@@ -222,7 +222,7 @@ function formatTime(sentAt: string): string {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--p-surface-border, #e2e8f0);
+  border-bottom: 1px solid var(--p-surface-border, var(--skolr-color-border));
   flex-shrink: 0;
 }
 
@@ -247,12 +247,12 @@ function formatTime(sentAt: string): string {
 .conversation-item {
   padding: 0.75rem 1rem;
   cursor: pointer;
-  border-bottom: 1px solid var(--p-surface-border, #e2e8f0);
+  border-bottom: 1px solid var(--p-surface-border, var(--skolr-color-border));
 }
 
 .conversation-item:hover,
 .conversation-item.active {
-  background: var(--p-surface-hover, #f1f5f9);
+  background: var(--p-surface-hover, var(--skolr-color-surface-hover));
 }
 
 .conv-name {
@@ -262,7 +262,7 @@ function formatTime(sentAt: string): string {
 
 .conv-preview {
   font-size: 0.75rem;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -277,7 +277,7 @@ function formatTime(sentAt: string): string {
 
 .chat-header {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--p-surface-border, #e2e8f0);
+  border-bottom: 1px solid var(--p-surface-border, var(--skolr-color-border));
   font-weight: 600;
   font-size: 0.9rem;
   flex-shrink: 0;
@@ -309,7 +309,7 @@ function formatTime(sentAt: string): string {
 
 .message-sender {
   font-size: 0.7rem;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   margin-bottom: 0.2rem;
   padding: 0 0.25rem;
 }
@@ -317,18 +317,18 @@ function formatTime(sentAt: string): string {
 .message-bubble {
   padding: 0.5rem 0.75rem;
   border-radius: 0.75rem;
-  background: var(--p-surface-ground, #f1f5f9);
+  background: var(--p-surface-ground, var(--skolr-color-page-bg));
   word-break: break-word;
 }
 
 .message-row.own .message-bubble {
-  background: var(--p-primary-color, #3b82f6);
+  background: var(--p-primary-color, var(--skolr-color-brand-green));
   color: white;
 }
 
 .message-time {
   font-size: 0.65rem;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   margin-top: 0.2rem;
   padding: 0 0.25rem;
 }
@@ -338,7 +338,7 @@ function formatTime(sentAt: string): string {
   align-items: flex-end;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border-top: 1px solid var(--p-surface-border, #e2e8f0);
+  border-top: 1px solid var(--p-surface-border, var(--skolr-color-border));
   flex-shrink: 0;
 }
 
@@ -355,7 +355,7 @@ function formatTime(sentAt: string): string {
   justify-content: center;
   flex: 1;
   height: 100%;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 2rem;
 }
 </style>

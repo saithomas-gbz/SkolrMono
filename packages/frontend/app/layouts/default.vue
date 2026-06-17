@@ -10,7 +10,7 @@
             text
             @click="isSidebarOpen = true"
           />
-          <span class="brand-name">Skolr</span>
+          <span class="brand-name">skolr<span class="brand-dot">.</span></span>
         </div>
       </template>
       <template #end>
@@ -158,8 +158,14 @@ async function signOut() {
 }
 
 .brand-name {
+  font-family: var(--skolr-font-family);
   font-weight: 700;
   letter-spacing: 0.2px;
+  color: var(--skolr-color-brand-navy);
+}
+
+.brand-dot {
+  color: var(--skolr-color-brand-green);
 }
 
 .menu-button {
@@ -188,7 +194,7 @@ async function signOut() {
 }
 
 .sidebar-link:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--skolr-color-surface-hover);
 }
 
 .sidebar-link-button {
@@ -205,7 +211,7 @@ async function signOut() {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--p-text-muted-color, #94a3b8);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 0.75rem 0.75rem 0.25rem;
 }
 

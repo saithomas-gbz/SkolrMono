@@ -132,7 +132,7 @@ function formatTime(iso: string) {
   flex-direction: column;
   gap: 0.2rem;
   padding: 0.5rem 0.75rem;
-  background: var(--p-surface-100, #f8fafc);
+  background: var(--p-surface-100, var(--skolr-color-surface-hover));
   border-radius: 6px;
   font-size: 0.875rem;
 }
@@ -142,11 +142,11 @@ function formatTime(iso: string) {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .session-room {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   font-size: 0.8rem;
 }
 

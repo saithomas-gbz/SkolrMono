@@ -219,12 +219,12 @@ watch(classId, () => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 1.5rem 0;
 }
 
 .empty {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 1rem 0;
 }
 
@@ -241,7 +241,7 @@ watch(classId, () => {
 .matrix-table th,
 .matrix-table td {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--p-surface-200, #e2e8f0);
+  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
   white-space: nowrap;
   text-align: center;
 }
@@ -252,7 +252,7 @@ watch(classId, () => {
   min-width: 10rem;
   position: sticky;
   left: 0;
-  background: var(--p-surface-0, #fff);
+  background: var(--p-surface-0);
   z-index: 1;
 }
 
@@ -263,7 +263,7 @@ watch(classId, () => {
 .col-avg {
   font-weight: 600;
   min-width: 6rem;
-  background: var(--p-surface-50, #f8fafc);
+  background: var(--p-surface-50, var(--skolr-color-surface-hover));
 }
 
 .avg-value {
@@ -293,7 +293,7 @@ watch(classId, () => {
 
 .assignment-meta {
   font-size: 0.75rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .grade-graded {
@@ -308,15 +308,15 @@ watch(classId, () => {
 }
 
 .grade-exempt {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   font-size: 0.8rem;
 }
 
 .grade-pending {
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .grade-missing {
-  color: var(--p-surface-400, #cbd5e1);
+  color: var(--p-surface-400, var(--skolr-color-border));
 }
 </style>

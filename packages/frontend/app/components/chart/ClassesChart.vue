@@ -1,270 +1,158 @@
 <template>
-  <div class="classes-chart">
-    <div class="chart-toolbar">
-      <div v-if="classOptions.length > 0" class="chart-select">
-        <label class="chart-select-label" for="class-select">Classe</label>
-        <Select
-          id="class-select"
-          v-model="selectedClassId"
-          :options="classOptions"
-          option-label="label"
-          option-value="value"
-          placeholder="Choisir une classe"
-          class="chart-select-input"
-        />
-      </div>
-      <Button
-        label="Actualiser"
-        icon="pi pi-refresh"
-        :loading="pending"
-        severity="secondary"
-        outlined
-        size="small"
-        @click="() => refreshAll()"
-      />
-    </div>
-
-    <Message v-if="fetchError" severity="error" :closable="false" class="chart-message">
+  <div class="classes-overview">
+    <Message v-if="fetchError" severity="error" :closable="false" class="overview-message">
       {{ fetchError }}
     </Message>
 
-    <div v-else-if="listPending" class="chart-loading">
-      <ProgressSpinner style="width: 2.5rem; height: 2.5rem" stroke-width="4" />
-      <span>Chargement de la liste des classes…</span>
+    <div v-else-if="pending" class="overview-loading">
+      <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
+      <span>Chargement des classes…</span>
     </div>
 
-    <div v-else-if="classOptions.length === 0" class="chart-empty">
+    <div v-else-if="classes.length === 0" class="overview-empty">
       <p>Aucune classe en base pour le moment.</p>
-      <p class="chart-empty-hint">
+      <p class="overview-empty-hint">
         Lancez <code>bun run seed:dev</code> à la racine du monorepo ou créez une classe via l’API.
       </p>
     </div>
 
-    <template v-else>
-      <div v-if="detailPending" class="chart-loading">
-        <ProgressSpinner style="width: 2.5rem; height: 2.5rem" stroke-width="4" />
-        <span>Chargement de la classe…</span>
-      </div>
-
-      <template v-else-if="selectedClass">
-        <p v-if="selectedClass.description" class="class-description">
-          {{ selectedClass.description }}
-        </p>
-
-        <div v-if="!hasChartData" class="chart-empty">
-          <p>
-            La classe <strong>{{ selectedClass.name }}</strong> n’a pas encore d’enseignants ni
-            d’élèves.
-          </p>
-        </div>
-
-        <div v-else class="chart-canvas-wrap">
-          <Chart type="pie" :data="chartData" :options="chartOptions" class="chart-canvas" />
-        </div>
-      </template>
-    </template>
-
-    <p v-if="apiMessage && !fetchError && !pending" class="api-message">{{ apiMessage }}</p>
+    <ul v-else class="class-items">
+      <li v-for="cls in classes" :key="cls.id">
+        <NuxtLink :to="classLink(cls.id)" class="class-item">
+          <span class="class-name">{{ cls.name }}</span>
+          <div class="class-meta">
+            <Tag :value="teacherCountLabel(cls.teacherCount)" severity="secondary" class="meta-tag" />
+            <Tag :value="studentCountLabel(cls.studentCount)" severity="info" class="meta-tag" />
+          </div>
+          <i class="pi pi-angle-right class-arrow" />
+        </NuxtLink>
+      </li>
+    </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{
-  /** Pré-sélection (SSR) — ex. depuis `?classId=` sur `/dashboard`. */
-  initialClassId?: string;
-}>();
+import {
+  normalizeApiError,
+  type ClassesSummaryApiResponse,
+  type SkolrClassSummary,
+} from '~/composables/useClass';
 
+const { t } = useI18n();
 const api = useApi();
-const apiMessage = ref<string | null>(null);
+const { hasRole } = useAuth();
 
 const {
-  selectedClassId,
-  classOptions,
-  summaryResponse,
-  listPending,
-  listError,
-  refreshSummary,
-} = await useChartClassSelection({
-  initialClassId: () => props.initialClassId,
-});
-
-const classDetailUrl = computed(() =>
-  selectedClassId.value ? `/class/classes/${selectedClassId.value}` : null,
-);
-
-const {
-  data: classResponse,
-  pending: detailPending,
-  error: detailError,
-  refresh: refreshClassDetail,
-} = await useFetch<ClassApiResponse>(() => classDetailUrl.value, {
+  data: summaryResponse,
+  pending,
+  error: summaryError,
+} = await useFetch<ClassesSummaryApiResponse>('/class/classes/summary', {
   $fetch: api,
-  watch: [selectedClassId],
-  immediate: true,
-  default: () => ({ data: null, message: '' }),
+  default: () => ({ data: [] as SkolrClassSummary[], message: '' }),
 });
 
-const selectedClass = computed(() => classResponse.value?.data ?? null);
+const classes = computed(() => summaryResponse.value?.data ?? []);
 
-const pending = computed(
-  () => listPending.value || (Boolean(selectedClassId.value) && detailPending.value),
+const fetchError = computed(() =>
+  summaryError.value ? normalizeApiError(summaryError.value) : null,
 );
 
-const fetchError = computed(() => {
-  if (listError.value) {
-    return normalizeApiError(listError.value);
-  }
-  if (detailError.value) {
-    return normalizeApiError(detailError.value);
-  }
-  return null;
-});
+const studentsBasePath = computed(() => (hasRole('ADMIN') ? '/admin/students' : '/teacher/students'));
 
-const teacherCount = computed(() => selectedClass.value?.classTeachers?.length ?? 0);
-
-const studentCount = computed(() => selectedClass.value?.students?.length ?? 0);
-
-const hasChartData = computed(() => teacherCount.value + studentCount.value > 0);
-
-watch(
-  [summaryResponse, classResponse],
-  ([summary, detail]) => {
-    apiMessage.value = detail?.message ?? summary?.message ?? null;
-  },
-  { immediate: true },
-);
-
-async function refreshAll() {
-  await Promise.all([refreshSummary(), refreshClassDetail()]);
+function classLink(classId: string) {
+  return { path: studentsBasePath.value, query: { classId } };
 }
 
-/** Couleurs fixes (Chart.js canvas n’interprète pas les var() CSS). */
-const PIE_SLICE_COLORS = {
-  teachers: { fill: '#6366f1', hover: '#4f46e5', border: '#4338ca' },
-  students: { fill: '#f97316', hover: '#ea580c', border: '#c2410c' },
-} as const;
+function teacherCountLabel(n: number): string {
+  return t('common.teacher_count', { count: n }, n);
+}
 
-const chartData = computed(() => ({
-  labels: ['Professeurs', 'Élèves'],
-  datasets: [
-    {
-      data: [teacherCount.value, studentCount.value],
-      backgroundColor: [PIE_SLICE_COLORS.teachers.fill, PIE_SLICE_COLORS.students.fill],
-      hoverBackgroundColor: [PIE_SLICE_COLORS.teachers.hover, PIE_SLICE_COLORS.students.hover],
-      borderColor: [PIE_SLICE_COLORS.teachers.border, PIE_SLICE_COLORS.students.border],
-      borderWidth: 2,
-    },
-  ],
-}));
-
-const chartOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      position: 'bottom' as const,
-    },
-    tooltip: {
-      callbacks: {
-        label(context: { label?: string; parsed: number; dataset: { data: number[] } }) {
-          const total = context.dataset.data.reduce((sum, n) => sum + n, 0);
-          const value = context.parsed;
-          const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-          return `${context.label}: ${value} (${pct} %)`;
-        },
-      },
-    },
-  },
-};
+function studentCountLabel(n: number): string {
+  return t('common.student_count', { count: n }, n);
+}
 </script>
 
 <style scoped>
-.classes-chart {
+.classes-overview {
   display: grid;
   gap: 1rem;
 }
 
-.chart-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.chart-select {
-  display: grid;
-  gap: 0.35rem;
-  min-width: min(100%, 16rem);
-  flex: 1;
-}
-
-.chart-select-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--p-text-muted-color, #64748b);
-}
-
-.chart-select-input {
-  width: 100%;
-}
-
-.chart-message {
+.overview-message {
   margin: 0;
 }
 
-.chart-loading {
+.overview-loading {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  min-height: 12rem;
-  color: var(--p-text-muted-color, #64748b);
+  min-height: 8rem;
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
-.chart-empty {
+.overview-empty {
   padding: 0.5rem 0;
   min-height: 8rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
-.chart-empty p {
+.overview-empty p {
   margin: 0 0 0.5rem;
 }
 
-.chart-empty-hint {
+.overview-empty-hint {
   font-size: 0.9rem;
 }
 
-.chart-empty-hint code {
+.overview-empty-hint code {
   font-size: 0.85em;
   padding: 0.1em 0.35em;
   border-radius: 0.25rem;
-  background: var(--p-surface-100, #f1f5f9);
+  background: var(--p-surface-100, var(--skolr-color-surface-hover));
 }
 
-.class-description {
+.class-items {
+  list-style: none;
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--p-text-muted-color, #64748b);
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
 }
 
-.chart-canvas-wrap {
-  position: relative;
-  height: min(22rem, 50vh);
-  width: 100%;
-  max-width: 28rem;
-  margin: 0 auto;
+.class-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
+  background: var(--p-surface-50, var(--skolr-color-surface-hover));
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
 }
 
-.chart-canvas {
-  width: 100%;
-  height: 100%;
+.class-item:hover {
+  background: var(--skolr-color-surface-hover);
 }
 
-.api-message {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--p-text-color-secondary, #64748b);
-  font-style: italic;
+.class-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.class-meta {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.meta-tag {
+  font-size: 0.75rem;
+}
+
+.class-arrow {
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 </style>

@@ -361,7 +361,7 @@ function resetForms() {
 
 .dialog-subtitle {
   margin: 0;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   font-size: 0.9rem;
 }
 
@@ -384,12 +384,12 @@ function resetForms() {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .dialog-empty {
   margin: 0;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .grade-list {
@@ -407,8 +407,8 @@ function resetForms() {
   flex-wrap: wrap;
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
-  border: 1px solid var(--p-surface-200, #e2e8f0);
-  background: var(--p-surface-50, #f8fafc);
+  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
+  background: var(--p-surface-50, var(--skolr-color-surface-hover));
 }
 
 .grade-course {
@@ -422,7 +422,7 @@ function resetForms() {
 
 .confirm-text {
   font-size: 0.85rem;
-  color: var(--p-text-muted-color, #64748b);
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .create-form {
