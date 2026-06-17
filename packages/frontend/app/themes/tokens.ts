@@ -3,13 +3,6 @@
  * canvas (Chart.js, FullCalendar) qui n'interprètent pas `var()`.
  */
 
-export const SKOLR_BRAND = {
-  navy: '#12263a',
-  cream: '#ede5a6',
-  green: '#498467',
-  text: '#1a1a1a',
-} as const;
-
 const PRIMARY_GREEN = { fill: '#498467', hover: '#3d6f57', border: '#325a46' } as const;
 
 /** Couleurs des barres (GradesChart) et de la ligne (GradesTrendChart). */
