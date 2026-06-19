@@ -112,3 +112,17 @@ export const listEstablishmentsSchema = {
     403: errorBody,
   },
 } as const;
+
+export const handleStripeWebhookSchema = {
+  description:
+    'Webhook Stripe (signature vérifiée, body brut) : synchronise le statut abonnement',
+  tags: [billingTag],
+  response: {
+    200: {
+      type: 'object',
+      properties: { received: { type: 'boolean' }, deduplicated: { type: 'boolean' } },
+      required: ['received'],
+    },
+    400: errorBody,
+  },
+} as const;

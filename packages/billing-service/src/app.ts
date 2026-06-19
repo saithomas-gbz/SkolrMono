@@ -9,6 +9,7 @@ import establishmentRoutes from './routes/establishmentRoutes';
 import checkoutRoutes from './routes/checkoutRoutes';
 import portalRoutes from './routes/portalRoutes';
 import platformRoutes from './routes/platformRoutes';
+import webhookRoutes from './routes/webhookRoutes';
 
 dotenv.config();
 
@@ -45,6 +46,7 @@ async function buildApp() {
   await app.register(checkoutRoutes);
   await app.register(portalRoutes);
   await app.register(platformRoutes);
+  await app.register(webhookRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 

@@ -3,6 +3,7 @@ WORKDIR /app
 
 COPY package.json bun.lock tsconfig.json ./
 
+COPY packages/rabbitmq/ ./packages/rabbitmq/
 COPY packages/billing-service/ ./packages/billing-service/
 
 WORKDIR /app/packages/billing-service

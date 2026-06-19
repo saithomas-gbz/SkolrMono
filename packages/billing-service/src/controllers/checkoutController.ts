@@ -3,7 +3,7 @@ import db from '../db';
 import stripe from '../lib/stripeClient';
 import { getPlans } from '../lib/plans';
 
-interface CheckoutBody {
+export interface CheckoutBody {
   priceId: string;
 }
 
@@ -41,8 +41,8 @@ export default {
       customer: stripeCustomerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: process.env.STRIPE_SUCCESS_URL ?? 'http://localhost:3000/admin/billing?success=1',
-      cancel_url: process.env.STRIPE_CANCEL_URL ?? 'http://localhost:3000/admin/billing?canceled=1',
+      success_url: process.env.STRIPE_SUCCESS_URL ?? 'http://localhost:3003/admin/billing?success=1',
+      cancel_url: process.env.STRIPE_CANCEL_URL ?? 'http://localhost:3003/admin/billing?canceled=1',
     });
 
     return reply.status(200).send({ url: session.url });

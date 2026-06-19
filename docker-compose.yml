@@ -329,12 +329,15 @@ services:
       - STRIPE_PRICE_PREMIUM=${STRIPE_PRICE_PREMIUM:-}
       - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-http://localhost:3003/admin/billing?success=1}
       - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-http://localhost:3003/admin/billing?canceled=1}
+      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
       - "${BILLING_SERVICE_PORT:-3011}:${BILLING_SERVICE_PORT:-3011}"
     depends_on:
       postgres-billing:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${BILLING_SERVICE_PORT:-3011}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
