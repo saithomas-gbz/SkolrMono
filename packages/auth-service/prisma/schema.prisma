@@ -36,6 +36,7 @@ enum Role {
   STAFF
   ADMIN
   PLATFORM_ADMIN
+  PARENT
 }
 
 model Account {
