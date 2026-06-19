@@ -39,6 +39,26 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/billing-service": {
+      "name": "billing-service",
+      "dependencies": {
+        "@fastify/jwt": "^10.0.0",
+        "@fastify/swagger": "^9.7.0",
+        "@fastify/swagger-ui": "^5.2.6",
+        "@prisma/adapter-pg": "7.5.0",
+        "@prisma/client": "7.5.0",
+        "@sentry/node": "^10.56.0",
+        "dotenv": "^17.4.2",
+        "fastify": "^5.8.2",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "prisma": "7.5.0",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
     "packages/class-service": {
       "name": "class-service",
       "dependencies": {
@@ -101,6 +121,27 @@
     "packages/grade-service": {
       "name": "grade-service",
       "dependencies": {
+        "@fastify/swagger": "^9.7.0",
+        "@fastify/swagger-ui": "^5.2.6",
+        "@prisma/adapter-pg": "7.5.0",
+        "@prisma/client": "7.5.0",
+        "@sentry/node": "^10.56.0",
+        "@skolr/rabbitmq": "workspace:*",
+        "dotenv": "^17.4.2",
+        "fastify": "^5.8.2",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "prisma": "7.5.0",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/message-service": {
+      "name": "message-service",
+      "dependencies": {
+        "@fastify/jwt": "^10.0.0",
         "@fastify/swagger": "^9.7.0",
         "@fastify/swagger-ui": "^5.2.6",
         "@prisma/adapter-pg": "7.5.0",
@@ -1229,6 +1270,8 @@
 
     "bcrypt": ["bcrypt@6.0.0", "", { "dependencies": { "node-addon-api": "^8.3.0", "node-gyp-build": "^4.8.4" } }, "sha512-cU8v/EGSrnH+HnxV2z0J7/blxH8gq7Xh2JFT6Aroax7UohdmiJJlxApMxtKfuI7z68NvvVcmR78k2LbT6efhRg=="],
 
+    "billing-service": ["billing-service@workspace:packages/billing-service"],
+
     "binary-extensions": ["binary-extensions@2.3.0", "", {}, "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="],
 
     "bindings": ["bindings@1.5.0", "", { "dependencies": { "file-uri-to-path": "1.0.0" } }, "sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ=="],
@@ -1866,6 +1909,8 @@
     "merge-stream": ["merge-stream@2.0.0", "", {}, "sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w=="],
 
     "merge2": ["merge2@1.4.1", "", {}, "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="],
+
+    "message-service": ["message-service@workspace:packages/message-service"],
 
     "micromatch": ["micromatch@4.0.8", "", { "dependencies": { "braces": "^3.0.3", "picomatch": "^2.3.1" } }, "sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA=="],
 

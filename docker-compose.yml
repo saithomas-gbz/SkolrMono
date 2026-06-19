@@ -109,6 +109,24 @@ services:
       retries: 5
     networks:
       - skolr_network
+  postgres-billing:
+    image: postgres:15-alpine
+    container_name: skolr_billing_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_BILLING_DB:-skolr_billing}
+    ports:
+      - "${POSTGRES_BILLING_PORT:-5438}:5432"
+    volumes:
+      - postgres_billing_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
@@ -295,6 +313,30 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+  billing-service:
+    build:
+      context: .
+      dockerfile: ./packages/billing-service/Dockerfile
+    container_name: skolr_billing_service
+    environment:
+      - PORT=${BILLING_SERVICE_PORT:-3011}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-billing:5432/${POSTGRES_BILLING_DB:-skolr_billing}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${BILLING_SERVICE_PORT:-3011}:${BILLING_SERVICE_PORT:-3011}"
+    depends_on:
+      postgres-billing:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${BILLING_SERVICE_PORT:-3011}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -447,6 +489,7 @@ volumes:
   postgres_planning_data:
   postgres_notification_data:
   postgres_message_data:
+  postgres_billing_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:
