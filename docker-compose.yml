@@ -237,6 +237,7 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
       - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
       - UPLOADS_DIR=${PLANNING_UPLOADS_DIR:-/app/packages/planning-services/uploads}
+      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
