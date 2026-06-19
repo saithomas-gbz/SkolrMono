@@ -135,8 +135,12 @@ async function build() {
     );
   }
 
+  /** Documents de justification jusqu'à ~5 Mo/fichier (issue #80) — au-delà du défaut Fastify (1 Mo). */
+  const MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024;
+
   const gateway = fastify({
     logger: true,
+    bodyLimit: MAX_UPLOAD_BODY_BYTES,
   });
 
   await gateway.register(fastifySwagger, {
