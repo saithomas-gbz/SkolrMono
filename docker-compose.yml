@@ -127,6 +127,24 @@ services:
       retries: 5
     networks:
       - skolr_network
+  postgres-parent:
+    image: postgres:15-alpine
+    container_name: skolr_parent_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_PARENT_DB:-skolr_parent}
+    ports:
+      - "${POSTGRES_PARENT_PORT:-5439}:5432"
+    volumes:
+      - postgres_parent_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
@@ -354,6 +372,30 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+  parent-service:
+    build:
+      context: .
+      dockerfile: ./packages/parent-service/Dockerfile
+    container_name: skolr_parent_service
+    environment:
+      - PORT=${PARENT_SERVICE_PORT:-3012}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-parent:5432/${POSTGRES_PARENT_DB:-skolr_parent}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${PARENT_SERVICE_PORT:-3012}:${PARENT_SERVICE_PORT:-3012}"
+    depends_on:
+      postgres-parent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PARENT_SERVICE_PORT:-3012}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -510,6 +552,7 @@ volumes:
   postgres_notification_data:
   postgres_message_data:
   postgres_billing_data:
+  postgres_parent_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:

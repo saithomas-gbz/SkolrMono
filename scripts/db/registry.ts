@@ -29,6 +29,14 @@ export const DB_SERVICES: DbService[] = [
     seedScript: 'db:seed',
   },
   {
+    packageDir: 'parent-service',
+    composeService: 'postgres-parent',
+    defaultDatabaseUrl:
+      'postgresql://postgres:postgres@localhost:5439/skolr_parent?schema=public',
+    migrateScript: 'db:migrate:deploy',
+    seedScript: 'db:seed',
+  },
+  {
     packageDir: 'class-service',
     composeService: 'postgres-class',
     defaultDatabaseUrl:

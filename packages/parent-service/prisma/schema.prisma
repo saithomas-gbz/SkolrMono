@@ -1,0 +1,29 @@
+generator client {
+  provider      = "prisma-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  output        = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ParentLinkType {
+  LEGAL_GUARDIAN
+  EMERGENCY_CONTACT
+  OTHER
+}
+
+model ParentStudent {
+  id        String         @id @default(uuid())
+  parentId  String
+  studentId String
+  linkType  ParentLinkType @default(LEGAL_GUARDIAN)
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+}
