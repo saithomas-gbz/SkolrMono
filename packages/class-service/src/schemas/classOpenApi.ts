@@ -36,6 +36,7 @@ const classEntity = {
     id: { type: 'string' },
     name: { type: 'string' },
     description: { type: 'string' },
+    establishmentId: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
     classTeachers: { type: 'array', items: classTeacher },
