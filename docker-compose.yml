@@ -244,7 +244,9 @@ services:
     ports:
       - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
     volumes:
-      - planning_uploads_data:/app/packages/planning-services/uploads
+      # Bind mount (pas un volume nommé) : scripts/db/seed-pipeline.ts écrit les documents
+      # depuis l'hôte (bun run seed:dev) — il doit voir le même répertoire que le conteneur.
+      - ./packages/planning-services/uploads:/app/packages/planning-services/uploads
     depends_on:
       postgres-planning:
         condition: service_healthy
@@ -508,7 +510,6 @@ volumes:
   postgres_notification_data:
   postgres_message_data:
   postgres_billing_data:
-  planning_uploads_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:
