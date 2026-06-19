@@ -3,7 +3,7 @@ import db from '../db';
 import type { AbsenceRole } from '../generated/prisma/client';
 import { publish } from '@skolr/rabbitmq';
 
-type AbsenceFilters = {
+export type AbsenceFilters = {
   sessionId?: string;
   userId?: string;
   role?: AbsenceRole;
@@ -29,10 +29,13 @@ export async function getAbsences(
 ) {
   const { sessionId, userId, role, justified } = req.query;
 
+  /** Un élève (`USER`) ne voit que ses propres absences, quel que soit le `userId` demandé (issue #80). */
+  const effectiveUserId = req.planningUser?.role === 'USER' ? req.planningUser.userId : userId;
+
   const absences = await db.absence.findMany({
     where: {
       ...(sessionId && { sessionId }),
-      ...(userId && { userId }),
+      ...(effectiveUserId && { userId: effectiveUserId }),
       ...(role && { role }),
       ...(justified !== undefined && { justified }),
     },

@@ -7,6 +7,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
 import sessionRoutes from './routes/sessionRoutes';
 import absenceRoutes from './routes/absenceRoutes';
+import absenceJustificationRoutes from './routes/absenceJustificationRoutes';
 
 /** Documents de justification jusqu'à ~5 Mo/fichier (issue #80) — au-delà du défaut Fastify (1 Mo). */
 const MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024;
@@ -41,12 +42,14 @@ async function buildApp() {
       tags: [
         { name: 'session', description: 'Session scheduling api' },
         { name: 'absence', description: 'Absence management api' },
+        { name: 'absence-justification', description: 'Absence justification workflow api (issue #80)' },
       ],
     },
   });
 
   await app.register(sessionRoutes);
   await app.register(absenceRoutes);
+  await app.register(absenceJustificationRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 
