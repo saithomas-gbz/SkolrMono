@@ -235,11 +235,15 @@ services:
     environment:
       - PORT=${PLANNING_SERVICE_PORT:-3008}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - UPLOADS_DIR=${PLANNING_UPLOADS_DIR:-/app/packages/planning-services/uploads}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
+    volumes:
+      - planning_uploads_data:/app/packages/planning-services/uploads
     depends_on:
       postgres-planning:
         condition: service_healthy
@@ -503,6 +507,7 @@ volumes:
   postgres_notification_data:
   postgres_message_data:
   postgres_billing_data:
+  planning_uploads_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:

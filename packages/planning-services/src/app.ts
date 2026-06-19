@@ -1,11 +1,15 @@
 import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
+import fastifyJwt from '@fastify/jwt';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
 import sessionRoutes from './routes/sessionRoutes';
 import absenceRoutes from './routes/absenceRoutes';
+
+/** Documents de justification jusqu'à ~5 Mo/fichier (issue #80) — au-delà du défaut Fastify (1 Mo). */
+const MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024;
 
 dotenv.config();
 
@@ -19,7 +23,11 @@ Sentry.init({
 const planningPort = Number(process.env.PORT || 3008);
 
 async function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, bodyLimit: MAX_UPLOAD_BODY_BYTES });
+
+  await app.register(fastifyJwt, {
+    secret: process.env.JWT_SECRET!,
+  });
 
   await app.register(fastifySwagger, {
     openapi: {
