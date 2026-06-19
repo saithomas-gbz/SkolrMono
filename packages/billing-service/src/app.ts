@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
+import establishmentRoutes from './routes/establishmentRoutes';
+import checkoutRoutes from './routes/checkoutRoutes';
 
 dotenv.config();
 
@@ -36,6 +38,9 @@ async function buildApp() {
   await app.register(fastifyJwt, {
     secret: process.env.JWT_SECRET!,
   });
+
+  await app.register(establishmentRoutes);
+  await app.register(checkoutRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 
