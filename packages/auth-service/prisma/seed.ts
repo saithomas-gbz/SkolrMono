@@ -8,6 +8,9 @@ import {
   DEV_GENERATED_STUDENTS,
   DEV_TEACHER_PASSWORD,
   DEV_STUDENT_PASSWORD,
+  DEV_ESTABLISHMENT,
+  DEV_PLATFORM_ADMIN,
+  DEV_PLATFORM_ADMIN_PASSWORD,
 } from '../../../scripts/seed/dev-users';
 
 /**
@@ -20,6 +23,7 @@ const baseUsers: Array<{
   plainPassword: string;
   name: string;
   role: Role;
+  establishmentId?: string;
 }> = [
   {
     id: DEV_USER_IDS.admin,
@@ -27,6 +31,7 @@ const baseUsers: Array<{
     plainPassword: 'dev-admin-123',
     name: 'Dev Admin',
     role: Role.ADMIN,
+    establishmentId: DEV_ESTABLISHMENT.id,
   },
   {
     id: DEV_USER_IDS.user,
@@ -48,6 +53,13 @@ const baseUsers: Array<{
     plainPassword: 'dev-student-123',
     name: 'Dev Student',
     role: Role.USER,
+  },
+  {
+    id: DEV_PLATFORM_ADMIN.id,
+    email: DEV_PLATFORM_ADMIN.email,
+    plainPassword: DEV_PLATFORM_ADMIN_PASSWORD,
+    name: DEV_PLATFORM_ADMIN.name,
+    role: Role.PLATFORM_ADMIN,
   },
 ];
 
@@ -86,6 +98,7 @@ async function main() {
           password,
           name: u.name,
           role: u.role,
+          establishmentId: u.establishmentId ?? null,
           oauthProvider: null,
           oauthId: null,
         },
@@ -95,6 +108,7 @@ async function main() {
           password,
           name: u.name,
           role: u.role,
+          establishmentId: u.establishmentId ?? null,
         },
       });
     }

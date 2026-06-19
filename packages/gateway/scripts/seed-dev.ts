@@ -35,14 +35,21 @@ function main() {
   console.log(`PORT=${port}`);
   console.log(`AUTH_SERVICE_URL=${authUrl}`);
   console.log('\nTest accounts (after `bun run seed:dev` at repo root):');
-  console.log('  dev.admin@skolr.local   / dev-admin-123');
-  console.log('  dev.user@skolr.local    / dev-user-123');
-  console.log('  dev.teacher@skolr.local / dev-teacher-123');
-  console.log('  dev.student@skolr.local / dev-student-123');
+  console.log('  dev.admin@skolr.local       / dev-admin-123      (ADMIN, établissement Skolr Demo)');
+  console.log('  dev.user@skolr.local        / dev-user-123       (USER)');
+  console.log('  dev.teacher@skolr.local     / dev-teacher-123    (TEACHER)');
+  console.log('  dev.student@skolr.local     / dev-student-123    (USER/élève)');
+  console.log('  platform.admin@skolr.local  / dev-platform-123   (PLATFORM_ADMIN)');
   console.log('\nDev classes (class-service seed): CM2-A, 6ème Sciences');
   console.log(
     'Dev grades (grade-service seed): student + user (CM2-A), student (6ème Sciences)',
   );
+  console.log('\nDev billing (billing-service seed): établissement "Collège Skolr Demo" avec abonnement STARTER.');
+  console.log('\nBilling via gateway (nécessite un token ADMIN):');
+  console.log(`  curl -s http://localhost:${port}/billing/establishment`);
+  console.log(`  curl -s http://localhost:${port}/billing/plans`);
+  console.log('Portail admin plateforme (token PLATFORM_ADMIN requis):');
+  console.log(`  curl -s http://localhost:${port}/billing/establishments`);
   console.log('\nGrades via gateway:');
   console.log(`  curl -s http://localhost:${port}/grade/grades`);
   console.log('\nLogin via gateway:');

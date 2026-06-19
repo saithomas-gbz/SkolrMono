@@ -10,6 +10,21 @@ export const DEV_USER_IDS = {
   student: '11111111-1111-1111-1111-111111111104',
 } as const;
 
+/** Établissement de démo (issue #83) — dev.admin y est rattaché, classes seed alignées. */
+export const DEV_ESTABLISHMENT = {
+  id: '77777777-7777-7777-7777-000000000001',
+  name: 'Collège Skolr Demo',
+  slug: 'skolr-demo',
+} as const;
+
+export const DEV_PLATFORM_ADMIN = {
+  id: '88888888-8888-8888-8888-000000000001',
+  email: 'platform.admin@skolr.local',
+  name: 'Platform Admin',
+} as const;
+
+export const DEV_PLATFORM_ADMIN_PASSWORD = 'dev-platform-123';
+
 const DEV_CLASS_IDS = {
   cm2a: '22222222-2222-2222-2222-222222222201',
   sciences6: '22222222-2222-2222-2222-222222222202',

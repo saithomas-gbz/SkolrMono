@@ -4,6 +4,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import {
   DEV_CLASSES,
   DEV_COURSES,
+  DEV_ESTABLISHMENT,
   courseIdsForTeacherInClass,
   studentIdsForClass,
   teacherIdsForClass,
@@ -32,10 +33,12 @@ async function seedClass(
         id: spec.id,
         name: spec.name,
         description: spec.description,
+        establishmentId: DEV_ESTABLISHMENT.id,
       },
       update: {
         name: spec.name,
         description: spec.description,
+        establishmentId: DEV_ESTABLISHMENT.id,
       },
     });
 
