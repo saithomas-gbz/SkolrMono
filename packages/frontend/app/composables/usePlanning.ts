@@ -62,6 +62,35 @@ export type AbsenceFilters = {
   justified?: boolean;
 };
 
+export type JustificationStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type JustificationDocument = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+};
+
+export type AbsenceJustification = {
+  id: string;
+  studentId: string;
+  status: JustificationStatus;
+  reason: string;
+  reviewerId: string | null;
+  reviewComment: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  documents: JustificationDocument[];
+};
+
+export type JustificationFilters = {
+  status?: JustificationStatus;
+  studentId?: string;
+  classId?: string;
+};
+
 export function usePlanning() {
   const api = useApi();
 
@@ -110,6 +139,54 @@ export function usePlanning() {
     await api(`/planning/absences/${id}`, { method: 'DELETE' });
   }
 
+  // Justifications d'absence (issue #80)
+  async function fetchAbsenceJustifications(filters?: JustificationFilters): Promise<AbsenceJustification[]> {
+    return api<AbsenceJustification[]>('/planning/absence-justifications', { params: filters });
+  }
+
+  async function createAbsenceJustification(
+    reason: string,
+    absenceIds: string[],
+    files: File[],
+  ): Promise<AbsenceJustification> {
+    const formData = new FormData();
+    formData.append('reason', reason);
+    absenceIds.forEach((id) => formData.append('absenceIds', id));
+    files.forEach((file) => formData.append('file', file, file.name));
+    return api<AbsenceJustification>('/planning/absence-justifications', { method: 'POST', body: formData });
+  }
+
+  async function submitAbsenceJustification(id: string): Promise<AbsenceJustification> {
+    return api<AbsenceJustification>(`/planning/absence-justifications/${id}/submit`, { method: 'PATCH' });
+  }
+
+  async function reviewAbsenceJustification(
+    id: string,
+    action: 'approve' | 'reject',
+    comment?: string,
+  ): Promise<AbsenceJustification> {
+    return api<AbsenceJustification>(`/planning/absence-justifications/${id}/review`, {
+      method: 'PATCH',
+      body: { action, comment },
+    });
+  }
+
+  async function downloadJustificationDocument(
+    justificationId: string,
+    docId: string,
+    fileName: string,
+  ): Promise<void> {
+    const blob = await api<Blob>(`/planning/absence-justifications/${justificationId}/documents/${docId}`, {
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return {
     fetchSessions,
     fetchSessionById,
@@ -121,5 +198,10 @@ export function usePlanning() {
     createAbsence,
     justifyAbsence,
     deleteAbsence,
+    fetchAbsenceJustifications,
+    createAbsenceJustification,
+    submitAbsenceJustification,
+    reviewAbsenceJustification,
+    downloadJustificationDocument,
   };
 }
