@@ -76,6 +76,16 @@
       </nav>
     </Sidebar>
 
+    <Message
+      v-if="showInactiveSubscriptionBanner"
+      severity="warn"
+      :closable="false"
+      class="subscription-banner"
+    >
+      {{ $t('billing.inactive_warning') }}
+      <NuxtLink to="/admin/billing" class="banner-link">{{ $t('billing.manage_billing') }}</NuxtLink>
+    </Message>
+
     <main class="app-content">
       <slot />
     </main>
@@ -127,7 +137,34 @@ const navLinks = computed<NavLink[]>(() => {
 });
 
 const adminLinks = computed<NavLink[]>(() =>
-  isAdmin.value ? [{ label: t('nav.subjects'), to: '/admin/subjects' }] : [],
+  isAdmin.value
+    ? [
+        { label: t('nav.subjects'), to: '/admin/subjects' },
+        { label: t('nav.billing'), to: '/admin/billing' },
+      ]
+    : [],
+);
+
+const subscriptionStatus = ref<string | null>(null);
+
+if (isAdmin.value) {
+  const { fetchEstablishment } = useBilling();
+  fetchEstablishment()
+    .then((establishment) => {
+      subscriptionStatus.value = establishment.subscription?.status ?? null;
+    })
+    .catch(() => {
+      // Établissement non trouvé ou erreur réseau : pas de bannière, la page /admin/billing
+      // affiche déjà le détail de l'erreur si besoin.
+    });
+}
+
+const showInactiveSubscriptionBanner = computed(
+  () =>
+    isAdmin.value &&
+    subscriptionStatus.value !== null &&
+    subscriptionStatus.value !== 'ACTIVE' &&
+    subscriptionStatus.value !== 'TRIALING',
 );
 
 async function signOut() {
@@ -184,6 +221,20 @@ async function signOut() {
   width: min(1100px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 1.5rem 0;
+}
+
+.subscription-banner {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 1rem auto 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.banner-link {
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
 }
 
 .sidebar-nav {

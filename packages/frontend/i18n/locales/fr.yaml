@@ -26,6 +26,7 @@ nav:
   absences: Absences
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
+  billing: Facturation
   messages: Messages
   administration: Administration
   logout: Déconnexion
@@ -63,6 +64,7 @@ dashboard:
   recent_absences: "Absences récentes (7 jours)"
   student_overview: Aperçu des élèves
   see_all: "Voir tout →"
+  billing_title: Facturation
   my_classes: Mes classes
   grade_progress: Évolution de mes notes
   grade_repartition: Répartition de mes notes
@@ -113,6 +115,39 @@ admin:
     topics: Sujets
     no_topics: Aucun sujet
     topic_placeholder: "Nom du sujet (ex: Trigonométrie)"
+
+billing:
+  title: Facturation
+  status_label: "Statut de l'abonnement"
+  status:
+    TRIALING: Essai
+    ACTIVE: Actif
+    PAST_DUE: En retard
+    CANCELED: Annulé
+    UNPAID: Impayé
+    INCOMPLETE: Incomplet
+  current_plan: "Plan actuel : {plan}"
+  renews_on: "renouvellement le {date}"
+  no_subscription: "Aucun abonnement actif pour le moment."
+  inactive_warning: "Abonnement inactif — choisissez un plan ci-dessous ou contactez le support pour réactiver votre accès."
+  manage_billing: Gérer la facturation
+  choose_plan: Choisir un plan
+  current_plan_label: Plan actuel
+  select_plan: Choisir ce plan
+  plan_unavailable: Indisponible
+  checkout_success: "Paiement confirmé. Votre abonnement sera actif dès la confirmation de Stripe."
+  checkout_canceled: "Le paiement a été annulé."
+  establishment_not_found: "Aucun établissement n'est associé à votre compte. Contactez le support Skolr."
+  widget_no_subscription: Aucun abonnement actif
+  widget_see_billing: "Voir la facturation →"
+  plan_label:
+    STARTER: Starter
+    STANDARD: Standard
+    PREMIUM: Premium
+  plan_limit:
+    STARTER: "Jusqu'à 200 élèves"
+    STANDARD: "Jusqu'à 800 élèves"
+    PREMIUM: Illimité
 
 planning:
   title: Emploi du temps
