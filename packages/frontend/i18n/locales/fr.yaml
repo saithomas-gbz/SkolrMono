@@ -191,6 +191,16 @@ planning:
       choose_files: Choisir des fichiers
       drop_hint: Glissez-déposez vos documents ici.
       send: Envoyer
+    review:
+      tab: Justifications
+      no_pending: Aucune demande en attente de validation.
+      student_id: Élève (ID)
+      review_button: Examiner
+      title: Examiner la demande
+      comment: Commentaire
+      comment_required: Un commentaire est requis en cas de refus.
+      approve: Approuver
+      reject: Refuser
   absence_dialog:
     title: Déclarer une absence
     session: Session
