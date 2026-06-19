@@ -21,6 +21,14 @@ export const DB_SERVICES: DbService[] = [
     seedScript: 'db:seed',
   },
   {
+    packageDir: 'billing-service',
+    composeService: 'postgres-billing',
+    defaultDatabaseUrl:
+      'postgresql://postgres:postgres@localhost:5438/skolr_billing?schema=public',
+    migrateScript: 'db:migrate:deploy',
+    seedScript: 'db:seed',
+  },
+  {
     packageDir: 'class-service',
     composeService: 'postgres-class',
     defaultDatabaseUrl:

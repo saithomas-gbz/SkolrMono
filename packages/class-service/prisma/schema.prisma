@@ -12,8 +12,9 @@ model Class {
   id          String   @id @unique @default(uuid())
   name        String
   description String
+  establishmentId String? // établissement propriétaire (billing-service) — V1 : colonne seule, pas de filtrage forcé
   students    ClassStudent[]
-  classTeachers ClassTeacher[] 
+  classTeachers ClassTeacher[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -39,6 +39,17 @@
         <AdminKpiCards />
       </div>
       <Card>
+        <template #title>
+          <div class="card-title-row">
+            <span>{{ $t('dashboard.billing_title') }}</span>
+            <NuxtLink to="/admin/billing" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
+          </div>
+        </template>
+        <template #content>
+          <AdminBillingWidget />
+        </template>
+      </Card>
+      <Card>
         <template #title>{{ $t('dashboard.class_enrollment') }}</template>
         <template #content>
           <ChartClassesChart />

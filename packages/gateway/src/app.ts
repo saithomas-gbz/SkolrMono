@@ -13,6 +13,7 @@ import {
   mergeGatewayWithClassService,
   mergeGatewayWithGradeService,
   mergeGatewayWithPlanningService,
+  mergeGatewayWithBillingService,
 } from './lib/mergeOpenApi';
 
 dotenv.config();
@@ -41,6 +42,10 @@ const planningServiceUrl = process.env.PLANNING_SERVICE_URL || 'http://localhost
 /** Path on planning-service for raw OpenAPI JSON */
 const planningOpenApiPath = process.env.PLANNING_OPENAPI_PATH || '/openapi.json';
 
+const billingServiceUrl = process.env.BILLING_SERVICE_URL || 'http://localhost:3011';
+/** Path on billing-service for raw OpenAPI JSON */
+const billingOpenApiPath = process.env.BILLING_OPENAPI_PATH || '/openapi.json';
+
 async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<Record<string, unknown> | null> {
   const tryPaths = path === '/openapi.json' ? [path, '/documentation/json'] : [path];
 
@@ -65,16 +70,25 @@ interface SpecsCache {
   class: Record<string, unknown> | null;
   grade: Record<string, unknown> | null;
   planning: Record<string, unknown> | null;
+  billing: Record<string, unknown> | null;
   lastFetchAt: number;
 }
 
-const specsCache: SpecsCache = { auth: null, class: null, grade: null, planning: null, lastFetchAt: 0 };
+const specsCache: SpecsCache = {
+  auth: null,
+  class: null,
+  grade: null,
+  planning: null,
+  billing: null,
+  lastFetchAt: 0,
+};
 
 async function refreshSpecs() {
   specsCache.auth = await fetchServiceOpenApiSpec(authServiceUrl, authOpenApiPath);
   specsCache.class = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
   specsCache.grade = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
   specsCache.planning = await fetchServiceOpenApiSpec(planningServiceUrl, planningOpenApiPath);
+  specsCache.billing = await fetchServiceOpenApiSpec(billingServiceUrl, billingOpenApiPath);
   specsCache.lastFetchAt = Date.now();
 }
 
@@ -83,6 +97,7 @@ async function build() {
   const cachedClassSpec = await fetchServiceOpenApiSpec(classServiceUrl, classOpenApiPath);
   const cachedGradeSpec = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
   const cachedPlanningSpec = await fetchServiceOpenApiSpec(planningServiceUrl, planningOpenApiPath);
+  const cachedBillingSpec = await fetchServiceOpenApiSpec(billingServiceUrl, billingOpenApiPath);
 
   if (!cachedAuthSpec) {
     console.warn(
@@ -112,6 +127,13 @@ async function build() {
         '); /docs will only list gateway routes.',
     );
   }
+  if (!cachedBillingSpec) {
+    console.warn(
+      `[gateway] Billing OpenAPI not available at ${billingServiceUrl} (tried ${billingOpenApiPath}` +
+        (billingOpenApiPath === '/openapi.json' ? ' and /documentation/json' : '') +
+        '); /docs will only list gateway routes.',
+    );
+  }
 
   const gateway = fastify({
     logger: true,
@@ -137,6 +159,7 @@ async function build() {
         { name: 'class', description: 'Proxied to class-service under /class' },
         { name: 'grade', description: 'Proxied to grade-service under /grade' },
         { name: 'planning', description: 'Proxied to planning-services under /planning' },
+        { name: 'billing', description: 'Proxied to billing-service under /billing' },
       ],
     },
     transformObject: (documentObject) => {
@@ -152,7 +175,8 @@ async function build() {
         );
         const mergedClass = mergeGatewayWithClassService(mergedAuth, cachedClassSpec, '/class');
         const mergedGrade = mergeGatewayWithGradeService(mergedClass, cachedGradeSpec, '/grade');
-        return mergeGatewayWithPlanningService(mergedGrade, cachedPlanningSpec, '/planning') as Partial<OpenAPIV3_1.Document>;
+        const mergedPlanning = mergeGatewayWithPlanningService(mergedGrade, cachedPlanningSpec, '/planning');
+        return mergeGatewayWithBillingService(mergedPlanning, cachedBillingSpec, '/billing') as Partial<OpenAPIV3_1.Document>;
       }
       return 'swaggerObject' in documentObject ? documentObject.swaggerObject : {};
     },
@@ -177,6 +201,7 @@ async function build() {
   await gateway.register(import('./routes/planning'));
   await gateway.register(import('./routes/notification'));
   await gateway.register(import('./routes/message'));
+  await gateway.register(import('./routes/billing'));
 
   await gateway.register(fastifySwaggerUi, {
     routePrefix: '/docs',
