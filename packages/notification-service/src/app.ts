@@ -10,6 +10,7 @@ import { startGradeConsumer } from './consumers/gradeConsumer';
 import { startAbsenceConsumer } from './consumers/absenceConsumer';
 import { startEnrollmentConsumer } from './consumers/enrollmentConsumer';
 import { startMessageConsumer } from './consumers/messageConsumer';
+import { startBillingConsumer } from './consumers/billingConsumer';
 
 dotenv.config();
 
@@ -76,6 +77,7 @@ async function start() {
     await startAbsenceConsumer();
     await startEnrollmentConsumer();
     await startMessageConsumer();
+    await startBillingConsumer();
     app.log.info('RabbitMQ consumers started');
   } catch (err) {
     console.error(err);
