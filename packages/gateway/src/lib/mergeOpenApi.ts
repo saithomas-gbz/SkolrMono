@@ -117,6 +117,14 @@ export function mergeGatewayWithPlanningService(
   return mergeGatewayWithService(gatewayObject, planningServiceSpec, pathPrefix, 'planningService_');
 }
 
+export function mergeGatewayWithBillingService(
+  gatewayObject: JsonRecord,
+  billingServiceSpec: JsonRecord | null,
+  pathPrefix: string,
+): JsonRecord {
+  return mergeGatewayWithService(gatewayObject, billingServiceSpec, pathPrefix, 'billingService_');
+}
+
 export function mergeGatewayWithService(
   gatewayObject: JsonRecord,
   serviceSpec: JsonRecord | null,

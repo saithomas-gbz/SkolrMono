@@ -10,6 +10,7 @@ declare module 'fastify' {
     proxyToPlanningService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     proxyToNotificationService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
     proxyToMessageService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    proxyToBillingService: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -48,8 +49,11 @@ async function proxyRequest(req: FastifyRequest, reply: FastifyReply, targetUrl:
       reject(err);
     });
 
-    // Pipe request body to proxy
-    if (req.body) {
+    // Pipe request body to proxy. Un Buffer (body brut, ex. webhooks signés) est transmis
+    // tel quel pour préserver les octets exacts ; sinon on retombe sur le JSON ré-encodé.
+    if (Buffer.isBuffer(req.body)) {
+      proxyReq.write(req.body);
+    } else if (req.body) {
       proxyReq.write(JSON.stringify(req.body));
     }
     proxyReq.end();
@@ -63,6 +67,7 @@ export default async function proxyPlugin(fastify: FastifyInstance) {
   const planningServiceUrl = process.env.PLANNING_SERVICE_URL || 'http://planning-services:3008';
   const notificationServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3009';
   const messageServiceUrl = process.env.MESSAGE_SERVICE_URL || 'http://message-service:3010';
+  const billingServiceUrl = process.env.BILLING_SERVICE_URL || 'http://billing-service:3011';
 
   // Decorate fastify instance with proxy method
   fastify.decorate('proxyToAuthService', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -136,6 +141,20 @@ export default async function proxyPlugin(fastify: FastifyInstance) {
   fastify.decorate('proxyToMessageService', async (request: FastifyRequest, reply: FastifyReply) => {
     const targetPath = request.url.replace(/^\/message/, '');
     const targetUrl = `${messageServiceUrl}${targetPath}`;
+
+    try {
+      await proxyRequest(request, reply, targetUrl);
+    } catch (error) {
+      fastify.log.error({ message: 'Proxy error', error });
+      reply
+        .code(500)
+        .send({ error: 'Proxy error', details: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  fastify.decorate('proxyToBillingService', async (request: FastifyRequest, reply: FastifyReply) => {
+    const targetPath = request.url.replace(/^\/billing/, '');
+    const targetUrl = `${billingServiceUrl}${targetPath}`;
 
     try {
       await proxyRequest(request, reply, targetUrl);
