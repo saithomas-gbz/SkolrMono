@@ -2,7 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import bcrypt from 'bcrypt';
 
-type Role = 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN';
+type Role = 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PLATFORM_ADMIN';
 
 const userController = {
   me: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -60,11 +60,12 @@ const userController = {
 
   createUser: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { email, password, name, role } = request.body as {
+      const { email, password, name, role, establishmentId } = request.body as {
         email: string;
         password: string;
         name?: string;
         role?: Role;
+        establishmentId?: string;
       };
 
       const existing = await db.user.findUnique({ where: { email } });
@@ -80,6 +81,7 @@ const userController = {
           password: hashedPassword,
           name: name ?? email.split('@')[0],
           role: role ?? 'USER',
+          establishmentId,
         },
         omit: { password: true },
       });
@@ -94,10 +96,11 @@ const userController = {
   updateUser: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
-      const { name, email, role } = request.body as {
+      const { name, email, role, establishmentId } = request.body as {
         name?: string;
         email?: string;
         role?: Role;
+        establishmentId?: string;
       };
 
       const existing = await db.user.findUnique({ where: { id } });
@@ -107,7 +110,7 @@ const userController = {
 
       const user = await db.user.update({
         where: { id },
-        data: { name, email, role },
+        data: { name, email, role, establishmentId },
         omit: { password: true },
       });
 

@@ -33,13 +33,13 @@ const authController = {
       }
 
       const token = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
         { expiresIn: '1h' }
       );
 
         return reply.send({
         token,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role }
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, establishmentId: user.establishmentId }
       });
     } catch (error) {
       request.log.error(error);
@@ -68,7 +68,7 @@ const authController = {
       });
 
       const token = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
         { expiresIn: '1h' }
       );
 
@@ -81,7 +81,7 @@ const authController = {
 
       return reply.status(201).send({
         token,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role }
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, establishmentId: user.establishmentId }
       });
     } catch (error) {
       request.log.error(error);
@@ -122,7 +122,7 @@ const authController = {
       }
 
       const jwtToken = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role, oauthToken: token },
+        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId, oauthToken: token },
         { expiresIn: '1h' }
       );
 

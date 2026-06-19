@@ -6,7 +6,8 @@ const userPublic = {
     id: { type: 'string' },
     email: { type: 'string', format: 'email' },
     name: { type: 'string' },
-    role: { type: 'string', enum: ['USER', 'ADMIN'] },
+    role: { type: 'string', enum: ['USER', 'TEACHER', 'STAFF', 'ADMIN', 'PLATFORM_ADMIN'] },
+    establishmentId: { type: 'string', nullable: true },
   },
   required: ['id', 'email', 'role'],
 } as const;
