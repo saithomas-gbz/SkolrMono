@@ -85,3 +85,30 @@ export const createCheckoutSessionSchema = {
     404: errorBody,
   },
 } as const;
+
+export const createPortalSessionSchema = {
+  description:
+    "Crée une session Stripe Customer Portal pour l'établissement de l'ADMIN authentifié",
+  tags: [billingTag],
+  response: {
+    200: { type: 'object', properties: { url: { type: 'string' } }, required: ['url'] },
+    400: errorBody,
+    401: errorBody,
+    403: errorBody,
+    404: errorBody,
+  },
+} as const;
+
+export const listEstablishmentsSchema = {
+  description: 'Liste tous les établissements (réservé PLATFORM_ADMIN)',
+  tags: [billingTag],
+  response: {
+    200: {
+      type: 'object',
+      properties: { data: { type: 'array', items: establishmentEntity } },
+      required: ['data'],
+    },
+    401: errorBody,
+    403: errorBody,
+  },
+} as const;

@@ -7,6 +7,8 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
 import establishmentRoutes from './routes/establishmentRoutes';
 import checkoutRoutes from './routes/checkoutRoutes';
+import portalRoutes from './routes/portalRoutes';
+import platformRoutes from './routes/platformRoutes';
 
 dotenv.config();
 
@@ -41,6 +43,8 @@ async function buildApp() {
 
   await app.register(establishmentRoutes);
   await app.register(checkoutRoutes);
+  await app.register(portalRoutes);
+  await app.register(platformRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 
