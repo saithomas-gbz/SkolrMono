@@ -1,6 +1,6 @@
 import type { getPlans } from './plans';
 
-export type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID' | 'INCOMPLETE';
+type SubscriptionStatus = 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'UNPAID' | 'INCOMPLETE';
 type PlanTier = ReturnType<typeof getPlans>[number]['tier'];
 
 /** Mappe les statuts Stripe (string) vers notre enum local ; tout statut inconnu reste INCOMPLETE. */

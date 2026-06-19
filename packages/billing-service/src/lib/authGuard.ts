@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-export interface BillingJwtPayload {
+interface BillingJwtPayload {
   userId: string;
   email: string;
   role: string;

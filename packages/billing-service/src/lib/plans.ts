@@ -1,6 +1,6 @@
-export type PlanTier = 'STARTER' | 'STANDARD' | 'PREMIUM';
+type PlanTier = 'STARTER' | 'STANDARD' | 'PREMIUM';
 
-export interface PlanDefinition {
+interface PlanDefinition {
   tier: PlanTier;
   priceId: string | null;
   studentLimit: number | null;
