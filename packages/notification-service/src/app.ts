@@ -8,6 +8,7 @@ import { testDatabaseConnection } from './db';
 import notificationRoutes from './routes/notificationRoutes';
 import { startGradeConsumer } from './consumers/gradeConsumer';
 import { startAbsenceConsumer } from './consumers/absenceConsumer';
+import { startAbsenceJustificationConsumer } from './consumers/absenceJustificationConsumer';
 import { startEnrollmentConsumer } from './consumers/enrollmentConsumer';
 import { startMessageConsumer } from './consumers/messageConsumer';
 import { startBillingConsumer } from './consumers/billingConsumer';
@@ -75,6 +76,7 @@ async function start() {
 
     await startGradeConsumer();
     await startAbsenceConsumer();
+    await startAbsenceJustificationConsumer();
     await startEnrollmentConsumer();
     await startMessageConsumer();
     await startBillingConsumer();
