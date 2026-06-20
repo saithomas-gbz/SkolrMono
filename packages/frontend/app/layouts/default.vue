@@ -108,6 +108,7 @@ const { isLoggedIn, clearSession, hasRole } = useAuth();
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isAdmin = computed(() => hasRole('ADMIN'));
 const isStudent = computed(() => hasRole('USER'));
+const isParent = computed(() => hasRole('PARENT'));
 
 const navLinks = computed<NavLink[]>(() => {
   const links: NavLink[] = [
@@ -136,6 +137,10 @@ const navLinks = computed<NavLink[]>(() => {
 
   if (isTeacher.value) {
     links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new' });
+  }
+
+  if (isParent.value) {
+    links.push({ label: t('nav.family_space'), to: '/parent' });
   }
 
   return links;

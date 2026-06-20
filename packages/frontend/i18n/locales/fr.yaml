@@ -25,6 +25,7 @@ nav:
   schedule: Emploi du temps
   absences: Absences
   my_absences: Mes absences
+  family_space: Espace famille
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
   billing: Facturation
@@ -69,6 +70,8 @@ dashboard:
   my_classes: Mes classes
   grade_progress: Évolution de mes notes
   grade_repartition: Répartition de mes notes
+  family_title: Espace famille
+  family_hint: "Suivez les absences de vos enfants et déposez vos justificatifs."
 
 admin:
   students_title: "Élèves de l'établissement"
