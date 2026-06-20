@@ -381,12 +381,15 @@ services:
       - PORT=${PARENT_SERVICE_PORT:-3012}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-parent:5432/${POSTGRES_PARENT_DB:-skolr_parent}?schema=public
       - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
       - "${PARENT_SERVICE_PORT:-3012}:${PARENT_SERVICE_PORT:-3012}"
     depends_on:
       postgres-parent:
+        condition: service_healthy
+      auth-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PARENT_SERVICE_PORT:-3012}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
