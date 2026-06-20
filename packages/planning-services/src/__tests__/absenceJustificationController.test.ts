@@ -16,6 +16,10 @@ mock.module('../lib/classServiceClient', () => ({
   getClassIdsForTeacher: mock(() => Promise.resolve<string[]>([])),
 }));
 
+mock.module('../lib/parentServiceClient', () => ({
+  getChildIds: mock(() => Promise.resolve<string[]>([])),
+}));
+
 const { submitAbsenceJustification, reviewAbsenceJustification } = await import(
   '../controllers/absenceJustificationController'
 );
@@ -26,6 +30,9 @@ const db = (await import('../db')).default as unknown as {
 const { publish } = (await import('@skolr/rabbitmq')) as unknown as { publish: ReturnType<typeof mock> };
 const { getClassIdsForTeacher } = (await import('../lib/classServiceClient')) as unknown as {
   getClassIdsForTeacher: ReturnType<typeof mock>;
+};
+const { getChildIds } = (await import('../lib/parentServiceClient')) as unknown as {
+  getChildIds: ReturnType<typeof mock>;
 };
 
 function buildReply(): FastifyReply {
@@ -53,6 +60,8 @@ beforeEach(() => {
   publish.mockImplementation(() => Promise.resolve());
   getClassIdsForTeacher.mockReset();
   getClassIdsForTeacher.mockResolvedValue([]);
+  getChildIds.mockReset();
+  getChildIds.mockResolvedValue([]);
 });
 
 describe('submitAbsenceJustification', () => {
@@ -114,6 +123,39 @@ describe('submitAbsenceJustification', () => {
       classId: 'class-1',
     });
     expect(reply.send).toHaveBeenCalled();
+  });
+
+  it("renvoie 403 si le PARENT n'a pas de lien vers cet enfant", async () => {
+    db.absenceJustification.findUnique.mockResolvedValue(justificationFixture());
+    getChildIds.mockResolvedValue(['other-student']);
+    const reply = buildReply();
+
+    await submitAbsenceJustification(
+      { params: { id: 'just-1' }, planningUser: { userId: 'parent-1', email: '', role: 'PARENT' } } as unknown as SubmitRequest,
+      reply,
+    );
+
+    expect(reply.status).toHaveBeenCalledWith(403);
+    expect(db.absenceJustification.update).not.toHaveBeenCalled();
+  });
+
+  it('laisse passer un PARENT avec un enfant rattaché', async () => {
+    db.absenceJustification.findUnique.mockResolvedValue(justificationFixture());
+    db.absenceJustification.update.mockResolvedValue(justificationFixture({ status: 'PENDING' }));
+    getChildIds.mockResolvedValue(['student-1']);
+    const reply = buildReply();
+    const req = {
+      params: { id: 'just-1' },
+      planningUser: { userId: 'parent-1', email: '', role: 'PARENT' },
+      log: { warn: mock() },
+    } as unknown as SubmitRequest;
+
+    await submitAbsenceJustification(req, reply);
+
+    expect(db.absenceJustification.update).toHaveBeenCalledWith({
+      where: { id: 'just-1' },
+      data: { status: 'PENDING' },
+    });
   });
 });
 

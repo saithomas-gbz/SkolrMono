@@ -16,7 +16,11 @@ export default async function absenceRoutes(app: FastifyInstance) {
     { schema: { ...absenceSchema.list, tags: ['absence'] }, preHandler: requireAuth },
     getAbsences,
   );
-  app.get('/absences/:id', { schema: { ...absenceSchema.get, tags: ['absence'] } }, getAbsenceById);
+  app.get<{ Params: { id: string } }>(
+    '/absences/:id',
+    { schema: { ...absenceSchema.get, tags: ['absence'] }, preHandler: requireAuth },
+    getAbsenceById,
+  );
   app.post('/absences', { schema: { ...createAbsenceSchema, tags: ['absence'] } }, createAbsence);
   app.patch('/absences/:id', { schema: { ...absenceSchema.update, tags: ['absence'] } }, updateAbsence);
   app.delete('/absences/:id', { schema: { ...absenceSchema.delete, tags: ['absence'] } }, deleteAbsence);

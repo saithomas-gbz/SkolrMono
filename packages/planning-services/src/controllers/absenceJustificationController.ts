@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import db from '../db';
 import { publish } from '@skolr/rabbitmq';
 import { getClassIdsForTeacher } from '../lib/classServiceClient';
+import { getChildIds } from '../lib/parentServiceClient';
 import { getStorageProvider } from '../lib/storage';
 import type { JustificationStatus } from '../generated/prisma/client';
 
@@ -32,6 +33,14 @@ export async function listAbsenceJustifications(
 
   if (user.role === 'USER') {
     where.studentId = user.userId;
+  } else if (user.role === 'PARENT') {
+    const childIds = await getChildIds(user.userId);
+    if (studentId) {
+      if (!childIds.includes(studentId)) return reply.status(403).send({ error: 'Forbidden' });
+      where.studentId = studentId;
+    } else {
+      where.studentId = { in: childIds };
+    }
   } else {
     if (studentId) where.studentId = studentId;
 
@@ -70,6 +79,10 @@ export async function getAbsenceJustificationById(
   if (user.role === 'USER' && justification.studentId !== user.userId) {
     return reply.status(403).send({ error: 'Forbidden' });
   }
+  if (user.role === 'PARENT') {
+    const childIds = await getChildIds(user.userId);
+    if (!childIds.includes(justification.studentId)) return reply.status(403).send({ error: 'Forbidden' });
+  }
   if (user.role === 'TEACHER') {
     const teacherClassIds = await getClassIdsForTeacher(user.userId);
     const classIds = justification.absences.map((link) => link.absence.session.classId);
@@ -83,7 +96,7 @@ export async function getAbsenceJustificationById(
 
 export async function createAbsenceJustification(req: FastifyRequest, reply: FastifyReply) {
   const user = req.planningUser!;
-  if (user.role !== 'USER') {
+  if (!['USER', 'PARENT'].includes(user.role)) {
     return reply.status(403).send({ error: 'Forbidden' });
   }
   if (!req.isMultipart()) {
@@ -91,6 +104,7 @@ export async function createAbsenceJustification(req: FastifyRequest, reply: Fas
   }
 
   let reason: string | undefined;
+  let studentId: string | undefined;
   const absenceIds: string[] = [];
   const files: { fileName: string; mimeType: string; buffer: Buffer }[] = [];
 
@@ -108,7 +122,18 @@ export async function createAbsenceJustification(req: FastifyRequest, reply: Fas
       reason = String(part.value);
     } else if (part.fieldname === 'absenceIds') {
       absenceIds.push(String(part.value));
+    } else if (part.fieldname === 'studentId') {
+      studentId = String(part.value);
     }
+  }
+
+  if (user.role === 'USER') {
+    studentId = user.userId;
+  } else {
+    /** PARENT : déposer "au nom de l'enfant" — studentId requis et doit être un enfant rattaché. */
+    if (!studentId) return reply.status(400).send({ error: 'studentId is required' });
+    const childIds = await getChildIds(user.userId);
+    if (!childIds.includes(studentId)) return reply.status(403).send({ error: 'Forbidden' });
   }
 
   if (!reason || absenceIds.length === 0) {
@@ -116,7 +141,7 @@ export async function createAbsenceJustification(req: FastifyRequest, reply: Fas
   }
 
   const ownedAbsences = await db.absence.findMany({
-    where: { id: { in: absenceIds }, userId: user.userId },
+    where: { id: { in: absenceIds }, userId: studentId },
   });
   if (ownedAbsences.length !== absenceIds.length) {
     return reply.status(403).send({ error: 'Forbidden' });
@@ -124,7 +149,7 @@ export async function createAbsenceJustification(req: FastifyRequest, reply: Fas
 
   const justification = await db.absenceJustification.create({
     data: {
-      studentId: user.userId,
+      studentId: studentId!,
       reason,
       absences: { create: absenceIds.map((absenceId) => ({ absenceId })) },
     },
@@ -161,7 +186,12 @@ export async function submitAbsenceJustification(
     include: justificationInclude,
   });
   if (!justification) return reply.status(404).send({ error: 'Justification not found' });
-  if (justification.studentId !== user.userId) return reply.status(403).send({ error: 'Forbidden' });
+  if (user.role === 'PARENT') {
+    const childIds = await getChildIds(user.userId);
+    if (!childIds.includes(justification.studentId)) return reply.status(403).send({ error: 'Forbidden' });
+  } else if (justification.studentId !== user.userId) {
+    return reply.status(403).send({ error: 'Forbidden' });
+  }
   if (justification.status !== 'DRAFT') {
     return reply.status(409).send({ error: 'Justification is not in DRAFT status' });
   }
@@ -245,6 +275,10 @@ export async function downloadJustificationDocument(
   if (!justification) return reply.status(404).send({ error: 'Justification not found' });
   if (user.role === 'USER' && justification.studentId !== user.userId) {
     return reply.status(403).send({ error: 'Forbidden' });
+  }
+  if (user.role === 'PARENT') {
+    const childIds = await getChildIds(user.userId);
+    if (!childIds.includes(justification.studentId)) return reply.status(403).send({ error: 'Forbidden' });
   }
 
   const document = await db.justificationDocument.findUnique({ where: { id: req.params.docId } });
