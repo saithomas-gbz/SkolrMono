@@ -51,7 +51,7 @@
 <script setup lang="ts">
 import { normalizeApiError } from '~/composables/useClass';
 
-const props = defineProps<{ absenceIds: string[] }>();
+const props = defineProps<{ absenceIds: string[]; studentId?: string }>();
 const emit = defineEmits<{ (e: 'saved'): void }>();
 const visible = defineModel<boolean>('visible', { default: false });
 
@@ -78,7 +78,12 @@ async function submit() {
   error.value = null;
   pending.value = true;
   try {
-    const justification = await createAbsenceJustification(reason.value.trim(), props.absenceIds, files.value);
+    const justification = await createAbsenceJustification(
+      reason.value.trim(),
+      props.absenceIds,
+      files.value,
+      props.studentId,
+    );
     await submitAbsenceJustification(justification.id);
     visible.value = false;
     emit('saved');

@@ -229,6 +229,16 @@ planning:
     recurrence_weekly: Hebdomadaire
     recurrence_biweekly: Bi-hebdomadaire
 
+parent:
+  dashboard_title: Mes enfants
+  no_children: Aucun enfant rattaché à votre compte.
+  select_child: Choisir un enfant
+  select_child_hint: Sélectionnez un enfant pour afficher ses informations.
+  see_absences: Voir les absences
+  see_justifications: Voir les justificatifs
+  absences_title: Absences
+  justifications_title: Justificatifs
+
 grades:
   gradebook:
     title: Carnet de notes

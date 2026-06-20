@@ -148,11 +148,14 @@ export function usePlanning() {
     reason: string,
     absenceIds: string[],
     files: File[],
+    /** Requis pour un PARENT déposant une demande au nom de l'enfant (issue #81). */
+    studentId?: string,
   ): Promise<AbsenceJustification> {
     const formData = new FormData();
     formData.append('reason', reason);
     absenceIds.forEach((id) => formData.append('absenceIds', id));
     files.forEach((file) => formData.append('file', file, file.name));
+    if (studentId) formData.append('studentId', studentId);
     return api<AbsenceJustification>('/planning/absence-justifications', { method: 'POST', body: formData });
   }
 
