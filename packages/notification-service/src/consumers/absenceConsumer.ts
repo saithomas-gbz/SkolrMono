@@ -1,6 +1,7 @@
 import { consume } from '@skolr/rabbitmq';
 import db from '../db';
 import { resolveRecipients } from '../lib/resolveRecipients';
+import { getParentIds } from '../lib/parentServiceClient';
 
 interface AbsenceCreatedEvent {
   absenceId: string;
@@ -16,7 +17,9 @@ export async function startAbsenceConsumer() {
     'absence.created',
     async (payload) => {
       const event = payload as AbsenceCreatedEvent;
-      const userIds = await resolveRecipients({ userId: event.userId });
+      const studentIds = await resolveRecipients({ userId: event.userId });
+      const parentIds = event.role === 'STUDENT' ? await getParentIds(event.userId) : [];
+      const userIds = [...new Set([...studentIds, ...parentIds])];
       const metadata = event as unknown as Record<string, unknown>;
 
       await db.notification.createMany({

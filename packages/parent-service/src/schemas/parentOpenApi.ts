@@ -51,6 +51,18 @@ export const parentSchema = {
       404: errorResponse,
     },
   },
+  getParentIds: {
+    description: "Parents rattachés à un enfant (appel inter-services, non protégé)",
+    querystring: {
+      type: 'object',
+      properties: { studentId: { type: 'string', format: 'uuid' } },
+      required: ['studentId'],
+    },
+    response: {
+      200: { type: 'object', properties: { data: { type: 'array', items: { type: 'string', format: 'uuid' } } } },
+      400: errorResponse,
+    },
+  },
 };
 
 export const parentLinkSchema = {

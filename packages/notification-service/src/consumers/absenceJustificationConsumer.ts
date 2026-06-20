@@ -3,6 +3,7 @@ import db from '../db';
 import { getClassTeacherIds } from '../lib/classServiceClient';
 import { getUserIdsByRole } from '../lib/authServiceClient';
 import { resolveRecipients } from '../lib/resolveRecipients';
+import { getParentIds } from '../lib/parentServiceClient';
 
 interface JustificationSubmittedEvent {
   justificationId: string;
@@ -54,7 +55,9 @@ export async function startAbsenceJustificationConsumer() {
     'absence.justification.approved',
     async (payload) => {
       const event = payload as JustificationReviewedEvent;
-      const recipientUserIds = await resolveRecipients({ userId: event.studentId });
+      const studentIds = await resolveRecipients({ userId: event.studentId });
+      const parentIds = await getParentIds(event.studentId);
+      const recipientUserIds = [...new Set([...studentIds, ...parentIds])];
       await notifyRecipients(
         recipientUserIds,
         'absence.justification.approved',
@@ -70,7 +73,9 @@ export async function startAbsenceJustificationConsumer() {
     'absence.justification.rejected',
     async (payload) => {
       const event = payload as JustificationReviewedEvent;
-      const recipientUserIds = await resolveRecipients({ userId: event.studentId });
+      const studentIds = await resolveRecipients({ userId: event.studentId });
+      const parentIds = await getParentIds(event.studentId);
+      const recipientUserIds = [...new Set([...studentIds, ...parentIds])];
       await notifyRecipients(
         recipientUserIds,
         'absence.justification.rejected',

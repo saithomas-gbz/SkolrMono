@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { getChildren, getChildById } from '../controllers/parentController';
+import { getChildren, getChildById, getParentIds } from '../controllers/parentController';
 import { parentSchema } from '../schemas/parentOpenApi';
 
 export default async function parentRoutes(app: FastifyInstance) {
@@ -12,5 +12,10 @@ export default async function parentRoutes(app: FastifyInstance) {
     '/children/:studentId',
     { schema: { ...parentSchema.getChildById, tags: ['parent'] } },
     getChildById,
+  );
+  app.get<{ Querystring: { studentId?: string } }>(
+    '/parents',
+    { schema: { ...parentSchema.getParentIds, tags: ['parent'] } },
+    getParentIds,
   );
 }

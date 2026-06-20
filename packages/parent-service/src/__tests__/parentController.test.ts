@@ -11,7 +11,7 @@ mock.module('../lib/authServiceClient', () => ({
   getUsersByIds: mock(() => Promise.resolve<{ id: string; name: string | null; email: string }[]>([])),
 }));
 
-const { getChildren, getChildById } = await import('../controllers/parentController');
+const { getChildren, getChildById, getParentIds } = await import('../controllers/parentController');
 const db = (await import('../db')).default as unknown as {
   parentStudent: { findMany: ReturnType<typeof mock>; findUnique: ReturnType<typeof mock> };
 };
@@ -21,6 +21,7 @@ const { getUsersByIds } = (await import('../lib/authServiceClient')) as unknown 
 
 type GetChildrenRequest = Parameters<typeof getChildren>[0];
 type GetChildByIdRequest = Parameters<typeof getChildById>[0];
+type GetParentIdsRequest = Parameters<typeof getParentIds>[0];
 
 function buildReply(): FastifyReply {
   return { status: mock().mockReturnThis(), send: mock().mockReturnThis() } as unknown as FastifyReply;
@@ -111,5 +112,28 @@ describe('getChildById', () => {
 
     expect(db.parentStudent.findUnique).not.toHaveBeenCalled();
     expect(reply.send).toHaveBeenCalledWith({ data: { id: 'student-x', name: 'Eleve X', email: 'x@skolr.local' } });
+  });
+});
+
+describe('getParentIds', () => {
+  it('renvoie 400 sans studentId', async () => {
+    const reply = buildReply();
+
+    await getParentIds({ query: {} } as unknown as GetParentIdsRequest, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(400);
+  });
+
+  it('renvoie les parentId rattachés à un enfant, sans authentification', async () => {
+    db.parentStudent.findMany.mockResolvedValue([
+      { parentId: 'parent-1' },
+      { parentId: 'parent-2' },
+    ]);
+    const reply = buildReply();
+
+    await getParentIds({ query: { studentId: 'student-1' } } as unknown as GetParentIdsRequest, reply);
+
+    expect(db.parentStudent.findMany).toHaveBeenCalledWith({ where: { studentId: 'student-1' } });
+    expect(reply.send).toHaveBeenCalledWith({ data: ['parent-1', 'parent-2'] });
   });
 });

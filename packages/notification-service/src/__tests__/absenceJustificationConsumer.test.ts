@@ -24,6 +24,10 @@ mock.module('../lib/authServiceClient', () => ({
   getUserIdsByRole: mock(() => Promise.resolve<string[]>(['staff-1'])),
 }));
 
+mock.module('../lib/parentServiceClient', () => ({
+  getParentIds: mock(() => Promise.resolve<string[]>(['parent-1'])),
+}));
+
 import db from '../db';
 import { startAbsenceJustificationConsumer } from '../consumers/absenceJustificationConsumer';
 
@@ -48,16 +52,19 @@ describe('absenceJustificationConsumer', () => {
     });
   });
 
-  it("notifie l'élève sur approved", async () => {
+  it("notifie l'élève et ses parents rattachés sur approved", async () => {
     const handler = handlers.get('absence.justification.approved')!;
     await handler({ justificationId: 'just-1', studentId: 'student-1', reviewComment: null });
 
     expect(prismaMock.notification.createMany).toHaveBeenCalledWith({
-      data: [expect.objectContaining({ userId: 'student-1', type: 'absence.justification.approved' })],
+      data: [
+        expect.objectContaining({ userId: 'student-1', type: 'absence.justification.approved' }),
+        expect.objectContaining({ userId: 'parent-1', type: 'absence.justification.approved' }),
+      ],
     });
   });
 
-  it("notifie l'élève avec le commentaire sur rejected", async () => {
+  it("notifie l'élève et ses parents avec le commentaire sur rejected", async () => {
     const handler = handlers.get('absence.justification.rejected')!;
     await handler({ justificationId: 'just-1', studentId: 'student-1', reviewComment: 'Document illisible' });
 
@@ -65,6 +72,11 @@ describe('absenceJustificationConsumer', () => {
       data: [
         expect.objectContaining({
           userId: 'student-1',
+          type: 'absence.justification.rejected',
+          body: expect.stringContaining('Document illisible'),
+        }),
+        expect.objectContaining({
+          userId: 'parent-1',
           type: 'absence.justification.rejected',
           body: expect.stringContaining('Document illisible'),
         }),

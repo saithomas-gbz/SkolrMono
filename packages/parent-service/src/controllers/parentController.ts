@@ -5,6 +5,7 @@ import { verifyToken } from '../lib/authGuard';
 
 type GetChildrenQuery = { parentId?: string };
 type GetChildByIdParams = { studentId: string };
+type GetParentIdsQuery = { studentId?: string };
 
 export async function getChildren(
   req: FastifyRequest<{ Querystring: GetChildrenQuery }>,
@@ -57,4 +58,19 @@ export async function getChildById(
   const [student] = await getUsersByIds([studentId]);
   if (!student) return reply.status(404).send({ error: 'Student not found' });
   return reply.send({ data: student });
+}
+
+/**
+ * Recherche inverse "parents de cet enfant" — non protégée, appel inter-services
+ * (notification-service) au même titre que GET /classes/teacher/:id sur class-service.
+ */
+export async function getParentIds(
+  req: FastifyRequest<{ Querystring: GetParentIdsQuery }>,
+  reply: FastifyReply,
+) {
+  const { studentId } = req.query;
+  if (!studentId) return reply.status(400).send({ error: 'studentId is required' });
+
+  const links = await db.parentStudent.findMany({ where: { studentId } });
+  return reply.send({ data: links.map((link) => link.parentId) });
 }
