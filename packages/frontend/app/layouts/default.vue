@@ -151,6 +151,7 @@ const adminLinks = computed<NavLink[]>(() =>
     ? [
         { label: t('nav.subjects'), to: '/admin/subjects' },
         { label: t('nav.billing'), to: '/admin/billing' },
+        { label: t('nav.parent_links'), to: '/admin/parent-links' },
       ]
     : [],
 );

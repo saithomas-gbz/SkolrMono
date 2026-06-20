@@ -29,6 +29,7 @@ nav:
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
   billing: Facturation
+  parent_links: Liens parents
   messages: Messages
   administration: Administration
   logout: Déconnexion
@@ -91,6 +92,19 @@ admin:
   loading_students: "Chargement des élèves…"
   no_students: Aucun élève dans cette classe.
   joined_on: Inscrit le
+  parent_links:
+    title: Liens parents ↔ enfants
+    parent_id: Parent (ID)
+    student_id: Enfant (ID)
+    uuid_placeholder: UUID utilisateur
+    link_type: Type de lien
+    is_primary: Contact principal
+    create: Créer le lien
+    no_links: Aucun lien parent ↔ enfant.
+    types:
+      LEGAL_GUARDIAN: Responsable légal
+      EMERGENCY_CONTACT: Contact d'urgence
+      OTHER: Autre
   kpi:
     loading: "Chargement des indicateurs…"
     students: Élèves
