@@ -125,6 +125,14 @@ export function mergeGatewayWithBillingService(
   return mergeGatewayWithService(gatewayObject, billingServiceSpec, pathPrefix, 'billingService_');
 }
 
+export function mergeGatewayWithParentService(
+  gatewayObject: JsonRecord,
+  parentServiceSpec: JsonRecord | null,
+  pathPrefix: string,
+): JsonRecord {
+  return mergeGatewayWithService(gatewayObject, parentServiceSpec, pathPrefix, 'parentService_');
+}
+
 export function mergeGatewayWithService(
   gatewayObject: JsonRecord,
   serviceSpec: JsonRecord | null,

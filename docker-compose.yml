@@ -416,6 +416,7 @@ services:
       - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:3009}
       - MESSAGE_SERVICE_URL=${MESSAGE_SERVICE_URL:-http://message-service:3010}
       - BILLING_SERVICE_URL=${BILLING_SERVICE_URL:-http://billing-service:3011}
+      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
@@ -434,6 +435,8 @@ services:
       message-service:
         condition: service_healthy
       billing-service:
+        condition: service_healthy
+      parent-service:
         condition: service_healthy
     networks:
       - skolr_network

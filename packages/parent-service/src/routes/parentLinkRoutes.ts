@@ -6,17 +6,17 @@ import type { ParentLinkType } from '../generated/prisma/client';
 
 export default async function parentLinkRoutes(app: FastifyInstance) {
   app.get<{ Querystring: { parentId?: string; studentId?: string } }>(
-    '/parent/links',
+    '/links',
     { schema: { ...parentLinkSchema.list, tags: ['parent'] }, preHandler: requireAdminOrStaff },
     listLinks,
   );
   app.post<{ Body: { parentId: string; studentId: string; linkType?: ParentLinkType; isPrimary?: boolean } }>(
-    '/parent/links',
+    '/links',
     { schema: { ...parentLinkSchema.create, tags: ['parent'] }, preHandler: requireAdminOrStaff },
     createLink,
   );
   app.delete<{ Params: { id: string } }>(
-    '/parent/links/:id',
+    '/links/:id',
     { schema: { ...parentLinkSchema.delete, tags: ['parent'] }, preHandler: requireAdminOrStaff },
     deleteLink,
   );

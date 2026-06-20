@@ -4,12 +4,12 @@ import { parentSchema } from '../schemas/parentOpenApi';
 
 export default async function parentRoutes(app: FastifyInstance) {
   app.get<{ Querystring: { parentId?: string } }>(
-    '/parent/children',
+    '/children',
     { schema: { ...parentSchema.getChildren, tags: ['parent'] } },
     getChildren,
   );
   app.get<{ Params: { studentId: string } }>(
-    '/parent/children/:studentId',
+    '/children/:studentId',
     { schema: { ...parentSchema.getChildById, tags: ['parent'] } },
     getChildById,
   );
