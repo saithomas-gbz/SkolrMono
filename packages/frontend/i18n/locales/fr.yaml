@@ -44,6 +44,7 @@ auth:
     submit: Se connecter
     no_account: Pas encore de compte ?
     create_account: Créer un compte
+    forgot_password: Mot de passe oublié ?
   register:
     title: Inscription
     submit: "S'inscrire"
@@ -56,6 +57,16 @@ auth:
     submit: Créer mon compte
     missing_token: Lien d'invitation invalide (token manquant).
     invalid_token: Cette invitation est invalide ou a expiré.
+  forgot_password:
+    title: Mot de passe oublié
+    submit: Envoyer le lien
+    success: "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé."
+  reset_password:
+    title: Réinitialiser le mot de passe
+    submit: Réinitialiser
+    success: "Votre mot de passe a été mis à jour. Vous pouvez maintenant vous connecter."
+    go_to_login: Se connecter
+    missing_token: Lien de réinitialisation invalide (token manquant).
   validation:
     email_required: "L'email est requis."
     email_invalid: Email invalide.

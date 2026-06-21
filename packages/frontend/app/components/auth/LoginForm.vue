@@ -42,6 +42,9 @@
       <div class="footer-actions">
         <Button :loading="loading" :label="$t('auth.login.submit')" @click="submit" />
       </div>
+      <p class="forgot-password">
+        <NuxtLink to="/auth/forgot-password" class="link">{{ $t('auth.login.forgot_password') }}</NuxtLink>
+      </p>
     </template>
   </Card>
 </template>
@@ -133,6 +136,22 @@ async function submit() {
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.forgot-password {
+  margin: 0.5rem 0 0;
+  text-align: right;
+  font-size: 0.9rem;
+}
+
+.link {
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
 }
 
 .full-width {

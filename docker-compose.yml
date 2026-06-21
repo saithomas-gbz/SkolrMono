@@ -186,6 +186,7 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - INVITATION_URL=${INVITATION_URL:-http://localhost:3003/auth/accept-invitation}
+      - PASSWORD_RESET_URL=${PASSWORD_RESET_URL:-http://localhost:3003/auth/reset-password}
     ports:
       - "${AUTH_SERVICE_PORT:-3000}:3000"
     depends_on:

@@ -41,7 +41,7 @@ export function normalizeAuthError(e: unknown): string {
 /** Aligné sur `auth-service` OpenAPI (`password` minLength 6). */
 export const AUTH_PASSWORD_MIN_LENGTH = 6;
 
-const AUTH_EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const AUTH_EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Politiques de champs identifiants (login / register).
