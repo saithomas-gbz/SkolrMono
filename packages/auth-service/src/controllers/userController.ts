@@ -2,7 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import bcrypt from 'bcrypt';
 
-type Role = 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PLATFORM_ADMIN';
+type Role = 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PLATFORM_ADMIN' | 'PARENT';
 
 const userController = {
   me: async (request: FastifyRequest, reply: FastifyReply) => {

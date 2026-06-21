@@ -14,6 +14,7 @@ import {
   mergeGatewayWithGradeService,
   mergeGatewayWithPlanningService,
   mergeGatewayWithBillingService,
+  mergeGatewayWithParentService,
 } from './lib/mergeOpenApi';
 
 dotenv.config();
@@ -46,6 +47,10 @@ const billingServiceUrl = process.env.BILLING_SERVICE_URL || 'http://localhost:3
 /** Path on billing-service for raw OpenAPI JSON */
 const billingOpenApiPath = process.env.BILLING_OPENAPI_PATH || '/openapi.json';
 
+const parentServiceUrl = process.env.PARENT_SERVICE_URL || 'http://localhost:3012';
+/** Path on parent-service for raw OpenAPI JSON */
+const parentOpenApiPath = process.env.PARENT_OPENAPI_PATH || '/openapi.json';
+
 async function fetchServiceOpenApiSpec(baseUrl: string, path: string): Promise<Record<string, unknown> | null> {
   const tryPaths = path === '/openapi.json' ? [path, '/documentation/json'] : [path];
 
@@ -71,6 +76,7 @@ interface SpecsCache {
   grade: Record<string, unknown> | null;
   planning: Record<string, unknown> | null;
   billing: Record<string, unknown> | null;
+  parent: Record<string, unknown> | null;
   lastFetchAt: number;
 }
 
@@ -80,6 +86,7 @@ const specsCache: SpecsCache = {
   grade: null,
   planning: null,
   billing: null,
+  parent: null,
   lastFetchAt: 0,
 };
 
@@ -89,6 +96,7 @@ async function refreshSpecs() {
   specsCache.grade = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
   specsCache.planning = await fetchServiceOpenApiSpec(planningServiceUrl, planningOpenApiPath);
   specsCache.billing = await fetchServiceOpenApiSpec(billingServiceUrl, billingOpenApiPath);
+  specsCache.parent = await fetchServiceOpenApiSpec(parentServiceUrl, parentOpenApiPath);
   specsCache.lastFetchAt = Date.now();
 }
 
@@ -98,6 +106,7 @@ async function build() {
   const cachedGradeSpec = await fetchServiceOpenApiSpec(gradeServiceUrl, gradeOpenApiPath);
   const cachedPlanningSpec = await fetchServiceOpenApiSpec(planningServiceUrl, planningOpenApiPath);
   const cachedBillingSpec = await fetchServiceOpenApiSpec(billingServiceUrl, billingOpenApiPath);
+  const cachedParentSpec = await fetchServiceOpenApiSpec(parentServiceUrl, parentOpenApiPath);
 
   if (!cachedAuthSpec) {
     console.warn(
@@ -134,9 +143,20 @@ async function build() {
         '); /docs will only list gateway routes.',
     );
   }
+  if (!cachedParentSpec) {
+    console.warn(
+      `[gateway] Parent OpenAPI not available at ${parentServiceUrl} (tried ${parentOpenApiPath}` +
+        (parentOpenApiPath === '/openapi.json' ? ' and /documentation/json' : '') +
+        '); /docs will only list gateway routes.',
+    );
+  }
+
+  /** Documents de justification jusqu'à ~5 Mo/fichier (issue #80) — au-delà du défaut Fastify (1 Mo). */
+  const MAX_UPLOAD_BODY_BYTES = 10 * 1024 * 1024;
 
   const gateway = fastify({
     logger: true,
+    bodyLimit: MAX_UPLOAD_BODY_BYTES,
   });
 
   await gateway.register(fastifySwagger, {
@@ -160,6 +180,7 @@ async function build() {
         { name: 'grade', description: 'Proxied to grade-service under /grade' },
         { name: 'planning', description: 'Proxied to planning-services under /planning' },
         { name: 'billing', description: 'Proxied to billing-service under /billing' },
+        { name: 'parent', description: 'Proxied to parent-service under /parent' },
       ],
     },
     transformObject: (documentObject) => {
@@ -176,7 +197,8 @@ async function build() {
         const mergedClass = mergeGatewayWithClassService(mergedAuth, cachedClassSpec, '/class');
         const mergedGrade = mergeGatewayWithGradeService(mergedClass, cachedGradeSpec, '/grade');
         const mergedPlanning = mergeGatewayWithPlanningService(mergedGrade, cachedPlanningSpec, '/planning');
-        return mergeGatewayWithBillingService(mergedPlanning, cachedBillingSpec, '/billing') as Partial<OpenAPIV3_1.Document>;
+        const mergedBilling = mergeGatewayWithBillingService(mergedPlanning, cachedBillingSpec, '/billing');
+        return mergeGatewayWithParentService(mergedBilling, cachedParentSpec, '/parent') as Partial<OpenAPIV3_1.Document>;
       }
       return 'swaggerObject' in documentObject ? documentObject.swaggerObject : {};
     },
@@ -202,6 +224,7 @@ async function build() {
   await gateway.register(import('./routes/notification'));
   await gateway.register(import('./routes/message'));
   await gateway.register(import('./routes/billing'));
+  await gateway.register(import('./routes/parent'));
 
   await gateway.register(fastifySwaggerUi, {
     routePrefix: '/docs',

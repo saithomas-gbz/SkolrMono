@@ -100,6 +100,21 @@
       </Card>
     </template>
 
+    <!-- PARENT : accès rapide à l'espace famille -->
+    <template v-else-if="isParent">
+      <Card>
+        <template #title>
+          <div class="card-title-row">
+            <span>{{ $t('dashboard.family_title') }}</span>
+            <NuxtLink to="/parent" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
+          </div>
+        </template>
+        <template #content>
+          <p class="dashboard-hint">{{ $t('dashboard.family_hint') }}</p>
+        </template>
+      </Card>
+    </template>
+
     <!-- Fallback : session chargée mais rôle inconnu -->
     <template v-else>
       <Card>
@@ -128,6 +143,7 @@ const initialClassId = computed(() => {
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isAdmin = computed(() => hasRole('ADMIN'));
 const isStudent = computed(() => hasRole('USER'));
+const isParent = computed(() => hasRole('PARENT'));
 </script>
 
 <style scoped>

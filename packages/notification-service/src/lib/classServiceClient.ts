@@ -20,3 +20,10 @@ export async function getClassMemberIds(classId: string): Promise<string[]> {
   const studentIds = data.students.map((s) => s.studentId);
   return [...new Set([...teacherIds, ...studentIds])];
 }
+
+/** Enseignants d'une classe — utilisé pour notifier le staff d'une nouvelle demande de justification (issue #80). */
+export async function getClassTeacherIds(classId: string): Promise<string[]> {
+  const data = await fetchClass(classId);
+  if (!data) return [];
+  return [...new Set(data.classTeachers.map((ct) => ct.teacherId))];
+}

@@ -1,11 +1,15 @@
 import 'dotenv/config';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { LocalDiskStorageProvider } from '../src/lib/storage/localDiskStorageProvider';
 import {
   DEV_CLASSES,
   DEV_COURSES,
   DEV_TEACHERS,
   DEV_STUDENTS,
+  DEV_GENERATED_STUDENTS,
   DEV_USER_IDS,
 } from '../../../scripts/seed/dev-users';
 
@@ -157,6 +161,7 @@ async function main() {
 
   try {
     // Nettoyage complet (dev seed idempotent)
+    await prisma.absenceJustification.deleteMany(); // cascade → documents + liens
     await prisma.absence.deleteMany();
     await prisma.session.deleteMany();
 
@@ -270,9 +275,120 @@ async function main() {
     }
 
     console.log(`  • ${absences.length} absences de démonstration (semaine du 13 oct. 2025)`);
+
+    // ── Justifications d'absence de démonstration (issue #80) ───────────────
+    // Semaine du 8 sept. 2025 (distincte de la semaine du 13 oct. ci-dessus,
+    // pour ne jamais entrer en collision avec les absences déjà créées).
+
+    const justifWeekSessions = await prisma.session.findMany({
+      where: {
+        startAt: {
+          gte: new Date('2025-09-08T00:00:00Z'),
+          lte: new Date('2025-09-12T23:59:59Z'),
+        },
+      },
+      orderBy: { startAt: 'asc' },
+    });
+    const justifCm2aSessions = justifWeekSessions.filter((s) => s.classId === CLASS_CM2A);
+    const justifSixemeSessions = justifWeekSessions.filter((s) => s.classId === CLASS_6EME);
+
+    const [leaMartin, hugoBernard, emmaDubois] = DEV_GENERATED_STUDENTS;
+    const [eleve6eme1, eleve6eme2] = DEV_STUDENTS.filter((s) => s.classId === CLASS_6EME);
+
+    const fixturesDir = join(__dirname, 'fixtures', 'justifications');
+    const storage = new LocalDiskStorageProvider();
+
+    async function attachDocument(justificationId: string, fileName: string, mimeType: string) {
+      const buffer = await readFile(join(fixturesDir, fileName));
+      const storageKey = await storage.save(buffer, `seed/${justificationId}/${fileName}`);
+      await prisma.justificationDocument.create({
+        data: { justificationId, fileName, mimeType, sizeBytes: buffer.length, storageKey },
+      });
+    }
+
+    let justificationCount = 0;
+
+    // Scénario 1 — Léa Martin : demande approuvée avec un certificat médical
+    if (justifCm2aSessions[0] && leaMartin) {
+      const absence = await prisma.absence.create({
+        data: { sessionId: justifCm2aSessions[0].id, userId: leaMartin.id, role: 'STUDENT', justified: true },
+      });
+      const justification = await prisma.absenceJustification.create({
+        data: {
+          studentId: leaMartin.id,
+          status: 'APPROVED',
+          reason: 'Rendez-vous médical',
+          reviewerId: TEACHER_MAIN,
+          reviewedAt: new Date(),
+          absences: { create: [{ absenceId: absence.id }] },
+        },
+      });
+      await attachDocument(justification.id, 'certificat-medical.pdf', 'application/pdf');
+      justificationCount++;
+    }
+
+    // Scénario 2 — Hugo Bernard : demande en attente avec une convocation
+    if (justifCm2aSessions[1] && hugoBernard) {
+      const absence = await prisma.absence.create({
+        data: { sessionId: justifCm2aSessions[1].id, userId: hugoBernard.id, role: 'STUDENT', justified: false },
+      });
+      const justification = await prisma.absenceJustification.create({
+        data: {
+          studentId: hugoBernard.id,
+          status: 'PENDING',
+          reason: 'Convocation administrative',
+          absences: { create: [{ absenceId: absence.id }] },
+        },
+      });
+      await attachDocument(justification.id, 'convocation.pdf', 'application/pdf');
+      justificationCount++;
+    }
+
+    // Scénario 3 — Élève 6ème #1 : demande refusée avec commentaire
+    if (justifSixemeSessions[0] && eleve6eme1) {
+      const absence = await prisma.absence.create({
+        data: { sessionId: justifSixemeSessions[0].id, userId: eleve6eme1.id, role: 'STUDENT', justified: false },
+      });
+      const justification = await prisma.absenceJustification.create({
+        data: {
+          studentId: eleve6eme1.id,
+          status: 'REJECTED',
+          reason: 'Oubli de venir en cours',
+          reviewerId: TEACHER_SCIENCES,
+          reviewComment: "Motif non recevable — merci de fournir un justificatif officiel.",
+          reviewedAt: new Date(),
+          absences: { create: [{ absenceId: absence.id }] },
+        },
+      });
+      await attachDocument(justification.id, 'photo-justificatif.png', 'image/png');
+      justificationCount++;
+    }
+
+    // Scénario 4 — Élève 6ème #2 : absence sans aucune demande (reste non justifiée)
+    if (justifSixemeSessions[1] && eleve6eme2) {
+      await prisma.absence.create({
+        data: { sessionId: justifSixemeSessions[1].id, userId: eleve6eme2.id, role: 'STUDENT', justified: false },
+      });
+    }
+
+    // Scénario 5 — Emma Dubois : justification manuelle legacy (sans demande ni document)
+    if (justifCm2aSessions[2] && emmaDubois) {
+      await prisma.absence.create({
+        data: {
+          sessionId: justifCm2aSessions[2].id,
+          userId: emmaDubois.id,
+          role: 'STUDENT',
+          justified: true,
+          reason: 'Justifiée manuellement par le professeur (sans document)',
+        },
+      });
+    }
+
+    console.log(`  • ${justificationCount} demandes de justification de démonstration (semaine du 8 sept. 2025)`);
     console.log('\nSeed planning-services: emploi du temps 2025-2026 prêt.');
     console.log('  GET http://localhost:3008/sessions?from=2025-10-13T00:00:00Z&to=2025-10-17T23:59:59Z');
     console.log('  GET http://localhost:3008/absences');
+    console.log('  GET http://localhost:3008/absence-justifications');
   } finally {
     await prisma.$disconnect();
   }

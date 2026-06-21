@@ -15,6 +15,9 @@
             <TabPanel :header="$t('planning.absences.teachers_tab')">
               <PlanningAbsenceTable :filters="{ role: 'TEACHER' }" />
             </TabPanel>
+            <TabPanel :header="$t('planning.justifications.review.tab')">
+              <PlanningJustificationReviewTable />
+            </TabPanel>
           </TabView>
         </template>
       </template>

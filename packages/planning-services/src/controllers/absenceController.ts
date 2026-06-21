@@ -2,8 +2,9 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import type { AbsenceRole } from '../generated/prisma/client';
 import { publish } from '@skolr/rabbitmq';
+import { getChildIds } from '../lib/parentServiceClient';
 
-type AbsenceFilters = {
+export type AbsenceFilters = {
   sessionId?: string;
   userId?: string;
   role?: AbsenceRole;
@@ -28,11 +29,26 @@ export async function getAbsences(
   reply: FastifyReply,
 ) {
   const { sessionId, userId, role, justified } = req.query;
+  const planningUser = req.planningUser;
+
+  /** Un élève (`USER`) ne voit que ses propres absences, quel que soit le `userId` demandé (issue #80). */
+  let userIdFilter: string | { in: string[] } | undefined = userId;
+  if (planningUser?.role === 'USER') {
+    userIdFilter = planningUser.userId;
+  } else if (planningUser?.role === 'PARENT') {
+    const childIds = await getChildIds(planningUser.userId);
+    if (userId) {
+      if (!childIds.includes(userId)) return reply.status(403).send({ error: 'Forbidden' });
+      userIdFilter = userId;
+    } else {
+      userIdFilter = { in: childIds };
+    }
+  }
 
   const absences = await db.absence.findMany({
     where: {
       ...(sessionId && { sessionId }),
-      ...(userId && { userId }),
+      ...(userIdFilter && { userId: userIdFilter }),
       ...(role && { role }),
       ...(justified !== undefined && { justified }),
     },
@@ -48,6 +64,16 @@ export async function getAbsenceById(
 ) {
   const absence = await db.absence.findUnique({ where: { id: req.params.id } });
   if (!absence) return reply.status(404).send({ error: 'Absence not found' });
+
+  const planningUser = req.planningUser;
+  if (planningUser?.role === 'USER' && absence.userId !== planningUser.userId) {
+    return reply.status(403).send({ error: 'Forbidden' });
+  }
+  if (planningUser?.role === 'PARENT') {
+    const childIds = await getChildIds(planningUser.userId);
+    if (!childIds.includes(absence.userId)) return reply.status(403).send({ error: 'Forbidden' });
+  }
+
   return reply.send(absence);
 }
 

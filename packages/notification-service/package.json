@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "NODE_env=test bun test src/__tests__",
+    "test": "NODE_ENV=test bun test src/__tests__",
     "dev": "bun --watch run src/app.ts",
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
     "start": "bun run ./dist/app.js",

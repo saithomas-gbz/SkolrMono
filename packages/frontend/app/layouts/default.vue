@@ -107,6 +107,8 @@ const { isLoggedIn, clearSession, hasRole } = useAuth();
 
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isAdmin = computed(() => hasRole('ADMIN'));
+const isStudent = computed(() => hasRole('USER'));
+const isParent = computed(() => hasRole('PARENT'));
 
 const navLinks = computed<NavLink[]>(() => {
   const links: NavLink[] = [
@@ -129,8 +131,16 @@ const navLinks = computed<NavLink[]>(() => {
     links.push({ label: t('nav.absences'), to: '/planning/absences' });
   }
 
+  if (isStudent.value) {
+    links.push({ label: t('nav.my_absences'), to: '/planning/my-absences' });
+  }
+
   if (isTeacher.value) {
     links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new' });
+  }
+
+  if (isParent.value) {
+    links.push({ label: t('nav.family_space'), to: '/parent' });
   }
 
   return links;
@@ -141,6 +151,7 @@ const adminLinks = computed<NavLink[]>(() =>
     ? [
         { label: t('nav.subjects'), to: '/admin/subjects' },
         { label: t('nav.billing'), to: '/admin/billing' },
+        { label: t('nav.parent_links'), to: '/admin/parent-links' },
       ]
     : [],
 );

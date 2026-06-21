@@ -24,9 +24,12 @@ nav:
   school_students: "Élèves (établissement)"
   schedule: Emploi du temps
   absences: Absences
+  my_absences: Mes absences
+  family_space: Espace famille
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
   billing: Facturation
+  parent_links: Liens parents
   messages: Messages
   administration: Administration
   logout: Déconnexion
@@ -68,6 +71,8 @@ dashboard:
   my_classes: Mes classes
   grade_progress: Évolution de mes notes
   grade_repartition: Répartition de mes notes
+  family_title: Espace famille
+  family_hint: "Suivez les absences de vos enfants et déposez vos justificatifs."
 
 admin:
   students_title: "Élèves de l'établissement"
@@ -87,6 +92,19 @@ admin:
   loading_students: "Chargement des élèves…"
   no_students: Aucun élève dans cette classe.
   joined_on: Inscrit le
+  parent_links:
+    title: Liens parents ↔ enfants
+    parent_id: Parent (ID)
+    student_id: Enfant (ID)
+    uuid_placeholder: UUID utilisateur
+    link_type: Type de lien
+    is_primary: Contact principal
+    create: Créer le lien
+    no_links: Aucun lien parent ↔ enfant.
+    types:
+      LEGAL_GUARDIAN: Responsable légal
+      EMERGENCY_CONTACT: Contact d'urgence
+      OTHER: Autre
   kpi:
     loading: "Chargement des indicateurs…"
     students: Élèves
@@ -167,6 +185,39 @@ planning:
     no_absences: Aucune absence enregistrée.
     justify: Justifier
     delete: Supprimer
+  justifications:
+    my_absences_title: Mes absences
+    deposit_button: Déposer un justificatif
+    no_unjustified_absences: Aucune absence à justifier.
+    my_requests_title: Mes demandes de justification
+    created_at: Déposée le
+    status: Statut
+    statuses:
+      DRAFT: Brouillon
+      PENDING: En attente
+      APPROVED: Approuvée
+      REJECTED: Refusée
+    documents: Documents
+    review_comment: Commentaire du validateur
+    no_requests: Aucune demande de justification.
+    upload_dialog:
+      title: Déposer un justificatif
+      selected_count: "{count} absence sélectionnée | {count} absences sélectionnées"
+      reason: Motif
+      documents: Documents (PDF, JPEG, PNG — 5 Mo max par fichier)
+      choose_files: Choisir des fichiers
+      drop_hint: Glissez-déposez vos documents ici.
+      send: Envoyer
+    review:
+      tab: Justifications
+      no_pending: Aucune demande en attente de validation.
+      student_id: Élève (ID)
+      review_button: Examiner
+      title: Examiner la demande
+      comment: Commentaire
+      comment_required: Un commentaire est requis en cas de refus.
+      approve: Approuver
+      reject: Refuser
   absence_dialog:
     title: Déclarer une absence
     session: Session
@@ -191,6 +242,16 @@ planning:
     recurrence_none: Aucune
     recurrence_weekly: Hebdomadaire
     recurrence_biweekly: Bi-hebdomadaire
+
+parent:
+  dashboard_title: Mes enfants
+  no_children: Aucun enfant rattaché à votre compte.
+  select_child: Choisir un enfant
+  select_child_hint: Sélectionnez un enfant pour afficher ses informations.
+  see_absences: Voir les absences
+  see_justifications: Voir les justificatifs
+  absences_title: Absences
+  justifications_title: Justificatifs
 
 grades:
   gradebook:

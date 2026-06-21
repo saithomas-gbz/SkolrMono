@@ -11,6 +11,8 @@ import {
   DEV_ESTABLISHMENT,
   DEV_PLATFORM_ADMIN,
   DEV_PLATFORM_ADMIN_PASSWORD,
+  DEV_PARENTS,
+  DEV_PARENT_PASSWORD,
 } from '../../../scripts/seed/dev-users';
 
 /**
@@ -78,6 +80,13 @@ const devUsers: typeof baseUsers = [
     plainPassword: DEV_STUDENT_PASSWORD,
     name: s.name,
     role: Role.USER,
+  })),
+  ...DEV_PARENTS.map((p) => ({
+    id: p.id,
+    email: p.email,
+    plainPassword: DEV_PARENT_PASSWORD,
+    name: p.name,
+    role: Role.PARENT,
   })),
 ];
 

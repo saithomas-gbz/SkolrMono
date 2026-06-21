@@ -127,6 +127,24 @@ services:
       retries: 5
     networks:
       - skolr_network
+  postgres-parent:
+    image: postgres:15-alpine
+    container_name: skolr_parent_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_PARENT_DB:-skolr_parent}
+    ports:
+      - "${POSTGRES_PARENT_PORT:-5439}:5432"
+    volumes:
+      - postgres_parent_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skolr_network
   postgres-planning:
     image: postgres:15-alpine
     container_name: skolr_planning_postgres
@@ -235,15 +253,25 @@ services:
     environment:
       - PORT=${PLANNING_SERVICE_PORT:-3008}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - UPLOADS_DIR=${PLANNING_UPLOADS_DIR:-/app/packages/planning-services/uploads}
+      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
+      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
     ports:
       - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
+    volumes:
+      # Bind mount (pas un volume nommé) : scripts/db/seed-pipeline.ts écrit les documents
+      # depuis l'hôte (bun run seed:dev) — il doit voir le même répertoire que le conteneur.
+      - ./packages/planning-services/uploads:/app/packages/planning-services/uploads
     depends_on:
       postgres-planning:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      parent-service:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PLANNING_SERVICE_PORT:-3008}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
@@ -264,6 +292,7 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
       - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
       - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
+      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
       - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
@@ -271,6 +300,8 @@ services:
       - "${NOTIFICATION_SERVICE_PORT:-3009}:${NOTIFICATION_SERVICE_PORT:-3009}"
     depends_on:
       postgres-notification:
+        condition: service_healthy
+      parent-service:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -347,6 +378,33 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+  parent-service:
+    build:
+      context: .
+      dockerfile: ./packages/parent-service/Dockerfile
+    container_name: skolr_parent_service
+    environment:
+      - PORT=${PARENT_SERVICE_PORT:-3012}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-parent:5432/${POSTGRES_PARENT_DB:-skolr_parent}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+    ports:
+      - "${PARENT_SERVICE_PORT:-3012}:${PARENT_SERVICE_PORT:-3012}"
+    depends_on:
+      postgres-parent:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PARENT_SERVICE_PORT:-3012}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - skolr_network
   gateway:
     build:
       context: ./packages/gateway
@@ -361,6 +419,7 @@ services:
       - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:3009}
       - MESSAGE_SERVICE_URL=${MESSAGE_SERVICE_URL:-http://message-service:3010}
       - BILLING_SERVICE_URL=${BILLING_SERVICE_URL:-http://billing-service:3011}
+      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
@@ -379,6 +438,8 @@ services:
       message-service:
         condition: service_healthy
       billing-service:
+        condition: service_healthy
+      parent-service:
         condition: service_healthy
     networks:
       - skolr_network
@@ -503,6 +564,7 @@ volumes:
   postgres_notification_data:
   postgres_message_data:
   postgres_billing_data:
+  postgres_parent_data:
   rabbitmq_data:
   rabbitmq_log:
   grafana_data:

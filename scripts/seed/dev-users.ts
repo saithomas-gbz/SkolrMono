@@ -177,6 +177,41 @@ export const DEV_GENERATED_STUDENTS: DevStudent[] = STUDENT_NAMES.map((name, i) 
   };
 });
 
+type DevParentChild = { studentId: string; isPrimary: boolean };
+type DevParent = { id: string; email: string; name: string; children: DevParentChild[] };
+
+const LEA_MARTIN_ID = DEV_GENERATED_STUDENTS[0]!.id;
+const HUGO_BERNARD_ID = DEV_GENERATED_STUDENTS[1]!.id;
+const EMMA_DUBOIS_ID = DEV_GENERATED_STUDENTS[2]!.id;
+
+/** Comptes parents de démo (issue #81) — liens insérés par parent-service/prisma/seed.ts. */
+export const DEV_PARENTS: DevParent[] = [
+  {
+    id: '66666666-6666-6666-6666-000000000001',
+    email: 'parent.martin@skolr.local',
+    name: 'Sophie Martin',
+    children: [{ studentId: LEA_MARTIN_ID, isPrimary: true }],
+  },
+  {
+    id: '66666666-6666-6666-6666-000000000002',
+    email: 'parent.bernard@skolr.local',
+    name: 'Marc Bernard',
+    children: [{ studentId: HUGO_BERNARD_ID, isPrimary: true }],
+  },
+  {
+    // Parent bi-enfant : second responsable de Léa Martin + responsable principal d'Emma Dubois.
+    id: '66666666-6666-6666-6666-000000000003',
+    email: 'parent.lefevre@skolr.local',
+    name: 'Julien Lefèvre',
+    children: [
+      { studentId: LEA_MARTIN_ID, isPrimary: false },
+      { studentId: EMMA_DUBOIS_ID, isPrimary: true },
+    ],
+  },
+];
+
+export const DEV_PARENT_PASSWORD = 'dev-parent-123';
+
 /** Comptes de login historiques, également inscrits comme élèves en CM2-A. */
 const DEV_LEGACY_STUDENTS: DevStudent[] = [
   {
