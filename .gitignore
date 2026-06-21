@@ -112,7 +112,6 @@ ehthumbs.db
 Thumbs.db
 
 # Docker
-.dockerignore
 infra/sentry/self-hosted/
 
 # Local development

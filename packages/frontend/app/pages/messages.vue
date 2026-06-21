@@ -30,7 +30,15 @@
           :class="{ active: selectedConversationId === conv.id }"
           @click="selectConversation(conv)"
         >
-          <div class="conv-name">{{ convDisplayName(conv) }}</div>
+          <div class="conv-name">
+            <Badge
+              v-if="otherParticipants(conv).length > 0"
+              class="presence-badge"
+              :severity="isAnyOnline(conv) ? 'success' : 'secondary'"
+              :aria-label="isAnyOnline(conv) ? $t('messages.presence_online') : $t('messages.presence_offline')"
+            />
+            {{ convDisplayName(conv) }}
+          </div>
           <div v-if="conv.messages[0]" class="conv-preview">{{ conv.messages[0].content }}</div>
         </li>
       </ul>
@@ -41,6 +49,16 @@
       <template v-if="selectedConversation">
         <div class="chat-header">
           <span class="chat-title">{{ convDisplayName(selectedConversation) }}</span>
+          <div class="chat-participants">
+            <span v-for="p in otherParticipants(selectedConversation)" :key="p.userId" class="chat-participant">
+              <Badge
+                class="presence-badge"
+                :severity="isOnline(p.userId) ? 'success' : 'secondary'"
+                :aria-label="presenceLabel(p.userId)"
+              />
+              {{ senderName(p.userId) }}
+            </span>
+          </div>
         </div>
 
         <div class="messages-area">
@@ -100,17 +118,31 @@
 </template>
 
 <script setup lang="ts">
+import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Textarea from 'primevue/textarea';
-import type { Conversation } from '~/composables/useMessages';
+import type { Conversation, ConversationParticipant } from '~/composables/useMessages';
 import type { UserProfile } from '~/composables/useUser';
 
 definePageMeta({ middleware: 'auth' });
 
+const { t } = useI18n();
 const { userId } = useAuth();
-const { conversations, currentMessages, loading, sending, error, fetchConversations, fetchMessages, sendMessage } =
-  useMessages();
+const {
+  conversations,
+  currentMessages,
+  loading,
+  sending,
+  error,
+  presence,
+  fetchConversations,
+  fetchMessages,
+  sendMessage,
+  fetchPresence,
+  connectRealtime,
+  disconnectRealtime,
+} = useMessages();
 const { fetchUsersByIds } = useUser();
 
 const selectedConversationId = ref<string | null>(null);
@@ -122,31 +154,16 @@ const newConvVisible = ref(false);
 const messagesEnd = ref<HTMLElement | null>(null);
 const userProfiles = ref(new Map<string, UserProfile>());
 
-let messagesPoll: ReturnType<typeof setInterval> | null = null;
-let conversationsPoll: ReturnType<typeof setInterval> | null = null;
-
 onMounted(async () => {
   if (userId.value) {
     await fetchConversations(userId.value);
     await resolveParticipants();
+    connectRealtime(userId.value, () => selectedConversationId.value);
   }
-
-  conversationsPoll = setInterval(async () => {
-    if (!userId.value) return;
-    await fetchConversations(userId.value, { silent: true });
-    await resolveParticipants();
-  }, 20_000);
-
-  messagesPoll = setInterval(() => {
-    if (selectedConversationId.value) {
-      fetchMessages(selectedConversationId.value, { silent: true });
-    }
-  }, 5_000);
 });
 
 onUnmounted(() => {
-  if (messagesPoll) clearInterval(messagesPoll);
-  if (conversationsPoll) clearInterval(conversationsPoll);
+  disconnectRealtime();
 });
 
 async function resolveParticipants() {
@@ -156,6 +173,23 @@ async function resolveParticipants() {
   if (allIds.length === 0) return;
   const profiles = await fetchUsersByIds(allIds);
   profiles.forEach((p) => userProfiles.value.set(p.id, p));
+  await fetchPresence(allIds);
+}
+
+function otherParticipants(conv: Conversation): ConversationParticipant[] {
+  return conv.participants.filter((p) => p.userId !== userId.value);
+}
+
+function isOnline(participantId: string): boolean {
+  return presence.value.get(participantId) ?? false;
+}
+
+function isAnyOnline(conv: Conversation): boolean {
+  return otherParticipants(conv).some((p) => isOnline(p.userId));
+}
+
+function presenceLabel(participantId: string): string {
+  return isOnline(participantId) ? t('messages.presence_online') : t('messages.presence_offline');
 }
 
 async function selectConversation(conv: Conversation) {
@@ -256,8 +290,19 @@ function formatTime(sentAt: string): string {
 }
 
 .conv-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-weight: 500;
   font-size: 0.875rem;
+}
+
+.presence-badge {
+  width: 0.5rem;
+  height: 0.5rem;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .conv-preview {
@@ -276,11 +321,29 @@ function formatTime(sentAt: string): string {
 }
 
 .chat-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--p-surface-border, var(--skolr-color-border));
   font-weight: 600;
   font-size: 0.9rem;
   flex-shrink: 0;
+}
+
+.chat-participants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
+}
+
+.chat-participant {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .messages-area {

@@ -322,6 +322,8 @@ messages:
   placeholder: Écrire un message… (Entrée pour envoyer)
   select_conversation: Sélectionnez une conversation
   default_conversation_name: Conversation
+  presence_online: En ligne
+  presence_offline: Hors ligne
   new_conversation_dialog:
     title: Nouvelle conversation
     name_label: Nom de la conversation (optionnel)

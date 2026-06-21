@@ -1,12 +1,14 @@
 import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
+import fastifyWebsocket from '@fastify/websocket';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { testDatabaseConnection } from './db';
 import conversationRoutes from './routes/conversationRoutes';
 import messageRoutes from './routes/messageRoutes';
+import wsRoutes from './routes/wsRoutes';
 
 dotenv.config();
 
@@ -39,8 +41,11 @@ async function buildApp() {
     secret: process.env.JWT_SECRET!,
   });
 
+  await app.register(fastifyWebsocket);
+
   await app.register(conversationRoutes);
   await app.register(messageRoutes);
+  await app.register(wsRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 

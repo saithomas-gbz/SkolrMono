@@ -3,8 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "test": "NODE_ENV=test bun test src/__tests__",
     "dev": "bun --watch run src/app.ts",
-    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client --external @fastify/websocket --external ws",
     "start": "bun run ./dist/app.js",
     "prisma:generate": "bunx prisma generate",
     "prisma:migrate": "bunx prisma migrate dev",
@@ -25,6 +26,7 @@
     "@fastify/jwt": "^10.0.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.6",
+    "@fastify/websocket": "^11.2.0",
     "@prisma/adapter-pg": "7.5.0",
     "@prisma/client": "7.5.0",
     "@sentry/node": "^10.56.0",

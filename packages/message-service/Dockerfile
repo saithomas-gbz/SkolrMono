@@ -11,7 +11,7 @@ WORKDIR /app/packages/message-service
 RUN bun install
 RUN bun prisma generate
 
-RUN bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client
+RUN bun run build
 
 RUN chmod +x docker-entrypoint.sh
 
