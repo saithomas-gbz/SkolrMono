@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export type MailMessage = {
+type MailMessage = {
   to: string;
   subject: string;
   html: string;
