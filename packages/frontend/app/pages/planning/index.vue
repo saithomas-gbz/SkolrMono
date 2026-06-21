@@ -15,6 +15,17 @@
               show-clear
               class="filter-select"
             />
+            <Select
+              v-if="isAdmin && selectedClassId"
+              v-model="selectedStudentId"
+              :options="studentOptions"
+              option-label="label"
+              option-value="value"
+              :placeholder="$t('planning.all_students')"
+              :aria-label="$t('planning.student_filter')"
+              show-clear
+              class="filter-select"
+            />
             <Button
               v-if="canEdit"
               :label="$t('planning.add')"
@@ -79,8 +90,9 @@ const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isStudent = computed(() => hasRole('USER'));
 const canEdit = computed(() => isAdmin.value || isTeacher.value);
 
-// Filtre de classe (admin uniquement)
+// Filtre de classe + élève (admin uniquement)
 const selectedClassId = ref<string | null>(null);
+const selectedStudentId = ref<string | null>(null);
 
 // Charger les classes (pour le select admin + le dialog)
 const { data: classesResponse } = await useFetch<ClassesApiResponse>('/class/classes', {
@@ -89,6 +101,29 @@ const { data: classesResponse } = await useFetch<ClassesApiResponse>('/class/cla
 });
 const classes = computed(() => classesResponse.value?.data ?? []);
 const classOptions = computed(() => classes.value.map((c) => ({ label: c.name, value: c.id })));
+const selectedClass = computed(
+  () => classes.value.find((c) => c.id === selectedClassId.value) ?? null,
+);
+
+// Noms des élèves de la classe sélectionnée (pour peupler le select élève)
+const studentProfiles = ref<{ id: string; name: string | null; email: string }[]>([]);
+watch(selectedClass, async (cls) => {
+  selectedStudentId.value = null;
+  const studentIds = cls?.students?.map((s) => s.studentId) ?? [];
+  if (studentIds.length === 0) {
+    studentProfiles.value = [];
+    return;
+  }
+  try {
+    studentProfiles.value = await fetchUsersByIds(studentIds);
+  } catch {
+    // non-bloquant : le select élève sera vide si le fetch échoue
+    studentProfiles.value = [];
+  }
+});
+const studentOptions = computed(() =>
+  studentProfiles.value.map((p) => ({ label: p.name ?? p.email, value: p.id })),
+);
 
 // Noms des matières (grade-service)
 const { data: coursesResponse } = await useFetch<CourseListApiResponse>('/grade/courses', {
@@ -115,7 +150,10 @@ const filters = computed(() => {
     return { teacherId: userId.value ?? undefined };
   }
   if (isAdmin.value && selectedClassId.value) {
-    return { classId: selectedClassId.value };
+    return {
+      classId: selectedClassId.value,
+      ...(selectedStudentId.value && { studentId: selectedStudentId.value }),
+    };
   }
   return {};
 });

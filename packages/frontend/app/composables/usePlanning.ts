@@ -42,6 +42,7 @@ export type UpdateSessionBody = {
 
 export type SessionFilters = {
   classId?: string;
+  studentId?: string;
   teacherId?: string;
   from?: string;
   to?: string;

@@ -13,11 +13,12 @@ const sessionProperties = {
 
 export const sessionSchema = {
   list: {
-    description: 'Get sessions — filtrable par classId, teacherId, startAt, endAt',
+    description: 'Get sessions — filtrable par classId, studentId, teacherId, startAt, endAt',
     querystring: {
       type: 'object',
       properties: {
         classId: { type: 'string', format: 'uuid' },
+        studentId: { type: 'string', format: 'uuid' },
         teacherId: { type: 'string', format: 'uuid' },
         from: { type: 'string', format: 'date-time' },
         to: { type: 'string', format: 'date-time' },

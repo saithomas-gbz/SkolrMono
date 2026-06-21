@@ -171,6 +171,8 @@ billing:
 planning:
   title: Emploi du temps
   all_classes: Toutes les classes
+  all_students: Tous les élèves
+  student_filter: "Filtrer par élève"
   add: Ajouter
   loading: "Chargement…"
   today: "Aujourd'hui"

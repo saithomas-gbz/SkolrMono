@@ -1,8 +1,10 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
+import { getClassIdsForStudent } from '../lib/classServiceClient';
 
 type SessionFilters = {
   classId?: string;
+  studentId?: string;
   teacherId?: string;
   from?: string;
   to?: string;
@@ -30,11 +32,24 @@ export async function getSessions(
   req: FastifyRequest<{ Querystring: SessionFilters }>,
   reply: FastifyReply,
 ) {
-  const { classId, teacherId, from, to } = req.query;
+  const { classId, studentId, teacherId, from, to } = req.query;
+
+  // Session n'a pas de champ par élève : on résout studentId -> classId(s) via class-service
+  // pour que le filtre ait un effet réel (et non un simple pass-through du classId déjà fourni).
+  let classWhere: { equals: string } | { in: string[] } | undefined;
+  if (studentId) {
+    const studentClassIds = await getClassIdsForStudent(studentId);
+    if (classId && !studentClassIds.includes(classId)) {
+      return reply.send([]);
+    }
+    classWhere = classId ? { equals: classId } : { in: studentClassIds };
+  } else if (classId) {
+    classWhere = { equals: classId };
+  }
 
   const sessions = await db.session.findMany({
     where: {
-      ...(classId && { classId }),
+      ...(classWhere && { classId: classWhere }),
       ...(teacherId && { teacherId }),
       ...(from || to
         ? {

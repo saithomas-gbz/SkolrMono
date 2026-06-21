@@ -14,6 +14,7 @@ mock.module('@skolr/rabbitmq', () => ({
 
 mock.module('../lib/classServiceClient', () => ({
   getClassIdsForTeacher: mock(() => Promise.resolve<string[]>([])),
+  getClassIdsForStudent: mock(() => Promise.resolve<string[]>([])),
 }));
 
 mock.module('../lib/parentServiceClient', () => ({
