@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { publish } from '@skolr/rabbitmq';
 import db from '../db';
 import { getUserId } from './conversationController';
+import * as presence from '../presence';
 
 export default {
   getMessages: async (
@@ -67,6 +68,10 @@ export default {
       content: message.content,
       recipientIds,
     }).catch((err) => console.error('[message-service] RabbitMQ publish failed:', err));
+
+    for (const recipientId of recipientIds) {
+      presence.sendToUser(recipientId, { type: 'message', data: message });
+    }
 
     return reply.status(201).send({ data: message });
   },

@@ -5,6 +5,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import sensible from '@fastify/sensible';
+import websocket from '@fastify/websocket';
 import autoLoad from '@fastify/autoload';
 import { join } from 'path';
 import type { OpenAPIV3_1 } from 'openapi-types';
@@ -210,6 +211,7 @@ async function build() {
   await gateway.register(cors, {
     origin: '*',
   });
+  await gateway.register(websocket);
 
   await gateway.register(autoLoad, {
     dir: join(__dirname, 'plugins'),

@@ -31,5 +31,12 @@ jobs:
       working-directory: packages/message-service
       run: bun run build
 
+    - name: Test message-service
+      working-directory: packages/message-service
+      run: bun test src/__tests__
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skolr_message_test?schema=public
+
     - name: Build Docker image
       run: docker build -f packages/message-service/Dockerfile -t message-service .
