@@ -140,22 +140,20 @@ export function useAuth() {
     }
   }
 
-  async function googleLogin() {
-    try {
-      const response = await api('/auth/google/login', {
-        method: 'GET',
-      });
-      return response;
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
+  /**
+   * Démarre le flux Google OAuth — doit être une vraie navigation (pas un fetch) : le
+   * gateway répond par une redirection 302 vers Google que seul le navigateur peut suivre.
+   */
+  function googleLoginUrl(): string {
+    const config = useRuntimeConfig();
+    const base = String(config.public.gatewayDirectUrl).replace(/\/$/, '');
+    return `${base}/auth/login/google`;
   }
 
   return {
     register,
     login,
-    googleLogin,
+    googleLoginUrl,
     setSession,
     clearSession,
     isLoggedIn,
