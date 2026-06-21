@@ -25,6 +25,7 @@ nav:
   schedule: Emploi du temps
   absences: Absences
   my_absences: Mes absences
+  my_grades: Mes notes
   family_space: Espace famille
   gradebook: Carnet de notes
   subjects: "Matières & Programmes"
@@ -298,6 +299,16 @@ grades:
     coefficient: Coefficient
     save_draft: Enregistrer brouillon
     publish: Publier
+  my_grades:
+    title: Mes notes
+    restricted: "Cette page est réservée aux élèves."
+    loading: "Chargement de vos notes…"
+    empty: Aucune note enregistrée pour le moment.
+    average: Moyenne
+    no_average: Pas encore de moyenne
+    date: Date
+    grade: Note
+    comment: Appréciation
 
 teacher:
   students_title: Mes élèves
