@@ -33,7 +33,7 @@ export const meRouteSchema = {
 } as const;
 
 export const getUsersByIdsRouteSchema = {
-  description: 'Batch lookup of users by their IDs (comma-separated query string)',
+  description: 'Batch lookup of users by IDs and/or role (au moins un des deux filtres)',
   tags: [userTag],
   querystring: {
     type: 'object',
@@ -42,8 +42,11 @@ export const getUsersByIdsRouteSchema = {
         type: 'string',
         description: 'Comma-separated list of user IDs, e.g. id1,id2,id3',
       },
+      role: {
+        type: 'string',
+        enum: ['USER', 'TEACHER', 'STAFF', 'ADMIN', 'PLATFORM_ADMIN', 'PARENT'],
+      },
     },
-    required: ['ids'],
   },
   response: {
     200: {

@@ -5,7 +5,8 @@ export type UserProfile = {
   id: string;
   name: string | null;
   email: string;
-  role: 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN';
+  role: 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PARENT';
+  createdAt?: string;
 };
 
 type UsersApiResponse = {
@@ -31,7 +32,7 @@ export function useUser() {
   }
 
   async function fetchAllUsers() {
-    const roles = ['TEACHER', 'USER', 'STAFF', 'ADMIN'];
+    const roles = ['TEACHER', 'USER', 'STAFF', 'ADMIN', 'PARENT'];
     const responses = await Promise.all(
       roles.map((role) =>
         api<UsersApiResponse>('/auth/users', { query: { role } }).catch(() => ({ data: [] as UserProfile[] })),
@@ -51,4 +52,9 @@ export function useUser() {
     fetchAllUsers,
     normalizeApiError,
   };
+}
+
+/** Libellé d'option pour les dropdowns de sélection d'utilisateur : "Nom (uuid)". */
+export function userOptionLabel(user: Pick<UserProfile, 'id' | 'name' | 'email'>): string {
+  return `${user.name?.trim() || user.email} (${user.id})`;
 }

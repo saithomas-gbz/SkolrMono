@@ -6,11 +6,29 @@
         <div class="create-form">
           <div class="field">
             <label for="link-parent">{{ $t('admin.parent_links.parent_id') }}</label>
-            <InputText id="link-parent" v-model="form.parentId" class="w-full" :placeholder="$t('admin.parent_links.uuid_placeholder')" />
+            <Select
+              id="link-parent"
+              v-model="form.parentId"
+              :options="parentOptions"
+              option-label="label"
+              option-value="value"
+              filter
+              :placeholder="$t('admin.parent_links.choose_parent')"
+              class="w-full"
+            />
           </div>
           <div class="field">
             <label for="link-student">{{ $t('admin.parent_links.student_id') }}</label>
-            <InputText id="link-student" v-model="form.studentId" class="w-full" :placeholder="$t('admin.parent_links.uuid_placeholder')" />
+            <Select
+              id="link-student"
+              v-model="form.studentId"
+              :options="studentOptions"
+              option-label="label"
+              option-value="value"
+              filter
+              :placeholder="$t('admin.parent_links.choose_student')"
+              class="w-full"
+            />
           </div>
           <div class="field">
             <label for="link-type">{{ $t('admin.parent_links.link_type') }}</label>
@@ -46,8 +64,12 @@
         </div>
 
         <DataTable v-else :value="links" data-key="id" class="table">
-          <Column field="parentId" :header="$t('admin.parent_links.parent_id')" />
-          <Column field="studentId" :header="$t('admin.parent_links.student_id')" />
+          <Column :header="$t('admin.parent_links.parent_id')">
+            <template #body="{ data }">{{ resolveUserName(data.parentId) }}</template>
+          </Column>
+          <Column :header="$t('admin.parent_links.student_id')">
+            <template #body="{ data }">{{ resolveUserName(data.studentId) }}</template>
+          </Column>
           <Column field="linkType" :header="$t('admin.parent_links.link_type')" />
           <Column field="isPrimary" :header="$t('admin.parent_links.is_primary')">
             <template #body="{ data }">
@@ -76,19 +98,29 @@
 <script setup lang="ts">
 import { normalizeApiError } from '~/composables/useClass';
 import type { ParentLink, ParentLinkType } from '~/composables/useParent';
+import { userOptionLabel, type UserProfile } from '~/composables/useUser';
 
 definePageMeta({ middleware: ['auth', 'admin'] });
 
 const { t } = useI18n();
 const { fetchParentLinks, createParentLink, deleteParentLink } = useParent();
+const { fetchAllUsers } = useUser();
 
 const links = ref<ParentLink[]>([]);
+const users = ref<UserProfile[]>([]);
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 const formError = ref<string | null>(null);
 const creating = ref(false);
 
 const form = reactive({ parentId: '', studentId: '', linkType: 'LEGAL_GUARDIAN' as ParentLinkType, isPrimary: false });
+
+const parentOptions = computed(() =>
+  users.value.filter((u) => u.role === 'PARENT').map((u) => ({ label: userOptionLabel(u), value: u.id })),
+);
+const studentOptions = computed(() =>
+  users.value.filter((u) => u.role === 'USER').map((u) => ({ label: userOptionLabel(u), value: u.id })),
+);
 
 const linkTypeOptions = computed(() => [
   { label: t('admin.parent_links.types.LEGAL_GUARDIAN'), value: 'LEGAL_GUARDIAN' },
@@ -98,11 +130,17 @@ const linkTypeOptions = computed(() => [
 
 const isValid = computed(() => form.parentId.trim().length > 0 && form.studentId.trim().length > 0);
 
+const usersById = computed(() => new Map(users.value.map((u) => [u.id, u])));
+
+function resolveUserName(id: string): string {
+  return usersById.value.get(id)?.name || usersById.value.get(id)?.email || id;
+}
+
 async function load() {
   pending.value = true;
   fetchError.value = null;
   try {
-    links.value = await fetchParentLinks();
+    [links.value, users.value] = await Promise.all([fetchParentLinks(), fetchAllUsers()]);
   } catch (e) {
     fetchError.value = normalizeApiError(e);
   } finally {

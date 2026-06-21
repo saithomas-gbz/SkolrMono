@@ -27,7 +27,16 @@
 
       <div class="field">
         <label for="sd-teacher">{{ $t('planning.session_dialog.teacher_id') }}</label>
-        <InputText id="sd-teacher" v-model="form.teacherId" class="w-full" :placeholder="$t('planning.session_dialog.teacher_placeholder')" />
+        <Select
+          id="sd-teacher"
+          v-model="form.teacherId"
+          :options="teacherOptions"
+          option-label="label"
+          option-value="value"
+          filter
+          :placeholder="$t('planning.session_dialog.teacher_placeholder')"
+          class="w-full"
+        />
       </div>
 
       <div class="field">
@@ -92,6 +101,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 import type { SkolrClass } from '~/composables/useClass';
 import type { Session } from '~/composables/usePlanning';
+import { userOptionLabel, type UserProfile } from '~/composables/useUser';
 
 const props = defineProps<{
   session?: Session | null;
@@ -107,6 +117,20 @@ const visible = defineModel<boolean>('visible', { default: false });
 
 const { t } = useI18n();
 const { createSession, updateSession } = usePlanning();
+const { fetchAllUsers } = useUser();
+
+const teachers = ref<UserProfile[]>([]);
+onMounted(async () => {
+  try {
+    teachers.value = (await fetchAllUsers()).filter((u) => u.role === 'TEACHER');
+  } catch {
+    teachers.value = [];
+  }
+});
+
+const teacherOptions = computed(() =>
+  teachers.value.map((u) => ({ label: userOptionLabel(u), value: u.id })),
+);
 
 const recurrenceOptions = computed(() => [
   { label: t('planning.session_dialog.recurrence_none'), value: '' },

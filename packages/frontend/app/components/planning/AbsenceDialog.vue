@@ -18,7 +18,16 @@
 
       <div class="field">
         <label for="ab-user">{{ $t('planning.absence_dialog.user_id') }}</label>
-        <InputText id="ab-user" v-model="form.userId" class="w-full" :placeholder="$t('planning.absence_dialog.user_placeholder')" />
+        <Select
+          id="ab-user"
+          v-model="form.userId"
+          :options="userOptions"
+          option-label="label"
+          option-value="value"
+          filter
+          :placeholder="$t('planning.absence_dialog.user_placeholder')"
+          class="w-full"
+        />
       </div>
 
       <div class="field">
@@ -51,6 +60,7 @@
 <script setup lang="ts">
 import { normalizeApiError } from '~/composables/useClass';
 import type { Session } from '~/composables/usePlanning';
+import { userOptionLabel, type UserProfile } from '~/composables/useUser';
 
 const props = defineProps<{ session: Session | null }>();
 const emit = defineEmits<{ (e: 'saved'): void }>();
@@ -58,6 +68,7 @@ const visible = defineModel<boolean>('visible', { default: false });
 
 const { t } = useI18n();
 const { createAbsence } = usePlanning();
+const { fetchAllUsers } = useUser();
 
 const roleOptions = computed(() => [
   { label: t('planning.absence_dialog.student'), value: 'STUDENT' },
@@ -68,7 +79,27 @@ const form = reactive({ userId: '', role: 'STUDENT' as 'STUDENT' | 'TEACHER', re
 const pending = ref(false);
 const error = ref<string | null>(null);
 
+const users = ref<UserProfile[]>([]);
+onMounted(async () => {
+  try {
+    users.value = await fetchAllUsers();
+  } catch {
+    users.value = [];
+  }
+});
+
+const userOptions = computed(() => {
+  const targetRole = form.role === 'TEACHER' ? 'TEACHER' : 'USER';
+  return users.value
+    .filter((u) => u.role === targetRole)
+    .map((u) => ({ label: userOptionLabel(u), value: u.id }));
+});
+
 const isValid = computed(() => form.userId.trim().length > 0 && props.session !== null);
+
+watch(() => form.role, () => {
+  form.userId = '';
+});
 
 function reset() {
   form.userId = '';
