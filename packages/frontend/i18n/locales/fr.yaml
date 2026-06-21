@@ -28,6 +28,7 @@ nav:
   my_grades: Mes notes
   family_space: Espace famille
   gradebook: Carnet de notes
+  users: Utilisateurs
   subjects: "Matières & Programmes"
   billing: Facturation
   parent_links: Liens parents
@@ -49,6 +50,12 @@ auth:
     name_optional: Nom (optionnel)
     already_registered: Déjà inscrit ?
     sign_in: Se connecter
+  accept_invitation:
+    title: Créer mon compte
+    checking: "Vérification de l'invitation…"
+    submit: Créer mon compte
+    missing_token: Lien d'invitation invalide (token manquant).
+    invalid_token: Cette invitation est invalide ou a expiré.
   validation:
     email_required: "L'email est requis."
     email_invalid: Email invalide.
@@ -76,6 +83,24 @@ dashboard:
   family_hint: "Suivez les absences de vos enfants et déposez vos justificatifs."
 
 admin:
+  users_title: Utilisateurs
+  invite_user: Inviter un utilisateur
+  invite_hint: "Invitez un enseignant, un membre du personnel, un élève ou un parent par email. Il recevra un lien pour créer son compte."
+  invite_sent: "Invitation envoyée à {email}."
+  users_table:
+    role: Rôle
+    empty: Aucun utilisateur.
+  invite_dialog:
+    title: Inviter un utilisateur
+    email: Email
+    role: Rôle
+    choose_role: Choisir un rôle
+    role_user: Élève
+    role_teacher: Enseignant
+    role_staff: Vie scolaire
+    role_parent: Parent
+    role_admin: Administrateur
+    submit: Envoyer l'invitation
   students_title: "Élèves de l'établissement"
   subjects_title: "Matières & Programmes"
   new_subject: Nouvelle matière
@@ -95,9 +120,10 @@ admin:
   joined_on: Inscrit le
   parent_links:
     title: Liens parents ↔ enfants
-    parent_id: Parent (ID)
-    student_id: Enfant (ID)
-    uuid_placeholder: UUID utilisateur
+    parent_id: Parent
+    student_id: Enfant
+    choose_parent: Choisir un parent
+    choose_student: Choisir un élève
     link_type: Type de lien
     is_primary: Contact principal
     create: Créer le lien
@@ -222,8 +248,8 @@ planning:
   absence_dialog:
     title: Déclarer une absence
     session: Session
-    user_id: Utilisateur (ID)
-    user_placeholder: "UUID de l'élève ou du prof"
+    user_id: Utilisateur
+    user_placeholder: Choisir un élève ou un professeur
     role: Rôle
     reason_optional: Motif (optionnel)
     student: Élève
@@ -233,8 +259,8 @@ planning:
     new: Nouvelle session
     course_id: Cours (ID)
     course_placeholder: UUID du cours
-    teacher_id: Professeur (ID)
-    teacher_placeholder: UUID du professeur
+    teacher_id: Professeur
+    teacher_placeholder: Choisir un professeur
     room: Salle
     room_placeholder: "Ex: B204"
     start: Début

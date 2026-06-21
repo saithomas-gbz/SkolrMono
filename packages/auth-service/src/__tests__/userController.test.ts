@@ -166,6 +166,19 @@ describe('UserController', () => {
       expect(reply.send).toHaveBeenCalledWith({ data: [] });
     });
 
+    it('should query by role only when ids is missing', async () => {
+      const users = [userWithoutPassword({ ...mockUser, role: 'TEACHER' })];
+      prismaMock.user.findMany.mockResolvedValue(users);
+      const request = makeRequest({ query: { role: 'TEACHER' } } as Partial<FastifyRequest>);
+
+      await userController.getUsersByIds(request, reply);
+
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { role: 'TEACHER' } })
+      );
+      expect(reply.send).toHaveBeenCalledWith({ data: users });
+    });
+
     it('should return 500 on unexpected error', async () => {
       prismaMock.user.findMany.mockRejectedValue(new Error('DB failure'));
       const request = makeRequest({ query: { ids: 'user-1' } } as Partial<FastifyRequest>);

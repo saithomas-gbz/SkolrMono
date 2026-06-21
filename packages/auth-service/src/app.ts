@@ -8,6 +8,8 @@ import dotenv from 'dotenv';
 import { testDatabaseConnection } from './db';
 import { authTag } from './schemas/authOpenApi';
 import userRoutes from './routes/userRoutes';
+import invitationRoutes from './routes/invitationRoutes';
+import { invitationTag } from './schemas/invitationOpenApi';
 
 dotenv.config();
 
@@ -30,7 +32,10 @@ async function buildApp() {
         description: 'Authentication API (OpenAPI source for gateway merge)',
       },
       servers: [{ url: 'http://localhost:3000', description: 'Auth service (direct)' }],
-      tags: [{ name: authTag, description: 'Authentication' }],
+      tags: [
+        { name: authTag, description: 'Authentication' },
+        { name: invitationTag, description: 'User invitations' },
+      ],
     },
   });
 
@@ -58,6 +63,7 @@ async function buildApp() {
 
   await app.register(authRoutes);
   await app.register(userRoutes);
+  await app.register(invitationRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 

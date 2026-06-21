@@ -47,3 +47,14 @@ model Account {
   providerId   String
   createdAt    DateTime @default(now())
 }
+
+model InvitationToken {
+  id              String    @id @default(uuid())
+  token           String    @unique
+  email           String
+  role            Role      @default(USER)
+  establishmentId String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime  @default(now())
+}
