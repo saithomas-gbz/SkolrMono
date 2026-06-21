@@ -31,14 +31,18 @@ async function proxyRequest(req: FastifyRequest, reply: FastifyReply, targetUrl:
 
   return new Promise((resolve, reject) => {
     const proxyReq = (target.protocol === 'https:' ? https : http).request(options, (proxyRes) => {
-      reply.code(proxyRes.statusCode || 200);
-      
-      // Copy headers from proxy response
+      // On pipe directement vers reply.raw : reply.header()/reply.code() ne seraient jamais
+      // flush (ils ne s'appliquent qu'au appel de reply.send()). hijack() + writeHead()
+      // garantit que les headers proxifiés (ex. Location sur une redirection OAuth) sortent bien.
+      reply.hijack();
+
+      const headers: http.OutgoingHttpHeaders = {};
       Object.entries(proxyRes.headers).forEach(([key, value]) => {
         if (value && key !== 'transfer-encoding') {
-          reply.header(key, Array.isArray(value) ? value.join(', ') : value);
+          headers[key] = value;
         }
       });
+      reply.raw.writeHead(proxyRes.statusCode || 200, headers);
 
       proxyRes.pipe(reply.raw);
       proxyRes.on('end', resolve);

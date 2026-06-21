@@ -22,6 +22,15 @@ interface GoogleUserInfo {
   name: string;
 }
 
+function buildGoogleSuccessUrl(token: string): string {
+  const base = process.env.GOOGLE_OAUTH_SUCCESS_URL ?? 'http://localhost:3003/auth/success';
+  return `${base}?token=${token}`;
+}
+
+function buildGoogleErrorUrl(): string {
+  return process.env.GOOGLE_OAUTH_ERROR_URL ?? 'http://localhost:3003/auth/error';
+}
+
 const authRoutes = async (fastify: FastifyInstance) => {
   fastify.post('/login', { schema: loginRouteSchema }, authController.login);
   fastify.post('/register', { schema: registerRouteSchema }, authController.register);
@@ -58,14 +67,15 @@ const authRoutes = async (fastify: FastifyInstance) => {
         });
       }
 
-      const jwtToken = fastify.jwt.sign({ id: user.id, email: user.email });
+      const jwtToken = fastify.jwt.sign(
+        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
+        { expiresIn: '1h' },
+      );
 
-      // reply.redirect(process.env.GOOGLE_CALLBACK_URI)
-      reply.redirect(`http://votre-frontend.com/auth/success?token=${jwtToken}`);
+      reply.redirect(buildGoogleSuccessUrl(jwtToken));
     } catch (error) {
-      console.error('error google prisma callback : ', error);
       fastify.log.error(error);
-      reply.redirect('http://votre-fronte//nd.com/auth/error');
+      reply.redirect(buildGoogleErrorUrl());
     }
   });
 };
