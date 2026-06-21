@@ -133,6 +133,7 @@ const navLinks = computed<NavLink[]>(() => {
 
   if (isStudent.value) {
     links.push({ label: t('nav.my_absences'), to: '/planning/my-absences' });
+    links.push({ label: t('nav.my_grades'), to: '/grades/my-grades' });
   }
 
   if (isTeacher.value) {

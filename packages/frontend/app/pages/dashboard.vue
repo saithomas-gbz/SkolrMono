@@ -87,7 +87,12 @@
         </template>
       </Card>
       <Card>
-        <template #title>{{ $t('dashboard.grade_progress') }}</template>
+        <template #title>
+          <div class="card-title-row">
+            <span>{{ $t('dashboard.grade_progress') }}</span>
+            <NuxtLink to="/grades/my-grades" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
+          </div>
+        </template>
         <template #content>
           <ChartGradesTrendChart />
         </template>
