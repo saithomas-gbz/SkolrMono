@@ -10,5 +10,3 @@ export function getStorageProvider(): StorageProvider {
   }
   return provider;
 }
-
-export type { StorageProvider };
