@@ -28,6 +28,7 @@ export default defineNuxtConfig({
     public: {
       gatewayBaseUrl: process.env.NUXT_PUBLIC_GATEWAY_BASE_URL || "/api",
       gatewayWsBaseUrl: process.env.NUXT_PUBLIC_GATEWAY_WS_BASE_URL || "ws://localhost:3001",
+      gatewayDirectUrl: process.env.NUXT_PUBLIC_GATEWAY_DIRECT_URL || "http://localhost:3001",
       sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN || "",
       sentryEnvironment: process.env.NUXT_PUBLIC_SENTRY_ENVIRONMENT || "development",
     },

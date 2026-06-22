@@ -10,6 +10,8 @@ import { authTag } from './schemas/authOpenApi';
 import userRoutes from './routes/userRoutes';
 import invitationRoutes from './routes/invitationRoutes';
 import { invitationTag } from './schemas/invitationOpenApi';
+import passwordResetRoutes from './routes/passwordResetRoutes';
+import { passwordResetTag } from './schemas/passwordResetOpenApi';
 
 dotenv.config();
 
@@ -35,6 +37,7 @@ async function buildApp() {
       tags: [
         { name: authTag, description: 'Authentication' },
         { name: invitationTag, description: 'User invitations' },
+        { name: passwordResetTag, description: 'Password reset' },
       ],
     },
   });
@@ -64,6 +67,7 @@ async function buildApp() {
   await app.register(authRoutes);
   await app.register(userRoutes);
   await app.register(invitationRoutes);
+  await app.register(passwordResetRoutes);
 
   Sentry.setupFastifyErrorHandler(app);
 

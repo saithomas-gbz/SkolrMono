@@ -35,3 +35,21 @@ export function welcomeEmail(params: { name: string }): { subject: string; html:
     ),
   };
 }
+
+export function passwordResetEmail(params: { resetUrl: string }): { subject: string; html: string } {
+  return {
+    subject: 'Réinitialisation de votre mot de passe Skolr',
+    html: layout(
+      'Réinitialisation du mot de passe',
+      `
+        <p>Vous avez demandé la réinitialisation de votre mot de passe Skolr.</p>
+        <p>
+          <a href="${params.resetUrl}" style="display: inline-block; padding: 10px 20px; background: #2f6f4f; color: #fff; text-decoration: none; border-radius: 6px;">
+            Réinitialiser mon mot de passe
+          </a>
+        </p>
+        <p>Ce lien est valable 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+      `,
+    ),
+  };
+}
