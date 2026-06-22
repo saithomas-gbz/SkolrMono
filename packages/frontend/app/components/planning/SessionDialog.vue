@@ -22,7 +22,16 @@
 
       <div class="field">
         <label for="sd-course">{{ $t('planning.session_dialog.course_id') }}</label>
-        <InputText id="sd-course" v-model="form.courseId" class="w-full" :placeholder="$t('planning.session_dialog.course_placeholder')" />
+        <Select
+          id="sd-course"
+          v-model="form.courseId"
+          :options="courseOptions"
+          option-label="label"
+          option-value="value"
+          filter
+          :placeholder="$t('planning.session_dialog.course_placeholder')"
+          class="w-full"
+        />
       </div>
 
       <div class="field">
@@ -102,6 +111,7 @@ import { normalizeApiError } from '~/composables/useClass';
 import type { SkolrClass } from '~/composables/useClass';
 import type { Session } from '~/composables/usePlanning';
 import { userOptionLabel, type UserProfile } from '~/composables/useUser';
+import type { CourseEntity } from '~/composables/useCourse';
 
 const props = defineProps<{
   session?: Session | null;
@@ -118,18 +128,29 @@ const visible = defineModel<boolean>('visible', { default: false });
 const { t } = useI18n();
 const { createSession, updateSession } = usePlanning();
 const { fetchAllUsers } = useUser();
+const { fetchCourses } = useCourse();
 
 const teachers = ref<UserProfile[]>([]);
+const courses = ref<CourseEntity[]>([]);
 onMounted(async () => {
   try {
     teachers.value = (await fetchAllUsers()).filter((u) => u.role === 'TEACHER');
   } catch {
     teachers.value = [];
   }
+  try {
+    courses.value = await fetchCourses();
+  } catch {
+    courses.value = [];
+  }
 });
 
 const teacherOptions = computed(() =>
   teachers.value.map((u) => ({ label: userOptionLabel(u), value: u.id })),
+);
+
+const courseOptions = computed(() =>
+  courses.value.map((c) => ({ label: c.name, value: c.id })),
 );
 
 const recurrenceOptions = computed(() => [

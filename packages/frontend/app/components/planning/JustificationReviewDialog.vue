@@ -9,7 +9,7 @@
     <div v-if="justification" class="review-form">
       <div class="field-readonly">
         <span class="field-label">{{ $t('planning.justifications.review.student_id') }}</span>
-        <span>{{ justification.studentId }}</span>
+        <span>{{ studentName || justification.studentId }}</span>
       </div>
 
       <div class="field-readonly">
@@ -64,7 +64,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 import type { AbsenceJustification } from '~/composables/usePlanning';
 
-const props = defineProps<{ justification: AbsenceJustification | null }>();
+const props = defineProps<{ justification: AbsenceJustification | null; studentName?: string }>();
 const emit = defineEmits<{ (e: 'saved'): void }>();
 const visible = defineModel<boolean>('visible', { default: false });
 

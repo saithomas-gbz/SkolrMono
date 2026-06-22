@@ -54,7 +54,7 @@ export function useUser() {
   };
 }
 
-/** Libellé d'option pour les dropdowns de sélection d'utilisateur : "Nom (uuid)". */
+/** Libellé d'option pour les dropdowns de sélection d'utilisateur : nom, ou email à défaut. */
 export function userOptionLabel(user: Pick<UserProfile, 'id' | 'name' | 'email'>): string {
-  return `${user.name?.trim() || user.email} (${user.id})`;
+  return user.name?.trim() || user.email;
 }

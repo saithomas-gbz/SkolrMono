@@ -24,7 +24,9 @@
       <Column field="sessionDate" :header="$t('planning.absences.session')" sortable>
         <template #body="{ data }">{{ data.sessionDate }}</template>
       </Column>
-      <Column field="userId" :header="$t('planning.absences.user_id')" />
+      <Column field="userId" :header="$t('planning.absences.user_id')">
+        <template #body="{ data }">{{ resolveUserName(data.userId) }}</template>
+      </Column>
       <Column field="justified" :header="$t('planning.absences.justified')" sortable>
         <template #body="{ data }">
           <Tag
@@ -66,10 +68,12 @@
 <script setup lang="ts">
 import { normalizeApiError } from '~/composables/useClass';
 import type { AbsenceFilters } from '~/composables/usePlanning';
+import type { UserProfile } from '~/composables/useUser';
 
 const props = defineProps<{ filters?: AbsenceFilters }>();
 
 const { fetchAbsences, justifyAbsence, deleteAbsence } = usePlanning();
+const { fetchUsersByIds } = useUser();
 
 type Row = {
   id: string;
@@ -82,6 +86,7 @@ type Row = {
 };
 
 const rawAbsences = ref<Awaited<ReturnType<typeof fetchAbsences>>>([]);
+const userProfiles = ref(new Map<string, UserProfile>());
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 
@@ -90,11 +95,18 @@ async function load() {
   fetchError.value = null;
   try {
     rawAbsences.value = await fetchAbsences(props.filters);
+    const profiles = await fetchUsersByIds(rawAbsences.value.map((a) => a.userId));
+    profiles.forEach((p) => userProfiles.value.set(p.id, p));
   } catch (e) {
     fetchError.value = normalizeApiError(e);
   } finally {
     pending.value = false;
   }
+}
+
+function resolveUserName(userId: string): string {
+  const profile = userProfiles.value.get(userId);
+  return profile?.name?.trim() || profile?.email || userId;
 }
 
 watch(() => props.filters, load, { immediate: true, deep: true });
