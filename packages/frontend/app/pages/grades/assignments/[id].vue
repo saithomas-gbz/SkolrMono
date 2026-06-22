@@ -303,6 +303,10 @@ watch(id, load, { immediate: true });
   width: 7rem;
 }
 
+.grade-input :deep(.p-inputnumber-input) {
+  width: 100%;
+}
+
 .comment-input {
   width: 100%;
 }
