@@ -13,6 +13,18 @@ type UsersApiResponse = {
   data: UserProfile[];
 };
 
+const userErrorHints: Record<string, string> = {
+  'Email already in use': 'Cet email est déjà utilisé par un autre compte.',
+  'Current password is incorrect': "L'ancien mot de passe est incorrect.",
+  'Password change not available for this account':
+    "Le changement de mot de passe n'est pas disponible pour ce compte (connexion via Google).",
+};
+
+export function normalizeUserError(e: unknown): string {
+  const base = normalizeApiError(e);
+  return userErrorHints[base] ?? base;
+}
+
 export function useUser() {
   const api = useApi();
 
@@ -29,6 +41,22 @@ export function useUser() {
       query: { ids: uniqueIds.join(',') },
     });
     return response.data;
+  }
+
+  /** Met à jour le nom/email de l'utilisateur (self-service, cf. `requireSelfOrAdmin` côté auth-service). */
+  async function updateProfile(id: string, body: { name?: string; email?: string }) {
+    return api<UserProfile>(`/auth/users/${id}`, {
+      method: 'PUT',
+      body,
+    });
+  }
+
+  /** Change le mot de passe de l'utilisateur authentifié (ancien mot de passe requis). */
+  async function changePassword(currentPassword: string, newPassword: string) {
+    return api<{ message: string }>('/auth/users/me/password', {
+      method: 'PATCH',
+      body: { currentPassword, newPassword },
+    });
   }
 
   async function fetchAllUsers() {
@@ -50,6 +78,8 @@ export function useUser() {
   return {
     fetchUsersByIds,
     fetchAllUsers,
+    updateProfile,
+    changePassword,
     normalizeApiError,
   };
 }

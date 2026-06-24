@@ -298,6 +298,167 @@ describe('UserController', () => {
       expect(reply.status).toHaveBeenCalledWith(500);
       expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
     });
+
+    it('should ignore role/establishmentId when the requester is not ADMIN/PLATFORM_ADMIN', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      prismaMock.user.update.mockResolvedValue(userWithoutPassword(mockUser));
+
+      const request = makeRequest({
+        params: { id: 'user-1' },
+        body: { name: 'Updated Name', role: 'ADMIN', establishmentId: 'est-1' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.updateUser(request, reply);
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { name: 'Updated Name', email: undefined },
+        })
+      );
+    });
+
+    it('should allow role/establishmentId changes when the requester is ADMIN', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      prismaMock.user.update.mockResolvedValue(userWithoutPassword(mockUser));
+
+      const request = makeRequest({
+        params: { id: 'user-1' },
+        body: { role: 'ADMIN', establishmentId: 'est-1' },
+        authUser: { userId: 'admin-1', email: 'admin@example.com', role: 'ADMIN' },
+      } as Partial<FastifyRequest>);
+
+      await userController.updateUser(request, reply);
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { name: undefined, email: undefined, role: 'ADMIN', establishmentId: 'est-1' },
+        })
+      );
+    });
+
+    it('should return 409 when the new email is already taken by another user', async () => {
+      prismaMock.user.findUnique.mockImplementation(({ where }: { where: { id?: string; email?: string } }) => {
+        if (where.id === 'user-1') return Promise.resolve(mockUser);
+        if (where.email === 'taken@example.com') return Promise.resolve({ ...mockUser, id: 'user-2' });
+        return Promise.resolve(null);
+      });
+
+      const request = makeRequest({
+        params: { id: 'user-1' },
+        body: { email: 'taken@example.com' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.updateUser(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(409);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Email already in use' });
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should not treat the unchanged email as a conflict', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      prismaMock.user.update.mockResolvedValue(userWithoutPassword(mockUser));
+
+      const request = makeRequest({
+        params: { id: 'user-1' },
+        body: { email: mockUser.email },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.updateUser(request, reply);
+
+      expect(prismaMock.user.findUnique).toHaveBeenCalledTimes(1);
+      expect(reply.status).not.toHaveBeenCalledWith(409);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // changePassword
+  // ---------------------------------------------------------------------------
+  describe('changePassword', () => {
+    it('should update the password when the current password matches', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      prismaMock.user.update.mockResolvedValue(userWithoutPassword(mockUser));
+      spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-pw' as never);
+
+      const request = makeRequest({
+        body: { currentPassword: 'old-pw', newPassword: 'new-secret' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(bcrypt.compare).toHaveBeenCalledWith('old-pw', mockUser.password);
+      expect(bcrypt.hash).toHaveBeenCalledWith('new-secret', 10);
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { password: 'new-hashed-pw' },
+      });
+      expect(reply.send).toHaveBeenCalledWith({ message: 'Password updated successfully' });
+    });
+
+    it('should return 401 when the current password is incorrect', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+      const request = makeRequest({
+        body: { currentPassword: 'wrong-pw', newPassword: 'new-secret' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Current password is incorrect' });
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when the account has no password (OAuth-only)', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ ...mockUser, password: null });
+
+      const request = makeRequest({
+        body: { currentPassword: 'whatever', newPassword: 'new-secret' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(400);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Password change not available for this account',
+      });
+    });
+
+    it('should return 404 when the user does not exist', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      const request = makeRequest({
+        body: { currentPassword: 'old-pw', newPassword: 'new-secret' },
+        authUser: { userId: 'ghost', email: 'ghost@example.com', role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(404);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'User not found' });
+    });
+
+    it('should return 500 on unexpected error', async () => {
+      prismaMock.user.findUnique.mockRejectedValue(new Error('DB failure'));
+
+      const request = makeRequest({
+        body: { currentPassword: 'old-pw', newPassword: 'new-secret' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(500);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
   });
 
   // ---------------------------------------------------------------------------

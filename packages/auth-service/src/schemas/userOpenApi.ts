@@ -102,7 +102,8 @@ export const createUserRouteSchema = {
 } as const;
 
 export const updateUserRouteSchema = {
-  description: 'Update a user by ID',
+  description:
+    'Update a user by ID. Only the user themselves or an ADMIN/PLATFORM_ADMIN may call this; role/establishmentId changes are ignored unless the caller is an ADMIN/PLATFORM_ADMIN.',
   tags: [userTag],
   params: {
     type: 'object',
@@ -122,6 +123,35 @@ export const updateUserRouteSchema = {
   },
   response: {
     200: userPublic,
+    401: errorBody,
+    403: errorBody,
+    404: errorBody,
+    409: errorBody,
+    500: errorBody,
+  },
+} as const;
+
+export const changePasswordRouteSchema = {
+  description: "Change the authenticated user's own password (requires current password).",
+  tags: [userTag],
+  body: {
+    type: 'object',
+    properties: {
+      currentPassword: { type: 'string' },
+      newPassword: { type: 'string', minLength: 6 },
+    },
+    required: ['currentPassword', 'newPassword'],
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+      required: ['message'],
+    },
+    400: errorBody,
+    401: errorBody,
     404: errorBody,
     500: errorBody,
   },

@@ -144,6 +144,8 @@ const navLinks = computed<NavLink[]>(() => {
     links.push({ label: t('nav.family_space'), to: '/parent' });
   }
 
+  links.push({ label: t('nav.profile'), to: '/profile' });
+
   return links;
 });
 
