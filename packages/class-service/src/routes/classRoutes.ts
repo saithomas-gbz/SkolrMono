@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import classController from '../controllers/classController';
+import { requireAuth, requireStaff } from '../lib/authGuard';
 import {
   createClassSchema,
   deleteClassSchema,
@@ -15,49 +16,60 @@ import {
 } from '../schemas/classOpenApi';
 
 export default async function classRoutes(fastify: FastifyInstance) {
-  fastify.get('/classes', { schema: getAllClassesSchema }, classController.getAllClasses);
+  fastify.get(
+    '/classes',
+    { schema: getAllClassesSchema, preHandler: requireStaff },
+    classController.getAllClasses,
+  );
   fastify.get(
     '/classes/summary',
-    { schema: getClassesSummarySchema },
+    { schema: getClassesSummarySchema, preHandler: requireAuth },
     classController.getClassesSummary,
   );
   fastify.get(
     '/classes/teacher/:teacherId',
-    { schema: getClassesByTeacherIdSchema },
+    { schema: getClassesByTeacherIdSchema, preHandler: requireAuth },
     classController.getClassByTeacherId,
   );
   fastify.get(
     '/classes/student/:studentId',
-    { schema: getClassesByStudentIdSchema },
+    { schema: getClassesByStudentIdSchema, preHandler: requireAuth },
     classController.getClassesByStudentId,
   );
   fastify.get(
     '/classes/:classId/teachers/:teacherId/courses',
-    { schema: getTeacherCoursesInClassSchema },
+    { schema: getTeacherCoursesInClassSchema, preHandler: requireAuth },
     classController.getTeacherCoursesInClass,
   );
-  fastify.get('/classes/:id', { schema: getClassByIdSchema }, classController.getClassById);
+  fastify.get(
+    '/classes/:id',
+    { schema: getClassByIdSchema, preHandler: requireAuth },
+    classController.getClassById,
+  );
 
-  fastify.post('/classes', { schema: createClassSchema }, classController.createClass);
+  fastify.post('/classes', { schema: createClassSchema, preHandler: requireStaff }, classController.createClass);
 
   fastify.patch(
     '/classes/:id',
-    { schema: updateClassNameOrDescriptionSchema },
+    { schema: updateClassNameOrDescriptionSchema, preHandler: requireStaff },
     classController.updateClassNameOrDescription,
   );
 
   fastify.put(
     '/classes/:id/teachers',
-    { schema: updateClassTeacherListSchema },
+    { schema: updateClassTeacherListSchema, preHandler: requireStaff },
     classController.updateClassTeacherList,
   );
 
   fastify.put(
     '/classes/:id/students',
-    { schema: updateClassStudentListSchema },
+    { schema: updateClassStudentListSchema, preHandler: requireStaff },
     classController.updateClassStudentList,
   );
 
-  fastify.delete('/classes/:id', { schema: deleteClassSchema }, classController.deleteClass);
+  fastify.delete(
+    '/classes/:id',
+    { schema: deleteClassSchema, preHandler: requireStaff },
+    classController.deleteClass,
+  );
 }
-
