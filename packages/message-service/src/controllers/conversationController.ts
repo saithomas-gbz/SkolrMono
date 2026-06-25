@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
+import * as presence from '../utils/presence';
 
 interface JwtPayload {
   userId: string;
@@ -68,8 +69,71 @@ export default {
       orderBy: { joinedAt: 'desc' },
     });
 
-    const conversations = participations.map((p) => p.conversation);
+    const conversations = await Promise.all(
+      participations.map(async (p) => {
+        const unreadCount = await db.message.count({
+          where: {
+            conversationId: p.conversation.id,
+            senderId: { not: request.params.userId },
+            reads: { none: { userId: request.params.userId } },
+          },
+        });
+        return { ...p.conversation, unreadCount };
+      }),
+    );
+
     return reply.status(200).send({ data: conversations });
+  },
+
+  markConversationAsRead: async (
+    request: FastifyRequest<{ Params: { conversationId: string } }>,
+    reply: FastifyReply,
+  ) => {
+    const userId = getUserId(request);
+    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const participant = await db.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId: request.params.conversationId,
+          userId,
+        },
+      },
+    });
+    if (!participant) return reply.status(403).send({ error: 'Forbidden' });
+
+    const unreadMessages = await db.message.findMany({
+      where: {
+        conversationId: request.params.conversationId,
+        senderId: { not: userId },
+        reads: { none: { userId } },
+      },
+      select: { id: true, senderId: true },
+    });
+
+    if (unreadMessages.length === 0) {
+      return reply.status(200).send({ data: { messageIds: [] } });
+    }
+
+    const readAt = new Date();
+    await db.messageRead.createMany({
+      data: unreadMessages.map((m) => ({ messageId: m.id, userId, readAt })),
+      skipDuplicates: true,
+    });
+
+    const messageIds = unreadMessages.map((m) => m.id);
+    const senderIds = [...new Set(unreadMessages.map((m) => m.senderId))];
+    for (const senderId of senderIds) {
+      presence.sendToUser(senderId, {
+        type: 'read',
+        conversationId: request.params.conversationId,
+        messageIds,
+        readerId: userId,
+        readAt,
+      });
+    }
+
+    return reply.status(200).send({ data: { messageIds } });
   },
 
   getConversationById: async (
