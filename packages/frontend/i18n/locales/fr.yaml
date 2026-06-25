@@ -221,7 +221,7 @@ planning:
     students_tab: Élèves
     teachers_tab: Professeurs
     session: Session
-    user_id: Utilisateur (ID)
+    user_id: Utilisateur
     justified: Justifiée
     reason: Motif
     no_absences: Aucune absence enregistrée.
@@ -253,7 +253,7 @@ planning:
     review:
       tab: Justifications
       no_pending: Aucune demande en attente de validation.
-      student_id: Élève (ID)
+      student_id: Élève
       review_button: Examiner
       title: Examiner la demande
       comment: Commentaire
@@ -272,8 +272,8 @@ planning:
   session_dialog:
     edit: Modifier la session
     new: Nouvelle session
-    course_id: Cours (ID)
-    course_placeholder: UUID du cours
+    course_id: Cours
+    course_placeholder: Choisir un cours
     teacher_id: Professeur
     teacher_placeholder: Choisir un professeur
     room: Salle

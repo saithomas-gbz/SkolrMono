@@ -12,7 +12,9 @@
     </div>
 
     <DataTable v-else :value="justifications" data-key="id" class="table">
-      <Column field="studentId" :header="$t('planning.justifications.review.student_id')" />
+      <Column field="studentId" :header="$t('planning.justifications.review.student_id')">
+        <template #body="{ data }">{{ resolveUserName(data.studentId) }}</template>
+      </Column>
       <Column field="createdAt" :header="$t('planning.justifications.created_at')" sortable>
         <template #body="{ data }">{{ formatDatetime(data.createdAt) }}</template>
       </Column>
@@ -35,6 +37,7 @@
     <PlanningJustificationReviewDialog
       v-model:visible="reviewDialogVisible"
       :justification="selectedJustification"
+      :student-name="selectedJustification ? resolveUserName(selectedJustification.studentId) : ''"
       @saved="load"
     />
   </div>
@@ -43,10 +46,13 @@
 <script setup lang="ts">
 import { normalizeApiError } from '~/composables/useClass';
 import type { AbsenceJustification } from '~/composables/usePlanning';
+import type { UserProfile } from '~/composables/useUser';
 
 const { fetchAbsenceJustifications } = usePlanning();
+const { fetchUsersByIds } = useUser();
 
 const justifications = ref<AbsenceJustification[]>([]);
+const userProfiles = ref(new Map<string, UserProfile>());
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 const reviewDialogVisible = ref(false);
@@ -57,11 +63,18 @@ async function load() {
   fetchError.value = null;
   try {
     justifications.value = await fetchAbsenceJustifications({ status: 'PENDING' });
+    const profiles = await fetchUsersByIds(justifications.value.map((j) => j.studentId));
+    profiles.forEach((p) => userProfiles.value.set(p.id, p));
   } catch (e) {
     fetchError.value = normalizeApiError(e);
   } finally {
     pending.value = false;
   }
+}
+
+function resolveUserName(userId: string): string {
+  const profile = userProfiles.value.get(userId);
+  return profile?.name?.trim() || profile?.email || userId;
 }
 
 onMounted(load);
