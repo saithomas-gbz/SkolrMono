@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node';
 import Fastify from 'fastify';
+import fastifyJwt from '@fastify/jwt';
 import dotenv from 'dotenv';
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
@@ -18,6 +19,10 @@ Sentry.init({
 
 async function buildApp() {
   const app = Fastify({ logger: true });
+
+  await app.register(fastifyJwt, {
+    secret: process.env.JWT_SECRET!,
+  });
 
   await app.register(fastifySwagger, {
     openapi: {

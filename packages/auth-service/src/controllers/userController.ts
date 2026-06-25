@@ -108,13 +108,63 @@ const userController = {
         return reply.status(404).send({ error: 'User not found' });
       }
 
+      if (email && email !== existing.email) {
+        const emailTaken = await db.user.findUnique({ where: { email } });
+        if (emailTaken) {
+          return reply.status(409).send({ error: 'Email already in use' });
+        }
+      }
+
+      // Seul un ADMIN/PLATFORM_ADMIN peut changer le rôle ou l'établissement d'un compte
+      // (un utilisateur ne doit jamais pouvoir s'auto-promouvoir via son propre profil).
+      const isPrivileged = request.authUser?.role === 'ADMIN' || request.authUser?.role === 'PLATFORM_ADMIN';
+
       const user = await db.user.update({
         where: { id },
-        data: { name, email, role, establishmentId },
+        data: {
+          name,
+          email,
+          ...(isPrivileged ? { role, establishmentId } : {}),
+        },
         omit: { password: true },
       });
 
       return reply.send(user);
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
+
+  changePassword: async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { currentPassword, newPassword } = request.body as {
+        currentPassword: string;
+        newPassword: string;
+      };
+
+      const userId = request.authUser?.userId;
+      const existing = userId ? await db.user.findUnique({ where: { id: userId } }) : null;
+      if (!existing) {
+        return reply.status(404).send({ error: 'User not found' });
+      }
+
+      if (!existing.password) {
+        return reply.status(400).send({ error: 'Password change not available for this account' });
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, existing.password);
+      if (!passwordMatch) {
+        return reply.status(401).send({ error: 'Current password is incorrect' });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await db.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+
+      return reply.send({ message: 'Password updated successfully' });
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Internal server error' });

@@ -34,6 +34,7 @@ nav:
   parent_links: Liens parents
   messages: Messages
   administration: Administration
+  profile: Mon profil
   logout: Déconnexion
 
 auth:
@@ -70,10 +71,24 @@ auth:
     go_to_login: Se connecter
     missing_token: Lien de réinitialisation invalide (token manquant).
   validation:
+    name_required: Le nom est requis.
     email_required: "L'email est requis."
     email_invalid: Email invalide.
     password_required: Le mot de passe est requis.
     password_min: Au moins 6 caractères.
+
+profile:
+  title: Mon profil
+  info_title: Informations personnelles
+  password_change: Changer le mot de passe
+  save: Enregistrer
+  current_password: Mot de passe actuel
+  new_password: Nouveau mot de passe
+  confirm_password: Confirmer le nouveau mot de passe
+  password_mismatch: Les mots de passe ne correspondent pas.
+  update_success: Profil mis à jour avec succès.
+  password_update_success: Mot de passe mis à jour avec succès.
+  load_error: Impossible de charger votre profil.
 
 dashboard:
   title: Tableau de bord

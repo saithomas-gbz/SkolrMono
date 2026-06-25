@@ -82,6 +82,8 @@ export const getAllGradesSchema = {
   tags: [gradeTag],
   response: {
     200: gradeListResponse,
+    401: errorBody,
+    403: errorBody,
     500: errorBody,
   },
 } as const;
@@ -98,6 +100,8 @@ export const getGradeByIdSchema = {
   },
   response: {
     200: gradeResponse,
+    401: errorBody,
+    403: errorBody,
     404: errorBody,
     500: errorBody,
   },
@@ -115,6 +119,8 @@ export const getGradesByClassIdSchema = {
   },
   response: {
     200: gradeListResponse,
+    401: errorBody,
+    403: errorBody,
     500: errorBody,
   },
 } as const;
@@ -131,6 +137,8 @@ export const getGradesByUserIdSchema = {
   },
   response: {
     200: gradeListResponse,
+    401: errorBody,
+    403: errorBody,
     500: errorBody,
   },
 } as const;
@@ -155,6 +163,7 @@ export const createGradeSchema = {
   response: {
     201: gradeResponse,
     400: errorBody,
+    401: errorBody,
     403: errorBody,
     404: errorBody,
     500: errorBody,
@@ -182,6 +191,8 @@ export const updateGradeSchema = {
   },
   response: {
     200: gradeResponse,
+    401: errorBody,
+    403: errorBody,
     404: errorBody,
     500: errorBody,
   },
@@ -199,6 +210,8 @@ export const deleteGradeSchema = {
   },
   response: {
     200: gradeResponse,
+    401: errorBody,
+    403: errorBody,
     404: errorBody,
     500: errorBody,
   },

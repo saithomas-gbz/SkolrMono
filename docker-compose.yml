@@ -211,6 +211,7 @@ services:
     container_name: skolr_class_service
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
@@ -235,6 +236,7 @@ services:
     environment:
       - PORT=${GRADE_SERVICE_PORT:-3007}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?schema=public
+      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
       - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
