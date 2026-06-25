@@ -54,6 +54,7 @@ export default {
         senderId: userId,
         content: request.body.content,
       },
+      include: { reads: true, attachments: true },
     });
 
     const participants = await db.conversationParticipant.findMany({
