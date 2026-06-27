@@ -36,39 +36,12 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String              @id @default(uuid())
+  id             String       @id @default(uuid())
   conversationId String
   senderId       String
   content        String
-  sentAt         DateTime            @default(now())
-  conversation   Conversation        @relation(fields: [conversationId], references: [id])
-
-  attachments    MessageAttachment[]
-  reads          MessageRead[]
+  sentAt         DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
 
   @@index([conversationId, sentAt])
-}
-
-model MessageRead {
-  id        String   @id @default(uuid())
-  messageId String
-  userId    String
-  readAt    DateTime @default(now())
-  message   Message  @relation(fields: [messageId], references: [id])
-
-  @@unique([messageId, userId])
-  @@index([userId])
-}
-
-model MessageAttachment {
-  id         String   @id @default(uuid())
-  messageId  String
-  fileName   String
-  mimeType   String
-  sizeBytes  Int
-  storageKey String
-  uploadedAt DateTime @default(now())
-  message    Message  @relation(fields: [messageId], references: [id])
-
-  @@index([messageId])
 }

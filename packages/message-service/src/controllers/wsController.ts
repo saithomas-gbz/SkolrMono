@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import db from '../db';
-import * as presence from '../utils/presence';
+import * as presence from '../presence';
 
 interface JwtPayload {
   userId: string;

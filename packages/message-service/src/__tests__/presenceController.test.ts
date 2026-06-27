@@ -1,6 +1,6 @@
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import presenceController from '../controllers/presenceController';
-import * as presence from '../utils/presence';
+import * as presence from '../presence';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 // `../presence` est partagé avec presence.test.ts dans le même run : on patche

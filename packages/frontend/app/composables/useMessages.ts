@@ -1,19 +1,12 @@
 import { normalizeApiError } from '~/composables/useClass';
 import { useAuthTokenCookie } from '~/composables/authSession';
 
-export type MessageRead = {
-  id: string;
-  userId: string;
-  readAt: string;
-};
-
 export type Message = {
   id: string;
   conversationId: string;
   senderId: string;
   content: string;
   sentAt: string;
-  reads: MessageRead[];
 };
 
 export type ConversationParticipant = {
@@ -30,13 +23,11 @@ export type Conversation = {
   updatedAt: string;
   participants: ConversationParticipant[];
   messages: Message[];
-  unreadCount: number;
 };
 
 type RealtimeEvent =
   | { type: 'message'; data: Message }
-  | { type: 'presence'; userId: string; online: boolean }
-  | { type: 'read'; conversationId: string; messageIds: string[]; readerId: string; readAt: string };
+  | { type: 'presence'; userId: string; online: boolean };
 
 const FALLBACK_CONVERSATIONS_INTERVAL_MS = 20_000;
 const FALLBACK_MESSAGES_INTERVAL_MS = 5_000;
@@ -85,7 +76,7 @@ export function useMessages() {
         loading.value = true;
       }
       const response = await api<{ data: Message[] }>(`/message/conversations/${conversationId}/messages`);
-      currentMessages.value = response.data.map((m) => ({ reads: [], ...m }));
+      currentMessages.value = response.data;
     } catch (e) {
       if (!opts.silent) error.value = normalizeApiError(e);
     } finally {
@@ -101,23 +92,11 @@ export function useMessages() {
         method: 'POST',
         body: { content },
       });
-      currentMessages.value.push({ reads: [], ...response.data });
+      currentMessages.value.push(response.data);
     } catch (e) {
       error.value = normalizeApiError(e);
     } finally {
       sending.value = false;
-    }
-  }
-
-  async function markAsRead(conversationId: string) {
-    const conversation = conversations.value.find((c) => c.id === conversationId);
-    if (!conversation || !conversation.unreadCount) return;
-    try {
-      await api(`/message/conversations/${conversationId}/read`, { method: 'PATCH' });
-      conversation.unreadCount = 0;
-    } catch {
-
-      // Le marquage comme lu est un confort d'affichage : un échec ne doit pas bloquer la messagerie.
     }
   }
 
@@ -169,18 +148,8 @@ export function useMessages() {
       return;
     }
 
-    if (event.type === 'read') {
-      for (const message of currentMessages.value) {
-        if (!event.messageIds.includes(message.id)) continue;
-        if (!message.reads) message.reads = [];
-        if (message.reads.some((r) => r.userId === event.readerId)) continue;
-        message.reads.push({ id: `${message.id}:${event.readerId}`, userId: event.readerId, readAt: event.readAt });
-      }
-      return;
-    }
-
     if (event.data.conversationId === getActiveConversationId?.()) {
-      currentMessages.value.push({ reads: [], ...event.data });
+      currentMessages.value.push(event.data);
     }
 
     const conversation = conversations.value.find((c) => c.id === event.data.conversationId);
@@ -258,7 +227,6 @@ export function useMessages() {
     fetchConversations,
     fetchMessages,
     sendMessage,
-    markAsRead,
     createConversation,
     fetchPresence,
     connectRealtime,

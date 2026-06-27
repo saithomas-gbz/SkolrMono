@@ -391,10 +391,6 @@ messages:
   default_conversation_name: Conversation
   presence_online: En ligne
   presence_offline: Hors ligne
-  unread_badge: "{count} message non lu | {count} messages non lus"
-  read_receipt_sent: Envoyé
-  read_receipt_read: Lu
-  read_by: "Lu par {names}"
   new_conversation_dialog:
     title: Nouvelle conversation
     name_label: Nom de la conversation (optionnel)

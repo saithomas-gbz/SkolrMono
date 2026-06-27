@@ -2,7 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { publish } from '@skolr/rabbitmq';
 import db from '../db';
 import { getUserId } from './conversationController';
-import * as presence from '../utils/presence';
+import * as presence from '../presence';
 
 export default {
   getMessages: async (
@@ -25,7 +25,6 @@ export default {
     const messages = await db.message.findMany({
       where: { conversationId: request.params.conversationId },
       orderBy: { sentAt: 'asc' },
-      include: { reads: true, attachments: true },
     });
 
     return reply.status(200).send({ data: messages });
@@ -54,7 +53,6 @@ export default {
         senderId: userId,
         content: request.body.content,
       },
-      include: { reads: true, attachments: true },
     });
 
     const participants = await db.conversationParticipant.findMany({

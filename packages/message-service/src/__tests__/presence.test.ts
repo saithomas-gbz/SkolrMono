@@ -1,5 +1,5 @@
 import { describe, it, expect, mock } from 'bun:test';
-import * as presence from '../utils/presence';
+import * as presence from '../presence';
 
 function buildSocket(readyState = 1) {
   return {
