@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:test';
 import wsController from '../controllers/wsController';
 import db from '../db';
-import * as presence from '../presence';
+import * as presence from '../utils/presence';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 mock.module('../db', () => ({

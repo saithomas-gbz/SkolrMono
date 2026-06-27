@@ -38,6 +38,13 @@
               :aria-label="isAnyOnline(conv) ? $t('messages.presence_online') : $t('messages.presence_offline')"
             />
             {{ convDisplayName(conv) }}
+            <Badge
+              v-if="conv.unreadCount > 0"
+              class="unread-badge"
+              severity="danger"
+              :value="unreadBadgeValue(conv.unreadCount)"
+              :aria-label="$t('messages.unread_badge', { count: conv.unreadCount }, conv.unreadCount)"
+            />
           </div>
           <div v-if="conv.messages[0]" class="conv-preview">{{ conv.messages[0].content }}</div>
         </li>
@@ -81,7 +88,15 @@
               <div class="message-bubble">
                 <span class="message-content">{{ msg.content }}</span>
               </div>
-              <span class="message-time">{{ formatTime(msg.sentAt) }}</span>
+              <span class="message-time">
+                {{ formatTime(msg.sentAt) }}
+                <i
+                  v-if="msg.senderId === userId"
+                  v-tooltip.top="readReceiptTooltip(msg)"
+                  class="pi read-receipt"
+                  :class="allRead(msg) ? 'pi-check-circle read-receipt-read' : 'pi-check'"
+                />
+              </span>
             </div>
             <div ref="messagesEnd" />
           </div>
@@ -122,7 +137,7 @@ import Badge from 'primevue/badge';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Textarea from 'primevue/textarea';
-import type { Conversation, ConversationParticipant } from '~/composables/useMessages';
+import type { Conversation, ConversationParticipant, Message as ChatMessage } from '~/composables/useMessages';
 import type { UserProfile } from '~/composables/useUser';
 
 definePageMeta({ middleware: 'auth' });
@@ -139,6 +154,7 @@ const {
   fetchConversations,
   fetchMessages,
   sendMessage,
+  markAsRead,
   fetchPresence,
   connectRealtime,
   disconnectRealtime,
@@ -195,6 +211,7 @@ function presenceLabel(participantId: string): string {
 async function selectConversation(conv: Conversation) {
   selectedConversationId.value = conv.id;
   await fetchMessages(conv.id);
+  await markAsRead(conv.id);
 }
 
 async function onConversationCreated(conv: Conversation) {
@@ -211,7 +228,28 @@ async function handleSend() {
 
 watch(currentMessages, () => {
   nextTick(() => messagesEnd.value?.scrollIntoView({ behavior: 'smooth' }));
+
+  const lastMessage = currentMessages.value[currentMessages.value.length - 1];
+  if (lastMessage && lastMessage.senderId !== userId.value && selectedConversationId.value) {
+    markAsRead(selectedConversationId.value);
+  }
 });
+
+function unreadBadgeValue(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
+
+function allRead(msg: ChatMessage): boolean {
+  if (!selectedConversation.value) return false;
+  const otherIds = otherParticipants(selectedConversation.value).map((p) => p.userId);
+  return otherIds.length > 0 && otherIds.every((id) => (msg.reads ?? []).some((r) => r.userId === id));
+}
+
+function readReceiptTooltip(msg: ChatMessage): string {
+  if (msg.reads.length === 0) return t('messages.read_receipt_sent');
+  const names = msg.reads.map((r) => senderName(r.userId)).join(', ');
+  return t('messages.read_by', { names });
+}
 
 function convDisplayName(conv: Conversation): string {
   if (conv.name) return conv.name;
@@ -305,6 +343,10 @@ function formatTime(sentAt: string): string {
   border-radius: 50%;
 }
 
+.unread-badge {
+  margin-left: auto;
+}
+
 .conv-preview {
   font-size: 0.75rem;
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
@@ -390,10 +432,21 @@ function formatTime(sentAt: string): string {
 }
 
 .message-time {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
   font-size: 0.65rem;
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   margin-top: 0.2rem;
   padding: 0 0.25rem;
+}
+
+.read-receipt {
+  font-size: 0.7rem;
+}
+
+.read-receipt-read {
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
 }
 
 .message-input-row {

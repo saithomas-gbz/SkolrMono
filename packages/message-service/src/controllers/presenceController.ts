@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { getUserId } from './conversationController';
-import * as presence from '../presence';
+import * as presence from '../utils/presence';
 
 export default {
   getPresence: async (

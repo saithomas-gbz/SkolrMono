@@ -2,7 +2,7 @@ import { describe, it, expect, mock, beforeEach, afterEach, spyOn } from 'bun:te
 import messageController from '../controllers/messageController';
 import db from '../db';
 import { publish } from '@skolr/rabbitmq';
-import * as presence from '../presence';
+import * as presence from '../utils/presence';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 mock.module('../db', () => ({
@@ -159,6 +159,7 @@ describe('messageController.getMessages', () => {
     expect(prismaMock.message.findMany).toHaveBeenCalledWith({
       where: { conversationId: 'conv-1' },
       orderBy: { sentAt: 'asc' },
+      include: { reads: true, attachments: true },
     });
     expect(reply.status).toHaveBeenCalledWith(200);
     expect(reply.send).toHaveBeenCalledWith({ data: messages });
