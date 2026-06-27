@@ -86,7 +86,16 @@
                 {{ senderName(msg.senderId) }}
               </span>
               <div class="message-bubble">
-                <span class="message-content">{{ msg.content }}</span>
+                <span v-if="msg.content" class="message-content">{{ msg.content }}</span>
+                <div v-if="msg.attachments?.length" class="message-attachments">
+                  <MessagesAttachmentPreview
+                    v-for="att in msg.attachments"
+                    :key="att.id"
+                    :attachment="att"
+                    :conversation-id="msg.conversationId"
+                    @download="downloadAttachment(msg.conversationId, att.id, att.fileName)"
+                  />
+                </div>
               </div>
               <span class="message-time">
                 {{ formatTime(msg.sentAt) }}
@@ -102,22 +111,47 @@
           </div>
         </div>
 
-        <div class="message-input-row">
-          <Textarea
-            v-model="newMessage"
-            class="message-input"
-            :placeholder="$t('messages.placeholder')"
-            :auto-resize="true"
-            rows="1"
-            @keydown.enter.exact.prevent="handleSend"
-          />
-          <Button
-            icon="pi pi-send"
-            :loading="sending"
-            :disabled="!newMessage.trim()"
-            :aria-label="$t('messages.send')"
-            @click="handleSend"
-          />
+        <div class="message-input-area">
+          <div v-if="pendingFiles.length > 0" class="pending-files">
+            <Chip
+              v-for="(file, i) in pendingFiles"
+              :key="i"
+              :label="file.name"
+              removable
+              @remove="removeFile(i)"
+            />
+          </div>
+          <div class="message-input-row">
+            <input
+              ref="fileInput"
+              type="file"
+              multiple
+              hidden
+              @change="onFilesSelected"
+            />
+            <Button
+              icon="pi pi-paperclip"
+              text
+              rounded
+              :aria-label="$t('messages.attach_file')"
+              @click="fileInput?.click()"
+            />
+            <Textarea
+              v-model="newMessage"
+              class="message-input"
+              :placeholder="$t('messages.placeholder')"
+              :auto-resize="true"
+              rows="1"
+              @keydown.enter.exact.prevent="handleSend"
+            />
+            <Button
+              icon="pi pi-send"
+              :loading="sending"
+              :disabled="!newMessage.trim() && pendingFiles.length === 0"
+              :aria-label="$t('messages.send')"
+              @click="handleSend"
+            />
+          </div>
         </div>
       </template>
       <div v-else class="empty-state">
@@ -135,6 +169,7 @@
 <script setup lang="ts">
 import Badge from 'primevue/badge';
 import Button from 'primevue/button';
+import Chip from 'primevue/chip';
 import Message from 'primevue/message';
 import Textarea from 'primevue/textarea';
 import type { Conversation, ConversationParticipant, Message as ChatMessage } from '~/composables/useMessages';
@@ -154,6 +189,7 @@ const {
   fetchConversations,
   fetchMessages,
   sendMessage,
+  downloadAttachment,
   markAsRead,
   fetchPresence,
   connectRealtime,
@@ -169,6 +205,8 @@ const newMessage = ref('');
 const newConvVisible = ref(false);
 const messagesEnd = ref<HTMLElement | null>(null);
 const userProfiles = ref(new Map<string, UserProfile>());
+const fileInput = ref<HTMLInputElement | null>(null);
+const pendingFiles = ref<File[]>([]);
 
 onMounted(async () => {
   if (userId.value) {
@@ -220,10 +258,25 @@ async function onConversationCreated(conv: Conversation) {
   await fetchMessages(conv.id);
 }
 
+function onFilesSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  if (!input.files) return;
+  for (const file of Array.from(input.files)) {
+    pendingFiles.value.push(file);
+  }
+  input.value = '';
+}
+
+function removeFile(index: number) {
+  pendingFiles.value.splice(index, 1);
+}
+
 async function handleSend() {
-  if (!selectedConversationId.value || !newMessage.value.trim()) return;
-  await sendMessage(selectedConversationId.value, newMessage.value.trim());
+  if (!selectedConversationId.value) return;
+  if (!newMessage.value.trim() && pendingFiles.value.length === 0) return;
+  await sendMessage(selectedConversationId.value, newMessage.value.trim(), pendingFiles.value);
   newMessage.value = '';
+  pendingFiles.value = [];
 }
 
 watch(currentMessages, () => {
@@ -449,13 +502,23 @@ function formatTime(sentAt: string): string {
   color: var(--p-primary-color, var(--skolr-color-brand-green));
 }
 
+.message-input-area {
+  border-top: 1px solid var(--p-surface-border, var(--skolr-color-border));
+  flex-shrink: 0;
+}
+
+.pending-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem 0;
+}
+
 .message-input-row {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-top: 1px solid var(--p-surface-border, var(--skolr-color-border));
-  flex-shrink: 0;
+  padding: 0.5rem 1rem 0.75rem;
 }
 
 .message-input {
@@ -463,6 +526,13 @@ function formatTime(sentAt: string): string {
   resize: none;
   max-height: 8rem;
   overflow-y: auto;
+}
+
+.message-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
 }
 
 .empty-state {

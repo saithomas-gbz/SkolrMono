@@ -23,8 +23,9 @@ pids
 # TypeScript
 *.tsbuildinfo
 
-# Documents de justification uploadés en dev (issue #80, bind mount docker-compose)
+# Documents uploadés en dev (bind mount docker-compose)
 packages/planning-services/uploads/
+packages/message-service/uploads/
 
 # Build output (any dist/ directory in the repo)
 dist/

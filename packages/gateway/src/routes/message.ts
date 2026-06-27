@@ -58,6 +58,21 @@ export default async function messageRoutes(fastify: FastifyInstance) {
     },
   );
 
+  // Envoi multipart (pièces jointes) : body transmis tel quel à message-service.
+  // Contexte scoped pour ne pas interférer avec le parsing JSON des autres routes.
+  await fastify.register(async (scoped) => {
+    scoped.addContentTypeParser('multipart/form-data', { parseAs: 'buffer' }, (_request, body, done) => {
+      done(null, body);
+    });
+    scoped.post(
+      '/message/conversations/:conversationId/messages',
+      { schema: { hide: true } },
+      async (request, reply) => {
+        await fastify.proxyToMessageService(request, reply);
+      },
+    );
+  });
+
   fastify.all(
     '/message/*',
     {
