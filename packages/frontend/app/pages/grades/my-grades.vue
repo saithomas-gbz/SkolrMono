@@ -1,7 +1,19 @@
 <template>
   <div class="page">
     <Card>
-      <template #title>{{ $t('grades.my_grades.title') }}</template>
+      <template #title>
+        <div class="title-row">
+          <span>{{ $t('grades.my_grades.title') }}</span>
+          <Button
+            v-if="canAccess && !pending && courseGroups.length > 0"
+            icon="pi pi-download"
+            :label="downloading ? $t('grades.my_grades.downloading') : $t('grades.my_grades.download_bulletin')"
+            :loading="downloading"
+            size="small"
+            @click="downloadBulletin"
+          />
+        </div>
+      </template>
       <template #content>
         <Message v-if="!canAccess" severity="warn" :closable="false">
           {{ $t('grades.my_grades.restricted') }}
@@ -62,18 +74,23 @@
 
 <script setup lang="ts">
 import { useGrade, averageGradeValues, type GradeCourse, type GradeEntity } from '~/composables/useGrade';
+import { useAuthTokenCookie } from '~/composables/authSession';
 
 definePageMeta({ middleware: ['auth'] });
 
 const { t } = useI18n();
 const { hasRole, userId } = useAuth();
 const { fetchGradesByUserId, normalizeApiError } = useGrade();
+const config = useRuntimeConfig();
+const authTokenCookie = useAuthTokenCookie();
+const toast = useToast();
 
 const canAccess = computed(() => hasRole('USER'));
 
 const grades = ref<GradeEntity[]>([]);
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
+const downloading = ref(false);
 
 type CourseGroup = {
   course: GradeCourse;
@@ -143,6 +160,31 @@ function formatScore(value: number): string {
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
+
+async function downloadBulletin() {
+  if (!userId.value) return;
+  downloading.value = true;
+  try {
+    const response = await fetch(
+      `${config.public.gatewayBaseUrl}/grade/users/${userId.value}/bulletin`,
+      { headers: { Authorization: `Bearer ${authTokenCookie.value ?? ''}` } },
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bulletin.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    toast.add({ severity: 'error', summary: t('grades.my_grades.download_error'), life: 5000 });
+  } finally {
+    downloading.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -150,6 +192,14 @@ function formatDate(iso: string): string {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
 }
 
 .loading {

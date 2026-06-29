@@ -365,6 +365,9 @@ grades:
     date: Date
     grade: Note
     comment: Appréciation
+    download_bulletin: Télécharger le bulletin PDF
+    downloading: Téléchargement…
+    download_error: "Impossible de générer le bulletin. Veuillez réessayer."
 
 teacher:
   students_title: Mes élèves
