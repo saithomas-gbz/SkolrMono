@@ -7,6 +7,15 @@ export type MessageRead = {
   readAt: string;
 };
 
+export type MessageAttachment = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string;
+  uploadedAt: string;
+};
+
 export type Message = {
   id: string;
   conversationId: string;
@@ -14,6 +23,7 @@ export type Message = {
   content: string;
   sentAt: string;
   reads: MessageRead[];
+  attachments: MessageAttachment[];
 };
 
 export type ConversationParticipant = {
@@ -85,7 +95,7 @@ export function useMessages() {
         loading.value = true;
       }
       const response = await api<{ data: Message[] }>(`/message/conversations/${conversationId}/messages`);
-      currentMessages.value = response.data.map((m) => ({ reads: [], ...m }));
+      currentMessages.value = response.data.map((m) => ({ reads: [], attachments: [], ...m }));
     } catch (e) {
       if (!opts.silent) error.value = normalizeApiError(e);
     } finally {
@@ -93,20 +103,45 @@ export function useMessages() {
     }
   }
 
-  async function sendMessage(conversationId: string, content: string) {
+  async function sendMessage(conversationId: string, content: string, files: File[] = []) {
     try {
       error.value = null;
       sending.value = true;
-      const response = await api<{ data: Message }>(`/message/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        body: { content },
-      });
-      currentMessages.value.push({ reads: [], ...response.data });
+      let response: { data: Message };
+      if (files.length > 0) {
+        const form = new FormData();
+        form.append('content', content);
+        for (const file of files) {
+          form.append('file', file);
+        }
+        response = await api<{ data: Message }>(`/message/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          body: form,
+        });
+      } else {
+        response = await api<{ data: Message }>(`/message/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          body: { content },
+        });
+      }
+      currentMessages.value.push({ reads: [], attachments: [], ...response.data });
     } catch (e) {
       error.value = normalizeApiError(e);
     } finally {
       sending.value = false;
     }
+  }
+
+  async function downloadAttachment(conversationId: string, attachmentId: string, fileName: string) {
+    const blob = await api<Blob>(`/message/conversations/${conversationId}/attachments/${attachmentId}`, {
+      responseType: 'blob',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   async function markAsRead(conversationId: string) {
@@ -180,7 +215,7 @@ export function useMessages() {
     }
 
     if (event.data.conversationId === getActiveConversationId?.()) {
-      currentMessages.value.push({ reads: [], ...event.data });
+      currentMessages.value.push({ reads: [], attachments: [], ...event.data });
     }
 
     const conversation = conversations.value.find((c) => c.id === event.data.conversationId);
@@ -258,6 +293,7 @@ export function useMessages() {
     fetchConversations,
     fetchMessages,
     sendMessage,
+    downloadAttachment,
     markAsRead,
     createConversation,
     fetchPresence,
