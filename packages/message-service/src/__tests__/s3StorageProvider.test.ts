@@ -24,8 +24,6 @@ mock.module('@aws-sdk/client-s3', () => ({
 // Import après mock.module
 const { S3StorageProvider } = await import('../lib/storage/s3StorageProvider');
 
-const TEST_BUCKET = process.env.S3_BUCKET || 'skolr-messages';
-
 describe('S3StorageProvider', () => {
   beforeEach(() => {
     mockSend.mockReset();
