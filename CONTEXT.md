@@ -20,61 +20,64 @@ Les établissements pilotes utilisent des outils disparates (Excel, logiciels ob
 | Couche | Technologie |
 |--------|-------------|
 | Runtime | Bun |
-| Backend | TypeScript · Fastify · Prisma |
-| Base de données | PostgreSQL (une BDD par service) |
+| Backend | TypeScript · Fastify · Prisma (monolithe modulaire) |
+| Base de données | PostgreSQL (une base unique, multi-schema) |
 | Frontend | Nuxt · PrimeVue |
 | Infra | Docker · CI/CD |
 | Auth | OAuth Google · JWT · RBAC |
-| Communication | API Gateway · Kafka (message broker) · Redis (cache/sessions) |
+| Communication | Bus d'événements in-process (EventEmitter) |
 | IA | Serveur MCP |
 
 ## Architecture
 
-Architecture **microservices** avec une API Gateway centralisée comme point d'entrée unique. Chaque service est indépendant, conteneurisé via Docker, avec sa propre base de données PostgreSQL.
+Architecture **monolithe modulaire** (#114) : un seul backend Fastify déployable, une seule base PostgreSQL multi-schema. Chaque domaine métier est un **plugin Fastify** monté sous son préfixe (`/auth`, `/class`, `/grade`…), ce qui conserve le contrat d'API historique (le frontend est inchangé). L'ancien découpage (8 microservices + API Gateway + RabbitMQ, une base par service) a été fusionné : le gateway est absorbé (les préfixes deviennent les points de montage), et la communication inter-domaines passe d'appels HTTP / d'un exchange RabbitMQ à des **appels de fonction intra-process** et un **bus d'événements in-process**.
 
-### Services
+### Modules (`packages/backend/src/modules/<domaine>`)
 
-| Service | Responsabilité | BDD |
-|---------|---------------|-----|
-| `auth-service` | Authentification, OAuth, JWT, RBAC, sessions Redis | PostgreSQL Users |
-| `class-service` | Gestion des classes, élèves, enseignants | PostgreSQL Class |
-| `planning-service` | Emplois du temps, absences, alertes | PostgreSQL Planning |
-| `grade-service` | Notes, bulletins, évaluations, cours | PostgreSQL Grades |
-| `message-service` | Conversations, messagerie interne | PostgreSQL Messages |
-| `notification-service` | Notifications email, SMS, push | — |
-| `parent-service` | Liaison parent ↔ élève | — |
-| `frontend` | Interface Nuxt + PrimeVue (SSR/SSG) | — |
-| `mcp-server` | Serveur MCP pour fonctionnalités IA | — |
+| Module | Préfixe | Responsabilité |
+|--------|---------|----------------|
+| `auth` | `/auth` | Authentification, OAuth, JWT, RBAC, invitations, reset mot de passe |
+| `class` | `/class` | Gestion des classes, élèves, enseignants |
+| `grade` | `/grade` | Notes, devoirs, évaluations, cours, matières |
+| `planning` | `/planning` | Emplois du temps, sessions, absences, justificatifs |
+| `message` | `/message` | Conversations, messagerie interne, pièces jointes |
+| `notification` | `/notification` | Notifications (consommateurs d'événements) |
+| `parent` | `/parent` | Liaison parent ↔ élève |
+| `billing` | `/billing` | Établissements, abonnements Stripe |
 
-### Communication inter-services
+Le `frontend` (Nuxt + PrimeVue, SSR/SSG) reste un package séparé et dialogue avec le backend via son proxy `/api/*`.
 
-- **Synchrone** → API Gateway (REST)
-- **Asynchrone** → Kafka (événements inter-services)
+### Communication inter-domaines
 
-#### Exemples d'événements Kafka
+- **Synchrone** → appels de fonction intra-process (ex. `class/service.ts`, `auth/service.ts`) via les `lib/*ServiceClient.ts` (signatures conservées).
+- **Asynchrone** → bus d'événements in-process (`src/shared/events`), mêmes clés de routage que l'ancien exchange RabbitMQ.
+
+#### Exemples d'événements (bus in-process)
 
 | Producteur | Événement | Consommateur |
 |-----------|-----------|-------------|
-| `auth-service` | `user.created` | `notification-service` |
-| `planning-service` | `absence.detected` | `notification-service` |
-| `message-service` | `message.received` | `notification-service` |
-| `class-service` | `student.enrolled` | `auth-service` |
+| `auth` | `user.created` | `notification` |
+| `planning` | `absence.*` | `notification` |
+| `message` | `message.received` | `notification` |
+| `class` | `student.enrolled` | `notification` |
+| `billing` | `billing.*` | `notification` |
 
-## Modèle de données (DBML)
+## Modèle de données
 
-Chaque service dispose de ses propres tables. Les données partagées entre services sont **dupliquées localement** (pattern de copie locale) pour garantir l'indépendance et éviter les appels cross-service synchrones.
+Une seule base PostgreSQL, **multi-schema** : chaque domaine possède son schéma (`auth`, `class`, `grade`, `planning`, `message`, `notification`, `billing`, `parent`), déclaré dans un `schema.prisma` consolidé (`packages/backend/prisma/schema.prisma`). Les copies locales historiques (ex. User/Class/Course du domaine grade) sont conservées mais renommées (`GradeUser`/`GradeClass`/`GradeCourse`) pour éviter les collisions entre schémas.
 
-### Services et tables
+### Schémas et modèles principaux
 
-| Service | Tables principales |
-|---------|-------------------|
-| `auth-service` | `users_auth`, `accounts` |
-| `class-service` | `classes`, `class_teachers`, `class_students` |
-| `grade-service` | `grades`, `courses`, `users_grade`, `classes_grade` |
-| `planning-service` | `absences`, `users_absence`, `classes_absence` |
-| `message-service` | `messages`, `conversations`, `conversation_participants`, `users_message` |
-| `notification-service` | `notifications`, `users_notification` |
-| `parent-service` | `parent_students`, `users_parent` |
+| Schéma | Modèles principaux |
+|--------|--------------------|
+| `auth` | `User`, `Account`, `InvitationToken`, `PasswordResetToken` |
+| `class` | `Class`, `ClassTeacher`, `ClassStudent`, `Course` |
+| `grade` | `Grade`, `Assignment`, `GradeCourse`, `Subject`, `Topic`, `GradeUser`, `GradeClass` |
+| `planning` | `Session`, `Absence`, `AbsenceJustification`, `JustificationDocument` |
+| `message` | `Conversation`, `ConversationParticipant`, `Message`, `MessageRead`, `MessageAttachment` |
+| `notification` | `Notification` |
+| `billing` | `Establishment`, `EstablishmentMember`, `Subscription`, `StripeWebhookEvent` |
+| `parent` | `ParentStudent` |
 
 ## Méthodologie
 
