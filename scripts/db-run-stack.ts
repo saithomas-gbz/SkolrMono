@@ -29,10 +29,8 @@ async function main() {
   console.log('\n✓ Stack DB ready (postgres up, migrations applied' +
     (skipSeed ? '' : ', dev data seeded') +
     ').');
-  console.log('  Auth DB:  localhost:5432 / skolr_auth');
-  console.log('  Class DB: localhost:5433 / skolr_class');
-  console.log('  Grade DB: localhost:5434 / skolr_grade');
-  console.log('  Next: bun run seed:dev (if you skipped seed) or start services.');
+  console.log('  DB: localhost:5432 / skolr (base unique multi-schema)');
+  console.log('  Next: bun run seed:dev (if you skipped seed) or start the backend.');
 }
 
 main().catch((err) => {

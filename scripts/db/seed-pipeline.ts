@@ -1,7 +1,5 @@
 import { DB_SERVICES } from './registry';
-import { ensurePackageEnv, runPackageScript, runWorkspaceScript } from './run-package';
-
-const OPTIONAL_SEED = [{ packageDir: 'gateway', script: 'seed:dev' as const }];
+import { ensurePackageEnv, runPackageScript } from './run-package';
 
 export async function runSeedPipeline(only?: string) {
   const services = only
@@ -17,11 +15,5 @@ export async function runSeedPipeline(only?: string) {
   for (const service of services) {
     const databaseUrl = ensurePackageEnv(service);
     await runPackageScript(service, service.seedScript!, databaseUrl);
-  }
-
-  if (!only) {
-    for (const step of OPTIONAL_SEED) {
-      await runWorkspaceScript(step.packageDir, step.script);
-    }
   }
 }

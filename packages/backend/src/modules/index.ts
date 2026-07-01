@@ -13,7 +13,7 @@ import notificationModule, { notificationOpenApiTags } from './notification';
  * (ex. `/auth`, `/class`). Le préfixe conserve le contrat d'API historique du
  * gateway, si bien que le frontend reste inchangé.
  */
-export interface AppModule {
+interface AppModule {
   prefix: string;
   plugin: FastifyPluginAsync;
   /** Tag OpenAPI + description, agrégés dans la doc Swagger unifiée. */

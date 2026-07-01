@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-export interface AuthJwtPayload {
+interface AuthJwtPayload {
   userId: string;
   email: string;
   role: string;

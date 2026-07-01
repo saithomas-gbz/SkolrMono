@@ -1,6 +1,8 @@
 /**
- * DB-backed services in dependency order (auth before class).
- * Add a new service here when it gets Prisma + docker postgres.
+ * Base de données du monolithe modulaire (#114) : un seul backend, une seule
+ * base Postgres multi-schema. Historiquement un tableau (un service = une base) ;
+ * conservé sous forme de tableau à une entrée pour ne pas réécrire les scripts
+ * d'orchestration (migrate/seed/run-stack).
  */
 export type DbService = {
   packageDir: string;
@@ -13,50 +15,10 @@ export type DbService = {
 
 export const DB_SERVICES: DbService[] = [
   {
-    packageDir: 'auth-service',
+    packageDir: 'backend',
     composeService: 'postgres',
     defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5432/skolr_auth?schema=public',
-    migrateScript: 'db:migrate:deploy',
-    seedScript: 'db:seed',
-  },
-  {
-    packageDir: 'billing-service',
-    composeService: 'postgres-billing',
-    defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5438/skolr_billing?schema=public',
-    migrateScript: 'db:migrate:deploy',
-    seedScript: 'db:seed',
-  },
-  {
-    packageDir: 'parent-service',
-    composeService: 'postgres-parent',
-    defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5439/skolr_parent?schema=public',
-    migrateScript: 'db:migrate:deploy',
-    seedScript: 'db:seed',
-  },
-  {
-    packageDir: 'class-service',
-    composeService: 'postgres-class',
-    defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5433/skolr_class?schema=public',
-    migrateScript: 'db:migrate:deploy',
-    seedScript: 'db:seed',
-  },
-  {
-    packageDir: 'grade-service',
-    composeService: 'postgres-grade',
-    defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5434/skolr_grade?schema=public',
-    migrateScript: 'db:migrate:deploy',
-    seedScript: 'db:seed',
-  },
-  {
-    packageDir: 'planning-services',
-    composeService: 'postgres-planning',
-    defaultDatabaseUrl:
-      'postgresql://postgres:postgres@localhost:5435/skolr_planning?schema=public',
+      'postgresql://postgres:postgres@localhost:5432/skolr?schema=public',
     migrateScript: 'db:migrate:deploy',
     seedScript: 'db:seed',
   },

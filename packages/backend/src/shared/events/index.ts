@@ -15,8 +15,6 @@ import { EventEmitter } from 'node:events';
  * - le payload est sérialisé/désérialisé en JSON (Date -> string ISO) pour rester
  *   identique au comportement réseau précédent.
  */
-export const EXCHANGE = 'skolr.events';
-
 const emitter = new EventEmitter();
 // Plusieurs consumers peuvent écouter la même clé sans plafond de listeners.
 emitter.setMaxListeners(0);

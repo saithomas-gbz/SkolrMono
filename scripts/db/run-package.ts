@@ -48,7 +48,7 @@ export function ensurePackageEnv(service: DbService): string {
   return service.defaultDatabaseUrl;
 }
 
-export async function runWorkspaceScript(
+async function runWorkspaceScript(
   packageDir: string,
   script: string,
   extraEnv: Record<string, string | undefined> = {},

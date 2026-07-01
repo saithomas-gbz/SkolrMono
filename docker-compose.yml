@@ -5,11 +5,11 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_AUTH_DB:-skolr_auth}
+      POSTGRES_DB: ${POSTGRES_DB:-skolr}
     ports:
-      - "${POSTGRES_AUTH_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_auth_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 5s
@@ -17,169 +17,22 @@ services:
       retries: 5
     networks:
       - skolr_network
-  postgres-class:
-    image: postgres:15-alpine
-    container_name: skolr_class_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_CLASS_DB:-skolr_class}
-    ports:
-      - "${POSTGRES_CLASS_PORT:-5433}:5432"
-    volumes:
-      - postgres_class_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  postgres-grade:
-    image: postgres:15-alpine
-    container_name: skolr_grade_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_GRADE_DB:-skolr_grade}
-    ports:
-      - "${POSTGRES_GRADE_PORT:-5434}:5432"
-    volumes:
-      - postgres_grade_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: skolr_rabbitmq
-    ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-      - rabbitmq_log:/var/log/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    networks:
-      - skolr_network
-  postgres-notification:
-    image: postgres:15-alpine
-    container_name: skolr_notification_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_NOTIFICATION_DB:-skolr_notification}
-    ports:
-      - "${POSTGRES_NOTIFICATION_PORT:-5436}:5432"
-    volumes:
-      - postgres_notification_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  postgres-message:
-    image: postgres:15-alpine
-    container_name: skolr_message_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_MESSAGE_DB:-skolr_message}
-    ports:
-      - "${POSTGRES_MESSAGE_PORT:-5437}:5432"
-    volumes:
-      - postgres_message_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  postgres-billing:
-    image: postgres:15-alpine
-    container_name: skolr_billing_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_BILLING_DB:-skolr_billing}
-    ports:
-      - "${POSTGRES_BILLING_PORT:-5438}:5432"
-    volumes:
-      - postgres_billing_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  postgres-parent:
-    image: postgres:15-alpine
-    container_name: skolr_parent_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_PARENT_DB:-skolr_parent}
-    ports:
-      - "${POSTGRES_PARENT_PORT:-5439}:5432"
-    volumes:
-      - postgres_parent_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  postgres-planning:
-    image: postgres:15-alpine
-    container_name: skolr_planning_postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_PLANNING_DB:-skolr_planning}
-    ports:
-      - "${POSTGRES_PLANNING_PORT:-5435}:5432"
-    volumes:
-      - postgres_planning_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - skolr_network
-  auth-service:
+  backend:
     build:
       context: .
-      dockerfile: ./packages/auth-service/Dockerfile
-    container_name: skolr_auth_service
+      dockerfile: ./packages/backend/Dockerfile
+    container_name: skolr_backend
     environment:
-      - NODE_PATH=/app/node_modules
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_AUTH_DB:-skolr_auth}?schema=public
+      - PORT=${BACKEND_PORT:-3001}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-skolr}?schema=public
       - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      # --- OAuth Google (auth) ---
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
-      - GOOGLE_CALLBACK_URI=${GOOGLE_CALLBACK_URI:-http://localhost:3000/login/google/callback}
+      - GOOGLE_CALLBACK_URI=${GOOGLE_CALLBACK_URI:-http://localhost:3001/auth/login/google/callback}
       - GOOGLE_OAUTH_SUCCESS_URL=${GOOGLE_OAUTH_SUCCESS_URL:-http://localhost:3003/auth/success}
       - GOOGLE_OAUTH_ERROR_URL=${GOOGLE_OAUTH_ERROR_URL:-http://localhost:3003/auth/error}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+      # --- Email transactionnel (auth) ---
       - MAIL_PROVIDER=${MAIL_PROVIDER:-console}
       - MAIL_FROM=${MAIL_FROM:-no-reply@skolr.local}
       - SMTP_HOST=${SMTP_HOST:-}
@@ -189,194 +42,7 @@ services:
       - SMTP_PASS=${SMTP_PASS:-}
       - INVITATION_URL=${INVITATION_URL:-http://localhost:3003/auth/accept-invitation}
       - PASSWORD_RESET_URL=${PASSWORD_RESET_URL:-http://localhost:3003/auth/reset-password}
-    ports:
-      - "${AUTH_SERVICE_PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  class-service:
-    build:
-      context: .
-      dockerfile: ./packages/class-service/Dockerfile
-    container_name: skolr_class_service
-    environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?schema=public
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
-    depends_on:
-      postgres-class:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  grade-service:
-    build:
-      context: .
-      dockerfile: ./packages/grade-service/Dockerfile
-    container_name: skolr_grade_service
-    environment:
-      - PORT=${GRADE_SERVICE_PORT:-3007}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?schema=public
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
-    ports:
-      - "${GRADE_SERVICE_PORT:-3007}:${GRADE_SERVICE_PORT:-3007}"
-    depends_on:
-      postgres-grade:
-        condition: service_healthy
-      class-service:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${GRADE_SERVICE_PORT:-3007}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  planning-services:
-    build:
-      context: .
-      dockerfile: ./packages/planning-services/Dockerfile
-    container_name: skolr_planning_service
-    environment:
-      - PORT=${PLANNING_SERVICE_PORT:-3008}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?schema=public
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - UPLOADS_DIR=${PLANNING_UPLOADS_DIR:-/app/packages/planning-services/uploads}
-      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
-      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
-    ports:
-      - "${PLANNING_SERVICE_PORT:-3008}:${PLANNING_SERVICE_PORT:-3008}"
-    volumes:
-      # Bind mount (pas un volume nommé) : scripts/db/seed-pipeline.ts écrit les documents
-      # depuis l'hôte (bun run seed:dev) — il doit voir le même répertoire que le conteneur.
-      - ./packages/planning-services/uploads:/app/packages/planning-services/uploads
-    depends_on:
-      postgres-planning:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      parent-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PLANNING_SERVICE_PORT:-3008}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  notification-service:
-    build:
-      context: .
-      dockerfile: ./packages/notification-service/Dockerfile
-    container_name: skolr_notification_service
-    environment:
-      - PORT=${NOTIFICATION_SERVICE_PORT:-3009}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-notification:5432/${POSTGRES_NOTIFICATION_DB:-skolr_notification}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
-      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
-      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
-      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-    ports:
-      - "${NOTIFICATION_SERVICE_PORT:-3009}:${NOTIFICATION_SERVICE_PORT:-3009}"
-    depends_on:
-      postgres-notification:
-        condition: service_healthy
-      parent-service:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      class-service:
-        condition: service_healthy
-      auth-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${NOTIFICATION_SERVICE_PORT:-3009}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  message-service:
-    build:
-      context: .
-      dockerfile: ./packages/message-service/Dockerfile
-    container_name: skolr_message_service
-    environment:
-      - PORT=${MESSAGE_SERVICE_PORT:-3010}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-message:5432/${POSTGRES_MESSAGE_DB:-skolr_message}?schema=public
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-      - STORAGE_BACKEND=${STORAGE_BACKEND:-local}
-      - UPLOADS_DIR=/app/uploads
-      - MESSAGE_MAX_FILE_SIZE_BYTES=${MESSAGE_MAX_FILE_SIZE_BYTES:-5242880}
-      - MESSAGE_ALLOWED_MIME_TYPES=${MESSAGE_ALLOWED_MIME_TYPES:-application/pdf,image/jpeg,image/png,image/gif,image/webp}
-      - S3_ENDPOINT=${S3_ENDPOINT:-http://minio:9000}
-      - S3_REGION=${S3_REGION:-us-east-1}
-      - S3_BUCKET=${S3_BUCKET:-skolr-messages}
-      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-minioadmin}
-      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-minioadmin}
-    ports:
-      - "${MESSAGE_SERVICE_PORT:-3010}:${MESSAGE_SERVICE_PORT:-3010}"
-    volumes:
-      - ./packages/message-service/uploads:/app/uploads
-    depends_on:
-      postgres-message:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${MESSAGE_SERVICE_PORT:-3010}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  billing-service:
-    build:
-      context: .
-      dockerfile: ./packages/billing-service/Dockerfile
-    container_name: skolr_billing_service
-    environment:
-      - PORT=${BILLING_SERVICE_PORT:-3011}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-billing:5432/${POSTGRES_BILLING_DB:-skolr_billing}?schema=public
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
+      # --- Stripe (billing) ---
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
       - STRIPE_PRICE_STARTER=${STRIPE_PRICE_STARTER:-}
@@ -384,90 +50,39 @@ services:
       - STRIPE_PRICE_PREMIUM=${STRIPE_PRICE_PREMIUM:-}
       - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL:-http://localhost:3003/admin/billing?success=1}
       - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL:-http://localhost:3003/admin/billing?canceled=1}
-      - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER:-guest}:${RABBITMQ_DEFAULT_PASS:-guest}@rabbitmq:5672
+      # --- Stockage des pièces jointes (message → S3/MinIO, planning → disque) ---
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-s3}
+      - MESSAGE_MAX_FILE_SIZE_BYTES=${MESSAGE_MAX_FILE_SIZE_BYTES:-5242880}
+      - MESSAGE_ALLOWED_MIME_TYPES=${MESSAGE_ALLOWED_MIME_TYPES:-application/pdf,image/jpeg,image/png,image/gif,image/webp}
+      - S3_ENDPOINT=${S3_ENDPOINT:-http://minio:9000}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_BUCKET=${S3_BUCKET:-skolr-messages}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:-minioadmin}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-minioadmin}
+      - UPLOADS_DIR=${UPLOADS_DIR:-/app/packages/backend/uploads}
+      # --- Observabilité ---
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
     ports:
-      - "${BILLING_SERVICE_PORT:-3011}:${BILLING_SERVICE_PORT:-3011}"
+      - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
+    volumes:
+      # Bind mount (pas un volume nommé) : scripts/db/seed-pipeline.ts écrit les
+      # documents planning depuis l'hôte (bun run seed:dev) — il doit voir le même
+      # répertoire que le conteneur.
+      - ./packages/backend/uploads:/app/packages/backend/uploads
     depends_on:
-      postgres-billing:
+      postgres:
         condition: service_healthy
-      rabbitmq:
+      minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${BILLING_SERVICE_PORT:-3011}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${BACKEND_PORT:-3001}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
     networks:
       - skolr_network
-  parent-service:
-    build:
-      context: .
-      dockerfile: ./packages/parent-service/Dockerfile
-    container_name: skolr_parent_service
-    environment:
-      - PORT=${PARENT_SERVICE_PORT:-3012}
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-parent:5432/${POSTGRES_PARENT_DB:-skolr_parent}?schema=public
-      - JWT_SECRET=${JWT_SECRET:-your_secure_jwt_secret_here}
-      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-    ports:
-      - "${PARENT_SERVICE_PORT:-3012}:${PARENT_SERVICE_PORT:-3012}"
-    depends_on:
-      postgres-parent:
-        condition: service_healthy
-      auth-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bun -e \"fetch('http://localhost:${PARENT_SERVICE_PORT:-3012}/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    networks:
-      - skolr_network
-  gateway:
-    build:
-      context: ./packages/gateway
-      dockerfile: Dockerfile
-    container_name: skolr_gateway
-    environment:
-      - PORT=${GATEWAY_PORT:-3001}
-      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3000}
-      - CLASS_SERVICE_URL=${CLASS_SERVICE_URL:-http://class-service:3002}
-      - GRADE_SERVICE_URL=${GRADE_SERVICE_URL:-http://grade-service:3007}
-      - PLANNING_SERVICE_URL=${PLANNING_SERVICE_URL:-http://planning-services:3008}
-      - NOTIFICATION_SERVICE_URL=${NOTIFICATION_SERVICE_URL:-http://notification-service:3009}
-      - MESSAGE_SERVICE_URL=${MESSAGE_SERVICE_URL:-http://message-service:3010}
-      - BILLING_SERVICE_URL=${BILLING_SERVICE_URL:-http://billing-service:3011}
-      - PARENT_SERVICE_URL=${PARENT_SERVICE_URL:-http://parent-service:3012}
-      - SENTRY_DSN=${SENTRY_DSN:-}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
-    ports:
-      - "${GATEWAY_PORT:-3001}:${GATEWAY_PORT:-3001}"
-    depends_on:
-      auth-service:
-        condition: service_healthy
-      class-service:
-        condition: service_healthy
-      grade-service:
-        condition: service_healthy
-      planning-services:
-        condition: service_healthy
-      notification-service:
-        condition: service_healthy
-      message-service:
-        condition: service_healthy
-      billing-service:
-        condition: service_healthy
-      parent-service:
-        condition: service_healthy
-    networks:
-      - skolr_network
-
   frontend:
     build:
       context: ./packages/frontend
@@ -480,9 +95,9 @@ services:
     environment:
       - NODE_ENV=development
       - NUXT_PUBLIC_GATEWAY_BASE_URL=${NUXT_PUBLIC_GATEWAY_BASE_URL:-/api}
-      - NUXT_PUBLIC_GATEWAY_WS_BASE_URL=${NUXT_PUBLIC_GATEWAY_WS_BASE_URL:-ws://localhost:${GATEWAY_PORT:-3001}}
-      - NUXT_PUBLIC_GATEWAY_DIRECT_URL=${NUXT_PUBLIC_GATEWAY_DIRECT_URL:-http://localhost:${GATEWAY_PORT:-3001}}
-      - GATEWAY_INTERNAL_URL=${GATEWAY_INTERNAL_URL:-http://gateway:3001}
+      - NUXT_PUBLIC_GATEWAY_WS_BASE_URL=${NUXT_PUBLIC_GATEWAY_WS_BASE_URL:-ws://localhost:${BACKEND_PORT:-3001}}
+      - NUXT_PUBLIC_GATEWAY_DIRECT_URL=${NUXT_PUBLIC_GATEWAY_DIRECT_URL:-http://localhost:${BACKEND_PORT:-3001}}
+      - GATEWAY_INTERNAL_URL=${GATEWAY_INTERNAL_URL:-http://backend:3001}
       - NUXT_PUBLIC_SENTRY_DSN=${NUXT_PUBLIC_SENTRY_DSN:-}
       - NUXT_PUBLIC_SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:-}
@@ -492,7 +107,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-3003}:${FRONTEND_PORT:-3003}"
     depends_on:
-      - gateway
+      - backend
     networks:
       - skolr_network
   grafana:
@@ -533,49 +148,13 @@ services:
     networks:
       - monitoring
     restart: unless-stopped
-  postgres-exporter-auth:
+  postgres-exporter:
     image: prometheuscommunity/postgres-exporter:latest
-    container_name: postgres_exporter_auth
+    container_name: postgres_exporter
     environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_AUTH_DB:-skolr_auth}?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-skolr}?sslmode=disable
     depends_on:
       postgres:
-        condition: service_healthy
-    networks:
-      - skolr_network
-      - monitoring
-    restart: unless-stopped
-  postgres-exporter-class:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: postgres_exporter_class
-    environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-class:5432/${POSTGRES_CLASS_DB:-skolr_class}?sslmode=disable
-    depends_on:
-      postgres-class:
-        condition: service_healthy
-    networks:
-      - skolr_network
-      - monitoring
-    restart: unless-stopped
-  postgres-exporter-grade:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: postgres_exporter_grade
-    environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-grade:5432/${POSTGRES_GRADE_DB:-skolr_grade}?sslmode=disable
-    depends_on:
-      postgres-grade:
-        condition: service_healthy
-    networks:
-      - skolr_network
-      - monitoring
-    restart: unless-stopped
-  postgres-exporter-planning:
-    image: prometheuscommunity/postgres-exporter:latest
-    container_name: postgres_exporter_planning
-    environment:
-      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres-planning:5432/${POSTGRES_PLANNING_DB:-skolr_planning}?sslmode=disable
-    depends_on:
-      postgres-planning:
         condition: service_healthy
     networks:
       - skolr_network
@@ -603,16 +182,7 @@ services:
       retries: 5
       start_period: 10s
 volumes:
-  postgres_auth_data:
-  postgres_class_data:
-  postgres_grade_data:
-  postgres_planning_data:
-  postgres_notification_data:
-  postgres_message_data:
-  postgres_billing_data:
-  postgres_parent_data:
-  rabbitmq_data:
-  rabbitmq_log:
+  postgres_data:
   grafana_data:
   prometheus_data:
   minio_data:

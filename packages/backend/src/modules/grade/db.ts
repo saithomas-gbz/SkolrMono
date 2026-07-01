@@ -1,4 +1,4 @@
-import realDb, { testDatabaseConnection } from '../../shared/db';
+import realDb from '../../shared/db';
 
 /**
  * Vue Prisma propre au module grade.
@@ -30,5 +30,4 @@ type GradeDb = typeof realDb & {
   course: typeof realDb.gradeCourse;
 };
 
-export { testDatabaseConnection };
 export default gradeDb as unknown as GradeDb;
