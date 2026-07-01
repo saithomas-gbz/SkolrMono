@@ -1,0 +1,16 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests E2E Playwright du frontend Skolr (contre le backend monolithe + base seedée)",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0"
+  }
+}
