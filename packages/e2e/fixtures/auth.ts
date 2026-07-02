@@ -22,12 +22,20 @@ export async function loginAs(page: Page, account: DevAccountKey): Promise<void>
   const { email, password } = DEV_ACCOUNTS[account];
 
   await page.goto('/auth/login');
+  // Nuxt sert d'abord le HTML côté serveur ; le clic n'a d'effet qu'une fois
+  // l'app Vue hydratée côté client (tous les chunks JS chargés/exécutés). Sans
+  // cette attente, le clic sur "Se connecter" tombe sur un DOM inerte : aucune
+  // requête /auth/login n'est jamais envoyée (voir #114).
+  await page.waitForLoadState('networkidle');
+
   await page.locator('#login-email').fill(email);
   // PrimeVue Password : l'id est porté par le conteneur, l'input est à l'intérieur.
   await page.locator('#login-password input').fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
 
-  await expect(page).toHaveURL(/\/dashboard/);
+  // La page /dashboard charge ses propres chunks JS (widgets, i18n, ...) après
+  // la redirection : prévoir plus large que le timeout d'assertion par défaut.
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
 
 /**

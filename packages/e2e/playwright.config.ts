@@ -30,13 +30,20 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'bun run dev',
+    // En CI, `nuxt dev` compile les modules à la volée (Vite) : la toute
+    // première navigation peut se terminer avant que l'hydratation Vue soit
+    // finie, et les clics de Playwright tombent alors sur un DOM inerte (voir
+    // #114 — tests bloqués sur /auth/login, aucune requête /auth/login émise).
+    // On build donc le frontend et on le sert en prod pour avoir une
+    // hydratation immédiate et déterministe. En local on garde `dev` (HMR).
+    command: process.env.CI ? 'bun run build && bun run preview' : 'bun run dev',
     cwd: frontendDir,
     url: 'http://localhost:8000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: process.env.CI ? 180_000 : 120_000,
     env: {
       GATEWAY_INTERNAL_URL: process.env.GATEWAY_INTERNAL_URL ?? 'http://localhost:3001',
+      ...(process.env.CI ? { PORT: '8000', HOST: '0.0.0.0' } : {}),
     },
   },
 });

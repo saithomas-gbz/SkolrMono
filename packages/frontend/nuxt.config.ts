@@ -49,6 +49,18 @@ export default defineNuxtConfig({
     },
   },
 
+  nitro: {
+    // Bun's node_modules layout creates a symlink cycle between `vue` and
+    // `@vue/server-renderer` (mutual peer deps) that Nitro's dependency
+    // tracer (node-file-trace) walks into infinitely, crashing the build
+    // with ELOOP. We don't need a self-contained standalone bundle here —
+    // build and runtime share the same workspace node_modules — so skip
+    // the trace/copy step entirely.
+    externals: {
+      trace: false,
+    },
+  },
+
   css: [
     '~/assets/css/tokens.css',
     'primeicons/primeicons.css'

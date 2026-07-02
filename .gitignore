@@ -23,9 +23,9 @@ pids
 # TypeScript
 *.tsbuildinfo
 
-# Documents uploadés en dev (bind mount docker-compose)
-packages/planning-services/uploads/
-packages/message-service/uploads/
+# Documents uploadés en dev (bind mount docker-compose) + pièces jointes
+# générées par le seed (noms de dossier aléatoires à chaque run)
+packages/backend/uploads/seed/
 
 # Build output (any dist/ directory in the repo)
 dist/

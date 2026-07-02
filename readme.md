@@ -78,7 +78,7 @@ Les seeds créent des comptes et des données de démo **uniquement pour le dév
 
 ### Comptes utilisateurs
 
-Ces comptes sont créés ou mis à jour de façon idempotente par le seed consolidé `packages/backend/prisma/seed.ts` (emails `@skolr.local`).
+Le seed crée ~40 comptes de dev (admin, user, teacher, student, ainsi que des profs, élèves et parents supplémentaires). Ils sont créés ou mis à jour de façon idempotente par le seed consolidé `packages/backend/prisma/seed.ts` (emails `@skolr.local`). Les 5 comptes ci-dessous suffisent pour tester chaque rôle :
 
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
@@ -92,20 +92,29 @@ Les identifiants UUID sont stables (voir `scripts/seed/dev-users.ts`, la source 
 
 ### Données associées
 
-Après `bun run seed:dev`, le seed remplit tous les schémas dans une même transaction logique :
+Après `bun run seed:dev`, le seed remplit tous les schémas de la base unique :
 
 - **Classes** : `CM2-A` (primaire), `6ème Sciences` (collège), avec affectations enseignants / élèves.
-- **Notes** : devoirs et notes alignés sur les inscriptions (pas de note pour les profs).
-- **Planning** : emploi du temps 2025-2026, absences et justificatifs de démonstration.
-- **Messagerie** : une conversation de démonstration (avec un message non lu côté élève).
+- **Notes** : 3 matières, 4 cours, 6 devoirs et 75 notes alignés sur les inscriptions (pas de note pour les profs).
+- **Planning** : emploi du temps 2025-2026 (~19 créneaux/semaine), plus 6 absences et 3 justificatifs de démonstration.
+- **Messagerie** : une conversation de démonstration (3 messages, dont un non lu côté élève).
+- **Parents** : 4 liens parent ↔ enfant.
 - **Billing** : établissement « Collège Skolr Demo » avec abonnement STARTER.
 
 ### Se connecter (exemple)
 
-Avec le backend sur le port par défaut `3001` :
+Directement sur le backend (port par défaut `3001`) :
 
 ```bash
 curl -s -X POST http://localhost:3001/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"dev.user@skolr.local","password":"dev-user-123"}'
+```
+
+Depuis le frontend (port `3003`), les appels passent par le proxy `/api` (Nitro relaie vers le backend via `GATEWAY_INTERNAL_URL`, cf. `packages/frontend/server/api/[...path].ts`) :
+
+```bash
+curl -s -X POST http://localhost:3003/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"dev.user@skolr.local","password":"dev-user-123"}'
 ```
