@@ -5,14 +5,14 @@ import { test as base, expect, type Page } from '@playwright/test';
  * (source de vérité : `scripts/seed/dev-users.ts`). Réutilisés tels quels par
  * les specs E2E — ne jamais reproduire ces mots de passe en clair en prod.
  */
-export const DEV_ACCOUNTS = {
+const DEV_ACCOUNTS = {
   admin: { email: 'dev.admin@skolr.local', password: 'dev-admin-123', role: 'ADMIN' },
   user: { email: 'dev.user@skolr.local', password: 'dev-user-123', role: 'USER' },
   teacher: { email: 'dev.teacher@skolr.local', password: 'dev-teacher-123', role: 'TEACHER' },
   student: { email: 'dev.student@skolr.local', password: 'dev-student-123', role: 'USER' },
 } as const;
 
-export type DevAccountKey = keyof typeof DEV_ACCOUNTS;
+type DevAccountKey = keyof typeof DEV_ACCOUNTS;
 
 /**
  * Connexion par l'interface (formulaire `AuthLoginForm.vue`). Remplit email +

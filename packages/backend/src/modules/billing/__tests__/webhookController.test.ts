@@ -3,12 +3,16 @@ import webhookController from '../controllers/webhookController';
 import db from '../../../shared/db';
 import stripe from '../lib/stripeClient';
 import { publish } from '../../../shared/events';
-import { resolveBillingRecipients } from '../lib/resolveBillingRecipients';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 
+// On mocke la base plutôt que `resolveBillingRecipients` : la vraie fonction
+// tourne (via `establishmentMember.findMany`). Mocker le module global
+// `../lib/resolveBillingRecipients` fuiterait dans son test unitaire dédié
+// (mock.module est global à tout le run bun) et le ferait échouer selon l'ordre.
 mock.module('../../../shared/db', () => ({
   default: {
     establishment: { findUnique: mock() },
+    establishmentMember: { findMany: mock() },
     stripeWebhookEvent: { findUnique: mock(), create: mock() },
     subscription: { upsert: mock(), updateMany: mock() },
   },
@@ -21,16 +25,13 @@ mock.module('../lib/stripeClient', () => ({
   },
 }));
 
-mock.module('../lib/resolveBillingRecipients', () => ({
-  resolveBillingRecipients: mock(() => Promise.resolve(['admin-1'])),
-}));
-
 mock.module('../../../shared/events', () => ({
   publish: mock(() => Promise.resolve()),
 }));
 
 const prismaMock = db as unknown as {
   establishment: { findUnique: ReturnType<typeof mock> };
+  establishmentMember: { findMany: ReturnType<typeof mock> };
   stripeWebhookEvent: { findUnique: ReturnType<typeof mock>; create: ReturnType<typeof mock> };
   subscription: { upsert: ReturnType<typeof mock>; updateMany: ReturnType<typeof mock> };
 };
@@ -39,7 +40,6 @@ const stripeMock = stripe as unknown as {
   subscriptions: { retrieve: ReturnType<typeof mock> };
 };
 const publishMock = publish as unknown as ReturnType<typeof mock>;
-const resolveBillingRecipientsMock = resolveBillingRecipients as unknown as ReturnType<typeof mock>;
 
 function buildRequest(headers: Record<string, string> = { 'stripe-signature': 'sig_test' }): FastifyRequest {
   return {
@@ -59,6 +59,10 @@ function buildReply(): FastifyReply {
 describe('webhookController.handleStripeWebhook', () => {
   beforeEach(() => {
     prismaMock.establishment.findUnique.mockReset();
+    prismaMock.establishmentMember.findMany.mockReset();
+    prismaMock.establishmentMember.findMany.mockResolvedValue([
+      { userId: 'admin-1', isBillingContact: true },
+    ]);
     prismaMock.stripeWebhookEvent.findUnique.mockReset();
     prismaMock.stripeWebhookEvent.create.mockReset();
     prismaMock.subscription.upsert.mockReset();
@@ -67,8 +71,6 @@ describe('webhookController.handleStripeWebhook', () => {
     stripeMock.subscriptions.retrieve.mockReset();
     publishMock.mockReset();
     publishMock.mockResolvedValue(undefined);
-    resolveBillingRecipientsMock.mockReset();
-    resolveBillingRecipientsMock.mockResolvedValue(['admin-1']);
   });
 
   it('renvoie 400 si Stripe-Signature est absent', async () => {
