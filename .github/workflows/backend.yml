@@ -1,0 +1,63 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'packages/backend/**'
+      - 'scripts/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'packages/backend/**'
+      - 'scripts/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: skolr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/skolr?schema=public
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Generate Prisma client
+      working-directory: packages/backend
+      run: bunx prisma generate && ls src/generated/prisma/internal
+
+    - name: Build backend
+      working-directory: packages/backend
+      run: bun run build
+
+    - name: Test backend (all modules)
+      working-directory: packages/backend
+      run: bun test src
+      env:
+        NODE_ENV: test
+
+    - name: Apply migrations (single multi-schema DB)
+      working-directory: packages/backend
+      run: bunx prisma migrate deploy
+
+    - name: Build Docker image
+      run: docker build -f packages/backend/Dockerfile -t backend-skolr .

@@ -1,0 +1,52 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Skolr modular monolith backend (auth, class, grade, planning, message, notification, billing, parent)",
+  "type": "module",
+  "private": true,
+  "main": "dist/app.js",
+  "scripts": {
+    "test": "NODE_ENV=test bun test src",
+    "dev": "bun --watch run src/app.ts",
+    "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client --external @fastify/websocket --external ws",
+    "start": "bun run ./dist/app.js",
+    "prisma:generate": "bunx prisma generate",
+    "prisma:migrate": "bunx prisma migrate dev",
+    "db:migrate:deploy": "bunx prisma migrate deploy",
+    "db:seed": "bunx prisma db seed"
+  },
+  "prisma": {
+    "seed": "bun prisma/seed.ts"
+  },
+  "keywords": [],
+  "author": "thomas.grare",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bun": "latest",
+    "@types/nodemailer": "^8.0.1",
+    "dotenv": "^17.2.4",
+    "prisma": "7.5.0",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/multipart": "^10.0.0",
+    "@fastify/oauth2": "^8.1.2",
+    "@fastify/swagger": "^9.7.0",
+    "@fastify/swagger-ui": "^5.2.6",
+    "@fastify/websocket": "^11.2.0",
+    "@prisma/adapter-pg": "7.5.0",
+    "@prisma/client": "7.5.0",
+    "@sentry/node": "^10.56.0",
+    "bcrypt": "^6.0.0",
+    "fastify": "^5.8.2",
+    "nodemailer": "^9.0.1",
+    "stripe": "^18.0.0"
+  }
+}

@@ -5,9 +5,9 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: skolr_auth
+      POSTGRES_DB: skolr
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,16 +17,17 @@ services:
       retries: 5
     networks:
       - skolr_network
-  auth-service:
+  backend:
     build:
-      context: ./packages/auth-service
-      dockerfile: Dockerfile.dev
-    container_name: skolr_auth_service
+      context: .
+      dockerfile: ./packages/backend/Dockerfile
+    container_name: skolr_backend
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
+      - PORT=3001
       - JWT_SECRET=your_secure_jwt_secret_here
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/skolr_auth?schema=public
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/skolr?schema=public
     depends_on:
       postgres:
         condition: service_healthy

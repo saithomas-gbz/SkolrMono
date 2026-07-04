@@ -1,0 +1,559 @@
+// Skolr modular monolith — single consolidated Prisma schema.
+// One Postgres database, one logical schema per domain (multi-schema) to keep
+// the domain boundaries explicit. See packages/backend/src/modules/*.
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  output        = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["auth", "class", "grade", "planning", "message", "notification", "billing", "parent"]
+}
+
+// ============================================================================
+// auth
+// ============================================================================
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String?
+  name            String?
+  image           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  oauthProvider   String?
+  oauthId         String?
+  role            Role     @default(USER)
+  establishmentId String?
+
+  accounts Account[]
+
+  @@schema("auth")
+}
+
+enum Role {
+  USER
+  TEACHER
+  STAFF
+  ADMIN
+  PLATFORM_ADMIN
+  PARENT
+
+  @@schema("auth")
+}
+
+model Account {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  provider   String
+  providerId String
+  createdAt  DateTime @default(now())
+
+  @@schema("auth")
+}
+
+model InvitationToken {
+  id              String    @id @default(uuid())
+  token           String    @unique
+  email           String
+  role            Role      @default(USER)
+  establishmentId String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@schema("auth")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@schema("auth")
+}
+
+// ============================================================================
+// class
+// ============================================================================
+
+model Class {
+  id              String         @id @unique @default(uuid())
+  name            String
+  description     String
+  establishmentId String? // établissement propriétaire (billing) — V1 : colonne seule, pas de filtrage forcé
+  students        ClassStudent[]
+  classTeachers   ClassTeacher[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([name])
+  @@schema("class")
+}
+
+model ClassTeacher {
+  id          String   @id @unique @default(uuid())
+  classId     String
+  teacherId   String // userId of the teacher (auth)
+  isPrincipal Boolean  @default(false)
+  class       Class    @relation(fields: [classId], references: [id])
+  courses     Course[]
+
+  @@unique([classId, teacherId])
+  @@index([teacherId])
+  @@schema("class")
+}
+
+model Course {
+  id            String         @id @unique @default(uuid())
+  name          String
+  description   String
+  classTeachers ClassTeacher[]
+
+  @@schema("class")
+}
+
+model ClassStudent {
+  id        String   @id @unique @default(uuid())
+  classId   String
+  studentId String // userId of the student (auth)
+  class     Class    @relation(fields: [classId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([classId, studentId])
+  @@index([studentId])
+  @@schema("class")
+}
+
+// ============================================================================
+// grade
+// (conserve une copie locale de User/Class/Course, renommée pour éviter les
+//  collisions de noms avec les modèles auth/class du client unique)
+// ============================================================================
+
+enum AssignmentStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+
+  @@schema("grade")
+}
+
+enum GradeStatus {
+  PENDING
+  GRADED
+  ABSENT
+  EXEMPT
+
+  @@schema("grade")
+}
+
+model GradeUser {
+  id      String     @id @unique @default(uuid())
+  name    String
+  email   String     @unique
+  classId String
+  class   GradeClass @relation(fields: [classId], references: [id])
+  grades  Grade[]
+
+  @@schema("grade")
+}
+
+model GradeClass {
+  id          String       @id @unique @default(uuid())
+  name        String
+  description String
+  students    GradeUser[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  grades      Grade[]
+  assignments Assignment[]
+
+  @@schema("grade")
+}
+
+model Subject {
+  id          String        @id @unique @default(uuid())
+  name        String
+  description String
+  courses     GradeCourse[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@schema("grade")
+}
+
+model GradeCourse {
+  id               String        @id @unique @default(uuid())
+  name             String
+  description      String
+  subjectId        String?
+  subject          Subject?      @relation(fields: [subjectId], references: [id])
+  relatedCourses   GradeCourse[] @relation("CourseRelations")
+  relatedCoursesOf GradeCourse[] @relation("CourseRelations")
+  grades           Grade[]
+  topics           Topic[]
+  assignments      Assignment[]
+
+  @@schema("grade")
+}
+
+model Topic {
+  id          String      @id @unique @default(uuid())
+  name        String
+  description String
+  courseId    String
+  course      GradeCourse @relation(fields: [courseId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@schema("grade")
+}
+
+model Assignment {
+  id          String           @id @default(uuid())
+  title       String
+  description String?
+  classId     String
+  class       GradeClass       @relation(fields: [classId], references: [id])
+  courseId    String
+  course      GradeCourse      @relation(fields: [courseId], references: [id])
+  teacherId   String
+  assignedAt  DateTime
+  dueAt       DateTime?
+  maxScore    Float            @default(20)
+  coefficient Float            @default(1)
+  status      AssignmentStatus @default(DRAFT)
+  grades      Grade[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([classId, courseId])
+  @@index([assignedAt])
+  @@schema("grade")
+}
+
+model Grade {
+  id           String      @id @unique @default(uuid())
+  assignmentId String
+  assignment   Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         GradeUser   @relation(fields: [userId], references: [id])
+  classId      String
+  class        GradeClass  @relation(fields: [classId], references: [id])
+  courseId     String
+  course       GradeCourse @relation(fields: [courseId], references: [id])
+  status       GradeStatus @default(PENDING)
+  value        Float?
+  comment      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([assignmentId, userId])
+  @@schema("grade")
+}
+
+// ============================================================================
+// planning
+// ============================================================================
+
+enum AbsenceRole {
+  STUDENT
+  TEACHER
+
+  @@schema("planning")
+}
+
+enum JustificationStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("planning")
+}
+
+model Session {
+  id             String    @id @unique @default(uuid())
+  classId        String
+  courseId       String
+  teacherId      String
+  room           String?
+  startAt        DateTime
+  endAt          DateTime
+  recurrenceRule String?
+  absences       Absence[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@schema("planning")
+}
+
+model Absence {
+  id        String      @id @unique @default(uuid())
+  sessionId String
+  session   Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  role      AbsenceRole
+  justified Boolean     @default(false)
+  reason    String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  justificationLinks AbsenceJustificationLink[]
+
+  @@unique([sessionId, userId])
+  @@schema("planning")
+}
+
+model AbsenceJustification {
+  id            String                     @id @default(uuid())
+  studentId     String
+  status        JustificationStatus        @default(DRAFT)
+  reason        String
+  reviewerId    String?
+  reviewComment String?
+  reviewedAt    DateTime?
+  documents     JustificationDocument[]
+  absences      AbsenceJustificationLink[]
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+
+  @@index([studentId])
+  @@index([status])
+  @@schema("planning")
+}
+
+model AbsenceJustificationLink {
+  justificationId String
+  justification   AbsenceJustification @relation(fields: [justificationId], references: [id], onDelete: Cascade)
+  absenceId       String
+  absence         Absence              @relation(fields: [absenceId], references: [id], onDelete: Cascade)
+
+  @@unique([justificationId, absenceId])
+  @@index([absenceId])
+  @@schema("planning")
+}
+
+model JustificationDocument {
+  id              String               @id @default(uuid())
+  justificationId String
+  justification   AbsenceJustification @relation(fields: [justificationId], references: [id], onDelete: Cascade)
+  fileName        String
+  mimeType        String
+  sizeBytes       Int
+  storageKey      String
+  uploadedAt      DateTime             @default(now())
+
+  @@index([justificationId])
+  @@schema("planning")
+}
+
+// ============================================================================
+// message
+// ============================================================================
+
+enum MessageRole {
+  USER
+  TEACHER
+  STAFF
+  ADMIN
+
+  @@schema("message")
+}
+
+model Conversation {
+  id           String                    @id @default(uuid())
+  name         String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@schema("message")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@schema("message")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String
+  sentAt         DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  attachments MessageAttachment[]
+  reads       MessageRead[]
+
+  @@index([conversationId, sentAt])
+  @@schema("message")
+}
+
+model MessageRead {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id])
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@schema("message")
+}
+
+model MessageAttachment {
+  id         String   @id @default(uuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  storageKey String
+  uploadedAt DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id])
+
+  @@index([messageId])
+  @@schema("message")
+}
+
+// ============================================================================
+// notification
+// ============================================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@schema("notification")
+}
+
+// ============================================================================
+// billing
+// ============================================================================
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+
+  @@schema("billing")
+}
+
+enum PlanTier {
+  STARTER
+  STANDARD
+  PREMIUM
+
+  @@schema("billing")
+}
+
+model Establishment {
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  stripeCustomerId String?  @unique
+  billingEmail     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subscription Subscription?
+  members      EstablishmentMember[]
+
+  @@schema("billing")
+}
+
+model EstablishmentMember {
+  id               String   @id @default(uuid())
+  establishmentId  String
+  userId           String
+  isBillingContact Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+
+  @@unique([establishmentId, userId])
+  @@schema("billing")
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  establishmentId      String             @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  planTier             PlanTier           @default(STARTER)
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  establishment Establishment @relation(fields: [establishmentId], references: [id])
+
+  @@schema("billing")
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@schema("billing")
+}
+
+// ============================================================================
+// parent
+// ============================================================================
+
+enum ParentLinkType {
+  LEGAL_GUARDIAN
+  EMERGENCY_CONTACT
+  OTHER
+
+  @@schema("parent")
+}
+
+model ParentStudent {
+  id        String         @id @default(uuid())
+  parentId  String
+  studentId String
+  linkType  ParentLinkType @default(LEGAL_GUARDIAN)
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([parentId, studentId])
+  @@index([parentId])
+  @@index([studentId])
+  @@schema("parent")
+}

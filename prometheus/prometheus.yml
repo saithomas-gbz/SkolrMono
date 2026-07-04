@@ -10,26 +10,8 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
-  - job_name: 'postgres-auth'
+  - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres-exporter-auth:9187']
+      - targets: ['postgres-exporter:9187']
         labels:
-          db: 'auth'
-
-  - job_name: 'postgres-class'
-    static_configs:
-      - targets: ['postgres-exporter-class:9187']
-        labels:
-          db: 'class'
-
-  - job_name: 'postgres-grade'
-    static_configs:
-      - targets: ['postgres-exporter-grade:9187']
-        labels:
-          db: 'grade'
-
-  - job_name: 'postgres-planning'
-    static_configs:
-      - targets: ['postgres-exporter-planning:9187']
-        labels:
-          db: 'planning'
+          db: 'skolr'

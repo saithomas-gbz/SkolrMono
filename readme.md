@@ -1,49 +1,32 @@
 # SkolrMono
 
-SkolrMono est un monorepo contenant plusieurs services pour une application éducative. Ce dépôt utilise une architecture modulaire pour organiser les différents services et bibliothèques.
+SkolrMono est un monorepo pour une application éducative. Le backend est un **monolithe modulaire** (#114) : un seul service Fastify où chaque domaine métier est un plugin monté sous son préfixe (`/auth`, `/class`, `/grade`…), sur une base PostgreSQL unique multi-schema. Le frontend Nuxt reste un package séparé.
 
 ## Structure du Projet
 
 ```
 SkolrMono/
 ├── packages/
-│   ├── auth-service/      # Service d'authentification
-│   └── gateway/           # Passerelle API
-├── docker-compose.yml     # Configuration Docker pour le développement
-├── docker-compose.dev.yml # Configuration Docker pour la production
+│   ├── backend/           # Monolithe modulaire (Fastify + Prisma, tous les domaines)
+│   │   └── src/modules/   #   auth, class, grade, planning, message, notification, parent, billing
+│   └── frontend/          # Interface Nuxt + PrimeVue
+├── scripts/               # Orchestration DB (migrate/seed) + fixtures de dev partagées
+├── docker-compose.yml     # Stack complète (backend, postgres, minio, monitoring, frontend)
+├── docker-compose.dev.yml # Variante dev minimale (backend + postgres)
 └── readme.md              # Documentation principale
 ```
 
-## Services
+## Backend (monolithe modulaire)
 
-### auth-service
+`packages/backend` héberge tous les domaines métier sous forme de plugins Fastify. Chaque module vit dans `src/modules/<domaine>` et est monté sous son préfixe, ce qui conserve le contrat d'API historique (le frontend est inchangé).
 
-Le service d'authentification gère l'authentification des utilisateurs, la gestion des sessions et les autorisations. Il est construit avec Node.js et utilise Prisma pour l'accès à la base de données.
+**Domaines / préfixes :** `auth` (`/auth`), `class` (`/class`), `grade` (`/grade`), `planning` (`/planning`), `message` (`/message`), `notification` (`/notification`), `parent` (`/parent`), `billing` (`/billing`).
 
-**Fonctionnalités principales :**
-- Inscription et connexion des utilisateurs
-- Gestion des sessions
-- Autorisations basées sur les rôles
-- Intégration avec Prisma pour la gestion des données
+**Communication intra-process :** appels de fonction directs (`lib/*ServiceClient.ts`) pour le synchrone, bus d'événements in-process (`src/shared/events`) pour l'asynchrone — mêmes clés de routage que l'ancien exchange RabbitMQ.
 
-**Technologies :**
-- Bun
-- TypeScript
-- Prisma
-- Fastify
+**Technologies :** Bun · TypeScript · Fastify · Prisma (multi-schema) · PostgreSQL.
 
-### gateway
-
-La passerelle API agit comme un point d'entrée unique pour tous les services. Elle gère le routage des requêtes vers les services appropriés et peut inclure des fonctionnalités transversales comme l'authentification, la journalisation et la limitation de débit.
-
-**Fonctionnalités principales :**
-- Routage des requêtes
-- Agrégation des services
-- Middleware pour l'authentification et la journalisation
-
-**Technologies :**
-- Node.js
-- TypeScript
+Documentation OpenAPI unifiée : `http://localhost:3001/docs` (tous les endpoints préfixés) une fois le backend démarré.
 
 ## Configuration et Installation
 
@@ -84,19 +67,18 @@ Pour un environnement de développement, utilisez :
    ```bash
    bun run db:run:stack
    ```
-   Cette commande démarre les conteneurs Postgres, applique les migrations Prisma sur `auth-service`, `class-service` et `grade-service`, puis exécute les seeds. Si Postgres tourne déjà et que les migrations sont à jour, vous pouvez ne lancer que les seeds :
+   Cette commande démarre le conteneur Postgres, applique les migrations Prisma sur la base unique multi-schema, puis exécute le seed consolidé. Si Postgres tourne déjà et que les migrations sont à jour, vous pouvez ne lancer que le seed :
    ```bash
    bun run seed:dev
    ```
-   Pour ne seed qu’un service : `bun run seed:dev --only=auth-service` (idem pour `class-service`, `grade-service`).
 
 ## Données de développement (comptes de test)
 
 Les seeds créent des comptes et des données de démo **uniquement pour le développement local**. Les mots de passe sont en clair dans le code source — ne jamais réutiliser ce schéma en production.
 
-### Comptes utilisateurs (auth-service)
+### Comptes utilisateurs
 
-Ces comptes sont créés ou mis à jour de façon idempotente par `packages/auth-service/prisma/seed.ts` (emails `@skolr.local`).
+Le seed crée ~40 comptes de dev (admin, user, teacher, student, ainsi que des profs, élèves et parents supplémentaires). Ils sont créés ou mis à jour de façon idempotente par le seed consolidé `packages/backend/prisma/seed.ts` (emails `@skolr.local`). Les 5 comptes ci-dessous suffisent pour tester chaque rôle :
 
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
@@ -104,19 +86,24 @@ Ces comptes sont créés ou mis à jour de façon idempotente par `packages/auth
 | `dev.user@skolr.local` | `dev-user-123` | USER |
 | `dev.teacher@skolr.local` | `dev-teacher-123` | TEACHER |
 | `dev.student@skolr.local` | `dev-student-123` | USER |
+| `platform.admin@skolr.local` | `dev-platform-123` | PLATFORM_ADMIN |
 
-Les identifiants UUID sont stables entre services (voir `scripts/seed/dev-users.ts`) pour que `class-service` et `grade-service` puissent référencer les mêmes utilisateurs.
+Les identifiants UUID sont stables (voir `scripts/seed/dev-users.ts`, la source de vérité partagée par tous les domaines).
 
-### Données associées (class-service, grade-service)
+### Données associées
 
-Après `bun run seed:dev` :
+Après `bun run seed:dev`, le seed remplit tous les schémas de la base unique :
 
 - **Classes** : `CM2-A` (primaire), `6ème Sciences` (collège), avec affectations enseignants / élèves.
-- **Notes** : élèves `dev.student` (CM2-A + 6ème Sciences) et `dev.user` (CM2-A), alignées sur les inscriptions class-service (pas de note pour les profs).
+- **Notes** : 3 matières, 4 cours, 6 devoirs et 75 notes alignés sur les inscriptions (pas de note pour les profs).
+- **Planning** : emploi du temps 2025-2026 (~19 créneaux/semaine), plus 6 absences et 3 justificatifs de démonstration.
+- **Messagerie** : une conversation de démonstration (3 messages, dont un non lu côté élève).
+- **Parents** : 4 liens parent ↔ enfant.
+- **Billing** : établissement « Collège Skolr Demo » avec abonnement STARTER.
 
 ### Se connecter (exemple)
 
-Avec la gateway sur le port par défaut `3001` et les services locaux démarrés :
+Directement sur le backend (port par défaut `3001`) :
 
 ```bash
 curl -s -X POST http://localhost:3001/auth/login \
@@ -124,58 +111,60 @@ curl -s -X POST http://localhost:3001/auth/login \
   -d '{"email":"dev.user@skolr.local","password":"dev-user-123"}'
 ```
 
-Connexion directe au auth-service (sans préfixe `/auth`) :
+Depuis le frontend (port `3003`), les appels passent par le proxy `/api` (Nitro relaie vers le backend via `GATEWAY_INTERNAL_URL`, cf. `packages/frontend/server/api/[...path].ts`) :
 
 ```bash
-curl -s -X POST http://localhost:3000/login \
+curl -s -X POST http://localhost:3003/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"dev.user@skolr.local","password":"dev-user-123"}'
 ```
-
-Le script `packages/gateway/scripts/seed-dev.ts` (appelé à la fin de `bun run seed:dev`) affiche aussi ces identifiants et des exemples `curl` dans le terminal.
 
 ### Scripts utiles (base de données)
 
 | Commande | Description |
 |----------|-------------|
-| `bun run db:run:stack` | Postgres (Docker) → migrations → seeds complets |
-| `bun run db:run:stack --no-docker` | Migrations + seeds (Postgres déjà démarré) |
+| `bun run db:run:stack` | Postgres (Docker) → migrations → seed complet |
+| `bun run db:run:stack --no-docker` | Migrations + seed (Postgres déjà démarré) |
 | `bun run db:run:stack --no-seed` | Postgres + migrations uniquement |
-| `bun run seed:dev` | Seeds uniquement (auth → class → grade → rappel gateway) |
+| `bun run seed:dev` | Seed uniquement (base unique multi-schema) |
 | `bun run db:migrate:dev` | Appliquer les migrations sans seed |
 
 ## Développement
 
-### Structure des Packages
+### Packages
 
-Chaque package dans le dossier `packages/` est un service ou une bibliothèque indépendante. Chaque package a son propre fichier `package.json` et peut être développé et testé indépendamment.
+Le monorepo Bun contient deux packages : `backend` (monolithe modulaire) et `frontend` (Nuxt). Chacun a son `package.json` et se développe indépendamment.
 
 ### Scripts Utiles
 
-- **Installer les dépendances de tous les packages :**
+- **Installer les dépendances :**
   ```bash
-  bun run install:all
+  bun install
   ```
 
-- **Construire tous les packages :**
+- **Backend en mode développement (watch) :**
   ```bash
-  bun run build:all
+  cd packages/backend && bun run dev      # http://localhost:3001
   ```
 
-- **Démarrer tous les services en mode développement :**
+- **Frontend en mode développement :**
   ```bash
-  bun run dev
+  cd packages/frontend && bun run dev     # http://localhost:8000
   ```
+
+- **Qualité (racine) :** `bun run lint` (ESLint) · `bun run knip` (code mort / deps inutilisées).
 
 - **Données de test (comptes, classes, notes) :** voir [Données de développement](#données-de-développement-comptes-de-test) — `bun run db:run:stack` ou `bun run seed:dev`.
 
 ## Tests
 
-Pour exécuter les tests de tous les packages :
+Tests unitaires du backend (tous les modules, base mockée en `NODE_ENV=test`) :
 
 ```bash
-bun test
+cd packages/backend && bun test src
 ```
+
+Tests E2E frontend (Playwright) : voir `packages/e2e`.
 
 ## Contribution
 
