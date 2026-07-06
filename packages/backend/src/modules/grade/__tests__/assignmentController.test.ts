@@ -131,14 +131,29 @@ beforeEach(() => {
 
 describe('getAssignments', () => {
   it('returns a list of assignments', async () => {
-    prismaMock.assignment.findMany.mockResolvedValue([sampleAssignment]);
+    prismaMock.assignment.findMany.mockResolvedValue([{ ...sampleAssignment, grades: [] }]);
     const req = createMockRequest({ query: {} });
     await assignmentController.getAssignments(req as FastifyRequest<{ Querystring: Record<string, unknown> }>, mockReply);
     expect(mockReply.status).toHaveBeenCalledWith(200);
     expect(mockReply.send).toHaveBeenCalledWith({
-      data: [sampleAssignment],
+      data: [{ ...sampleAssignment, gradedCount: 0, totalCount: 0 }],
       message: 'Assignments fetched successfully',
     });
+  });
+
+  it('computes gradedCount/totalCount from the assignment grades', async () => {
+    prismaMock.assignment.findMany.mockResolvedValue([
+      {
+        ...sampleAssignment,
+        grades: [{ status: 'GRADED' }, { status: 'GRADED' }, { status: 'PENDING' }],
+      },
+    ]);
+    const req = createMockRequest({ query: { teacherId: 'teacher-1' } });
+    await assignmentController.getAssignments(req as FastifyRequest<{ Querystring: Record<string, unknown> }>, mockReply);
+    const call = (mockReply.send as ReturnType<typeof mock>).mock.calls[0]?.[0];
+    expect(call?.data[0].gradedCount).toBe(2);
+    expect(call?.data[0].totalCount).toBe(3);
+    expect(call?.data[0].grades).toBeUndefined();
   });
 });
 

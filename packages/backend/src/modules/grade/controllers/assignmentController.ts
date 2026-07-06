@@ -114,11 +114,17 @@ export default {
           ...(teacherId ? { teacherId } : {}),
           ...(status ? { status: status as AssignmentStatus } : {}),
         },
-        include: assignmentInclude,
+        include: { ...assignmentInclude, grades: { select: { status: true } } },
         orderBy: { assignedAt: 'desc' },
       });
 
-      return reply.status(200).send({ data: assignments, message: 'Assignments fetched successfully' });
+      const data = assignments.map(({ grades, ...assignment }) => ({
+        ...assignment,
+        gradedCount: grades.filter((g) => g.status === 'GRADED').length,
+        totalCount: grades.length,
+      }));
+
+      return reply.status(200).send({ data, message: 'Assignments fetched successfully' });
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Internal server error' });
