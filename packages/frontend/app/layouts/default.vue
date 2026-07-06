@@ -89,6 +89,7 @@
     <main class="app-content">
       <slot />
     </main>
+    <Toast position="bottom-right" />
   </div>
   <div v-else class="guest-root">
     <slot />
