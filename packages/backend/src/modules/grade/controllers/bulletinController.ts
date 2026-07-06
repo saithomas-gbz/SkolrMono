@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import PDFDocument from 'pdfkit';
 import db from '../db';
+import { weightedAverage } from '../lib/stats';
 
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
 
@@ -15,16 +16,6 @@ interface CourseGroup {
     coefficient: number;
     status: GradeStatus;
   }[];
-}
-
-function weightedAverage(
-  entries: { value: number | null; coefficient: number; status: GradeStatus }[],
-): number | null {
-  const graded = entries.filter((e) => e.status === 'GRADED' && e.value !== null);
-  if (graded.length === 0) return null;
-  const totalWeight = graded.reduce((acc, e) => acc + e.coefficient, 0);
-  const weightedSum = graded.reduce((acc, e) => acc + (e.value ?? 0) * e.coefficient, 0);
-  return weightedSum / totalWeight;
 }
 
 function formatDate(date: Date): string {
