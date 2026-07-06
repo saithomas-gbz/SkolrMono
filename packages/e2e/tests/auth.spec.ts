@@ -7,9 +7,9 @@ test.describe('Authentification & gardes de route', () => {
     await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible();
   });
 
-  test('connecte dev.user et atterrit sur le dashboard', async ({ page }) => {
+  test('connecte dev.user et atterrit sur son tableau de bord élève', async ({ page }) => {
     await loginAs(page, 'user');
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/student/);
   });
 
   test("empêche un utilisateur connecté de revenir sur /auth/login (garde guest)", async ({
