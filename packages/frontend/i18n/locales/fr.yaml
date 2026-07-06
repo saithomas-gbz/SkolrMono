@@ -382,6 +382,19 @@ teacher:
     joined_on: Inscrit le
     manage_grades: Gérer les notes
     gradebook: Carnet
+  dashboard:
+    today_sessions_title: Sessions du jour
+    no_sessions_today: Aucun cours prévu aujourd'hui.
+    see_planning: "Voir le planning →"
+    unjustified_absences_title: Absences non justifiées
+    unjustified_absences_count: "{count} absence non justifiée | {count} absences non justifiées"
+    see_absences: "Voir les absences →"
+    recent_assignments_title: Devoirs récents
+    no_recent_assignments: Aucun devoir créé récemment.
+    grades_entered: "{graded}/{total} notes saisies"
+    enter_grades: Saisir les notes
+    class_average_title: Moyenne de classe
+    class_average_coming_soon: "Ce widget arrivera avec le suivi statistique détaillé (issue #96)."
 
 messages:
   title: Messages

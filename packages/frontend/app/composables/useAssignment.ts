@@ -20,6 +20,8 @@ export type AssignmentEntity = {
   status: AssignmentStatus;
   class?: AssignmentClassRef;
   course?: AssignmentCourseRef;
+  gradedCount: number;
+  totalCount: number;
   createdAt: string;
   updatedAt: string;
 };

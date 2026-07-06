@@ -40,7 +40,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 import type { ParentChild } from '~/composables/useParent';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'parent'] });
 
 const { fetchChildren } = useParent();
 const { fetchClassesByStudentId } = useClass();
