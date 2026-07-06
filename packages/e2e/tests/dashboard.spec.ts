@@ -37,8 +37,8 @@ test('le tableau de bord enseignant affiche les widgets de synthèse (issue #97)
   await loginAs(page, 'teacher');
   await expect(page).toHaveURL(/\/teacher/);
 
-  await expect(page.getByText('Sessions du jour')).toBeVisible();
-  await expect(page.getByText('Absences non justifiées')).toBeVisible();
-  await expect(page.getByText('Devoirs récents')).toBeVisible();
-  await expect(page.getByText('Moyenne de classe')).toBeVisible();
+  await expect(page.getByText('Sessions du jour', { exact: true })).toBeVisible();
+  await expect(page.getByText('Absences non justifiées', { exact: true })).toBeVisible();
+  await expect(page.getByText('Devoirs récents', { exact: true })).toBeVisible();
+  await expect(page.getByText('Moyenne de classe', { exact: true })).toBeVisible();
 });
