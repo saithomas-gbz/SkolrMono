@@ -410,6 +410,9 @@ stats:
   distribution_title: Distribution des notes
   no_course_average: Aucune moyenne disponible pour cette classe.
   rank_badge: "{position}e / {total}"
+  course_average_dataset_label: Moyenne /20
+  average_axis_title: Moyenne (/20)
+  subject_axis_title: Matière
 
 messages:
   title: Messages

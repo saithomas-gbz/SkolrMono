@@ -26,6 +26,7 @@ const props = defineProps<{
   classId: string | null;
 }>();
 
+const { t } = useI18n();
 const { fetchClassStats, normalizeApiError } = useGrade();
 
 const pending = ref(true);
@@ -58,7 +59,7 @@ const chartData = computed(() => ({
   labels: byCourse.value.map((c) => c.courseName),
   datasets: [
     {
-      label: 'Moyenne /20',
+      label: t('stats.course_average_dataset_label'),
       data: byCourse.value.map((c) => c.average),
       backgroundColor: CHART_PRIMARY.fill,
       hoverBackgroundColor: CHART_PRIMARY.hover,
@@ -76,10 +77,10 @@ const chartOptions = {
       min: 0,
       max: 20,
       ticks: { stepSize: 2 },
-      title: { display: true, text: 'Moyenne (/20)' },
+      title: { display: true, text: t('stats.average_axis_title') },
     },
     x: {
-      title: { display: true, text: 'Matière' },
+      title: { display: true, text: t('stats.subject_axis_title') },
     },
   },
   plugins: {
