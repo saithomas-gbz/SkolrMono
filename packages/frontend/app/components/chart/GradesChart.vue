@@ -89,7 +89,7 @@ const props = defineProps<{
 
 const api = useApi();
 const { role, userId } = useAuth();
-const { normalizeApiError } = useGrade();
+const { normalizeApiError, roundScore } = useGrade();
 const apiMessage = ref<string | null>(null);
 
 const isPersonalView = computed(() => role.value === 'USER');
@@ -240,10 +240,6 @@ const chartOptions = {
     },
   },
 };
-
-function roundScore(value: number): string {
-  return String(Math.round(value * 10) / 10);
-}
 </script>
 
 <style scoped>

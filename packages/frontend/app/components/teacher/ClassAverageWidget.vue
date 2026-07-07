@@ -28,7 +28,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 
 const { fetchClassesByTeacherId } = useClass();
-const { fetchClassStats } = useGrade();
+const { fetchClassStats, roundScore } = useGrade();
 const { userId } = useAuth();
 
 const pending = ref(true);
@@ -63,10 +63,6 @@ onMounted(async () => {
     pending.value = false;
   }
 });
-
-function roundScore(value: number): string {
-  return String(Math.round(value * 10) / 10);
-}
 </script>
 
 <style scoped>

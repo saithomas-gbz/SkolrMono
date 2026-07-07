@@ -144,7 +144,7 @@ const route = useRoute();
 const id = computed(() => route.params.id as string);
 
 const { fetchGradeGrid, batchUpdateGrades, updateAssignment, normalizeApiError } = useAssignment();
-const { fetchAssignmentStats } = useGrade();
+const { fetchAssignmentStats, roundScore } = useGrade();
 
 const pending = ref(true);
 const saving = ref(false);
@@ -232,7 +232,7 @@ async function load() {
 }
 
 function formatStat(value: number | null): string {
-  return value !== null ? String(Math.round(value * 10) / 10) : '—';
+  return value !== null ? roundScore(value) : '—';
 }
 
 async function saveAll() {

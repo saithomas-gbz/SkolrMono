@@ -38,7 +38,7 @@
                     <Tag
                       :value="
                         group.average !== null
-                          ? `${$t('grades.my_grades.average')} ${formatScore(group.average)}/20`
+                          ? `${$t('grades.my_grades.average')} ${roundScore(group.average)}/20`
                           : $t('grades.my_grades.no_average')
                       "
                       :severity="gradeSeverity(group.average)"
@@ -80,7 +80,7 @@ definePageMeta({ middleware: ['auth'] });
 
 const { t } = useI18n();
 const { hasRole, userId } = useAuth();
-const { fetchGradesByUserId, normalizeApiError } = useGrade();
+const { fetchGradesByUserId, normalizeApiError, roundScore } = useGrade();
 const config = useRuntimeConfig();
 const authTokenCookie = useAuthTokenCookie();
 const toast = useToast();
@@ -147,14 +147,10 @@ function gradeSeverity(value: number | null): 'success' | 'warn' | 'danger' | 's
 }
 
 function statusLabel(grade: GradeEntity): string {
-  if (grade.status === 'GRADED' && grade.value !== null) return `${formatScore(grade.value)}/20`;
+  if (grade.status === 'GRADED' && grade.value !== null) return `${roundScore(grade.value)}/20`;
   if (grade.status === 'ABSENT') return t('grades.assignment.absent');
   if (grade.status === 'EXEMPT') return t('grades.assignment.exempt');
   return t('grades.assignment.pending');
-}
-
-function formatScore(value: number): string {
-  return String(Math.round(value * 10) / 10);
 }
 
 function formatDate(iso: string): string {

@@ -168,7 +168,7 @@ export function histogramBuckets(
   return buckets;
 }
 
-function roundScore(value: number): string {
+export function roundScore(value: number): string {
   return String(Math.round(value * 10) / 10);
 }
 
@@ -252,6 +252,7 @@ export function useGrade() {
     deleteGrade,
     averageGradeValues,
     histogramBuckets,
+    roundScore,
     normalizeApiError,
   };
 }
