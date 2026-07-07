@@ -64,7 +64,7 @@ export default {
           courseName: group.courseName,
           subjectName: group.subjectName,
           average: weightedAverage(group.entries),
-          gradedCount: group.entries.filter((e) => e.status === 'GRADED').length,
+          gradedCount: group.entries.filter((e) => e.status === 'GRADED' && e.value !== null).length,
         }));
 
         const allEntries = groups.flatMap((g) => g.entries);

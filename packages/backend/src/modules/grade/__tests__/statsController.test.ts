@@ -94,6 +94,22 @@ describe('getClassStats', () => {
     expect(call.data.distribution).toHaveLength(5);
   });
 
+  it("exclut du gradedCount les notes GRADED sans valeur (incohérence possible en base)", async () => {
+    db.grade.findMany.mockResolvedValue([
+      gradeFixture({ value: 10 }),
+      gradeFixture({ value: 20 }),
+      gradeFixture({ status: 'GRADED', value: null }),
+    ]);
+    const req = { params: { classId: 'class-1' }, gradeUser: { userId: 'admin-1', email: '', role: 'ADMIN' } } as unknown as GetClassStatsRequest;
+    const reply = buildReply();
+
+    await statsController.getClassStats(req, reply);
+
+    const call = (reply.send as ReturnType<typeof mock>).mock.calls[0]?.[0];
+    expect(call.data.byCourse[0].average).toBe(15);
+    expect(call.data.byCourse[0].gradedCount).toBe(2);
+  });
+
   it("renvoie 403 si un TEACHER demande une classe qu'il n'enseigne pas", async () => {
     getClassIdsForTeacher.mockResolvedValue(['other-class']);
     const req = { params: { classId: 'class-1' }, gradeUser: { userId: 'teacher-1', email: '', role: 'TEACHER' } } as unknown as GetClassStatsRequest;
