@@ -203,10 +203,12 @@ function markDirty(userId: string) {
 }
 
 async function load() {
+  const assignmentId = id.value;
   pending.value = true;
   fetchError.value = null;
   try {
-    const data = await fetchGradeGrid(id.value);
+    const data = await fetchGradeGrid(assignmentId);
+    if (id.value !== assignmentId) return; // navigation vers un autre assignment entre-temps
     gridData.value = data;
     const map: Record<string, LocalGradeRow> = {};
     for (const row of data.rows) {
@@ -219,11 +221,13 @@ async function load() {
     localRows.value = map;
     dirtyUsers.value = new Set();
 
-    assignmentStats.value = data.gradedCount > 0 ? await fetchAssignmentStats(id.value) : null;
+    assignmentStats.value = data.gradedCount > 0 ? await fetchAssignmentStats(assignmentId) : null;
+    if (id.value !== assignmentId) return;
   } catch (error) {
+    if (id.value !== assignmentId) return;
     fetchError.value = normalizeApiError(error);
   } finally {
-    pending.value = false;
+    if (id.value === assignmentId) pending.value = false;
   }
 }
 
