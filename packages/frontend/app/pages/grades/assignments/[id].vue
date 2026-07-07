@@ -42,6 +42,25 @@
         </div>
 
         <template v-else-if="gridData">
+          <div v-if="assignmentStats" class="assignment-stats">
+            <div class="stat-tile">
+              <span class="stat-value">{{ formatStat(assignmentStats.min) }}</span>
+              <span class="stat-label">{{ $t('grades.assignment.stats_min') }}</span>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-value">{{ formatStat(assignmentStats.max) }}</span>
+              <span class="stat-label">{{ $t('grades.assignment.stats_max') }}</span>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-value">{{ formatStat(assignmentStats.average) }}</span>
+              <span class="stat-label">{{ $t('grades.assignment.stats_average') }}</span>
+            </div>
+            <div class="stat-tile">
+              <span class="stat-value">{{ formatStat(assignmentStats.median) }}</span>
+              <span class="stat-label">{{ $t('grades.assignment.stats_median') }}</span>
+            </div>
+          </div>
+
           <div class="grid-toolbar">
             <span class="grade-counter">{{ gradedCountLabel }}</span>
             <Button
@@ -116,6 +135,7 @@ import {
   type GradeGridData,
   type GradeStatus,
 } from '~/composables/useAssignment';
+import type { AssignmentStats } from '~/composables/useGrade';
 
 definePageMeta({ middleware: ['auth'] });
 
@@ -124,6 +144,7 @@ const route = useRoute();
 const id = computed(() => route.params.id as string);
 
 const { fetchGradeGrid, batchUpdateGrades, updateAssignment, normalizeApiError } = useAssignment();
+const { fetchAssignmentStats, roundScore } = useGrade();
 
 const pending = ref(true);
 const saving = ref(false);
@@ -131,6 +152,7 @@ const closing = ref(false);
 const fetchError = ref<string | null>(null);
 const saveError = ref<string | null>(null);
 const gridData = ref<GradeGridData | null>(null);
+const assignmentStats = ref<AssignmentStats | null>(null);
 const assignment = computed(() => gridData.value?.assignment ?? null);
 
 interface LocalGradeRow {
@@ -181,10 +203,12 @@ function markDirty(userId: string) {
 }
 
 async function load() {
+  const assignmentId = id.value;
   pending.value = true;
   fetchError.value = null;
   try {
-    const data = await fetchGradeGrid(id.value);
+    const data = await fetchGradeGrid(assignmentId);
+    if (id.value !== assignmentId) return; // navigation vers un autre assignment entre-temps
     gridData.value = data;
     const map: Record<string, LocalGradeRow> = {};
     for (const row of data.rows) {
@@ -196,11 +220,19 @@ async function load() {
     }
     localRows.value = map;
     dirtyUsers.value = new Set();
+
+    assignmentStats.value = data.gradedCount > 0 ? await fetchAssignmentStats(assignmentId) : null;
+    if (id.value !== assignmentId) return;
   } catch (error) {
+    if (id.value !== assignmentId) return;
     fetchError.value = normalizeApiError(error);
   } finally {
-    pending.value = false;
+    if (id.value === assignmentId) pending.value = false;
   }
+}
+
+function formatStat(value: number | null): string {
+  return value !== null ? roundScore(value) : '—';
 }
 
 async function saveAll() {
@@ -275,6 +307,39 @@ watch(id, load, { immediate: true });
   gap: 0.75rem;
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
   padding: 1.5rem 0;
+}
+
+.assignment-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stat-tile {
+  flex: 1 1 min(100%, 8rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--p-surface-50, var(--skolr-color-surface-hover));
+  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--p-primary-color, var(--skolr-color-brand-green));
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
+  text-align: center;
 }
 
 .grid-toolbar {

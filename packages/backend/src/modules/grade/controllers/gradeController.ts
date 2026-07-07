@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
 import { publish } from '../../../shared/events';
+import { invalidate } from '../lib/ttlCache';
 
 const gradeInclude = {
   user: true,
@@ -151,6 +152,10 @@ export default {
         value: grade.value,
       }).catch((err) => request.log.warn({ err }, 'Failed to publish grade.created'));
 
+      invalidate(`user:${grade.userId}`);
+      invalidate(`class:${grade.classId}`);
+      invalidate(`assignment:${grade.assignmentId}`);
+
       return reply.status(201).send({ data: grade, message: 'Grade created successfully' });
     } catch (error) {
       request.log.error(error);
@@ -180,6 +185,11 @@ export default {
         },
         include: gradeInclude,
       });
+
+      invalidate(`user:${grade.userId}`);
+      invalidate(`class:${grade.classId}`);
+      invalidate(`assignment:${grade.assignmentId}`);
+
       return reply.status(200).send({ data: grade, message: 'Grade updated successfully' });
     } catch (error) {
       request.log.error(error);
@@ -200,6 +210,11 @@ export default {
         where: { id },
         include: gradeInclude,
       });
+
+      invalidate(`user:${grade.userId}`);
+      invalidate(`class:${grade.classId}`);
+      invalidate(`assignment:${grade.assignmentId}`);
+
       return reply.status(200).send({ data: grade, message: 'Grade deleted successfully' });
     } catch (error) {
       request.log.error(error);

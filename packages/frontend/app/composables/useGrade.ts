@@ -78,6 +78,49 @@ export type HistogramBucket = {
   count: number;
 };
 
+/** Aligné sur `statsOpenApi` (issue #96). */
+export type CourseAverage = {
+  courseId: string;
+  courseName: string;
+  subjectName: string | null;
+  average: number | null;
+};
+
+export type CourseAverageWithCount = CourseAverage & { gradedCount: number };
+
+export type ClassStats = {
+  classId: string;
+  average: number | null;
+  byCourse: CourseAverageWithCount[];
+  distribution: HistogramBucket[];
+};
+
+export type TrendPoint = { date: string; average: number };
+
+export type Rank = { position: number; totalStudents: number } | null;
+
+export type UserStats = {
+  userId: string;
+  average: number | null;
+  byCourse: CourseAverage[];
+  trend: TrendPoint[];
+  rank: Rank;
+};
+
+export type AssignmentStats = {
+  assignmentId: string;
+  gradedCount: number;
+  totalCount: number;
+  min: number | null;
+  max: number | null;
+  average: number | null;
+  median: number | null;
+};
+
+export type ClassStatsApiResponse = { data: ClassStats; message: string };
+export type UserStatsApiResponse = { data: UserStats; message: string };
+export type AssignmentStatsApiResponse = { data: AssignmentStats; message: string };
+
 export function averageGradeValues(grades: Pick<GradeEntity, 'value' | 'status'>[]): number | null {
   const graded = grades.filter((g) => g.status === 'GRADED' && g.value !== null);
   if (graded.length === 0) {
@@ -125,7 +168,7 @@ export function histogramBuckets(
   return buckets;
 }
 
-function roundScore(value: number): string {
+export function roundScore(value: number): string {
   return String(Math.round(value * 10) / 10);
 }
 
@@ -154,6 +197,21 @@ export function useGrade() {
 
   async function fetchCourses() {
     const response = await api<CourseListApiResponse>('/grade/courses');
+    return response.data;
+  }
+
+  async function fetchClassStats(classId: string) {
+    const response = await api<ClassStatsApiResponse>(`/grade/stats/class/${classId}`);
+    return response.data;
+  }
+
+  async function fetchUserStats(userId: string) {
+    const response = await api<UserStatsApiResponse>(`/grade/stats/user/${userId}`);
+    return response.data;
+  }
+
+  async function fetchAssignmentStats(assignmentId: string) {
+    const response = await api<AssignmentStatsApiResponse>(`/grade/stats/assignment/${assignmentId}`);
     return response.data;
   }
 
@@ -186,11 +244,15 @@ export function useGrade() {
     fetchGradesByClassId,
     fetchGradesByUserId,
     fetchCourses,
+    fetchClassStats,
+    fetchUserStats,
+    fetchAssignmentStats,
     createGrade,
     updateGrade,
     deleteGrade,
     averageGradeValues,
     histogramBuckets,
+    roundScore,
     normalizeApiError,
   };
 }

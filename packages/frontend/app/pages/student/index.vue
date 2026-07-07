@@ -10,7 +10,10 @@
       <template #title>
         <div class="card-title-row">
           <span>{{ $t('dashboard.grade_progress') }}</span>
-          <NuxtLink to="/grades/my-grades" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
+          <div class="card-title-actions">
+            <Tag v-if="rank" :value="$t('stats.rank_badge', { position: rank.position, total: rank.totalStudents })" severity="info" />
+            <NuxtLink to="/grades/my-grades" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
+          </div>
         </div>
       </template>
       <template #content>
@@ -27,7 +30,24 @@
 </template>
 
 <script setup lang="ts">
+import type { Rank } from '~/composables/useGrade';
+
 definePageMeta({ middleware: ['auth', 'student'] });
+
+const { fetchUserStats } = useGrade();
+const { userId } = useAuth();
+
+const rank = ref<Rank>(null);
+
+onMounted(async () => {
+  if (!userId.value) return;
+  try {
+    const stats = await fetchUserStats(userId.value);
+    rank.value = stats.rank;
+  } catch {
+    // Badge de rang non bloquant : on laisse simplement la carte sans badge.
+  }
+});
 </script>
 
 <style scoped>
@@ -46,6 +66,12 @@ definePageMeta({ middleware: ['auth', 'student'] });
   align-items: center;
   justify-content: space-between;
   width: 100%;
+}
+
+.card-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .card-link {

@@ -1,4 +1,7 @@
-import { teacherTeachesCourse as classTeacherTeachesCourse } from '../../class/service';
+import {
+  teacherTeachesCourse as classTeacherTeachesCourse,
+  getClassIdsForTeacher as classGetClassIdsForTeacher,
+} from '../../class/service';
 
 /**
  * Anciennement un appel HTTP vers class-service. Désormais un appel intra-process
@@ -11,4 +14,9 @@ export async function teacherTeachesCourse(
   courseId: string,
 ): Promise<boolean> {
   return classTeacherTeachesCourse(classId, teacherId, courseId);
+}
+
+/** Classes où ce teacherId enseigne — utilisé pour scoper les stats de classe (issue #96). */
+export async function getClassIdsForTeacher(teacherId: string): Promise<string[]> {
+  return classGetClassIdsForTeacher(teacherId);
 }

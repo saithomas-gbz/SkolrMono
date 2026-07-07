@@ -130,6 +130,7 @@ const navLinks = computed<NavLink[]>(() => {
 
   if (isTeacher.value || isAdmin.value) {
     links.push({ label: t('nav.absences'), to: '/planning/absences' });
+    links.push({ label: t('nav.statistics'), to: '/statistics' });
   }
 
   if (isStudent.value) {
