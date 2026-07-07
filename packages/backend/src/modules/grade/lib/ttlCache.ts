@@ -1,9 +1,11 @@
 /**
  * Cache mémoire minimal (issue #96) : pas de Redis/cache partagé ailleurs dans le
- * repo, donc un simple Map + TTL suffit pour ce monolithe mono-process. TTL court,
- * sans invalidation active sur écriture (createGrade/batchUpdateGrades/
- * publishAssignment ne sont pas modifiés) — fenêtre de fraîcheur assumée en échange
- * de ne pas toucher tous les points d'écriture du module grade.
+ * repo, donc un simple Map + TTL suffit pour ce monolithe mono-process. Les écritures
+ * de notes (createGrade/updateGrade/deleteGrade/batchUpdateGrades) appellent
+ * `invalidate` sur les clés directement concernées (user/class/assignment) ; le rang
+ * des camarades de classe (dérivé de leur propre entrée `user:*`) peut rester
+ * périmé jusqu'à expiration du TTL — fenêtre de fraîcheur assumée plutôt qu'une
+ * invalidation par préfixe de classe.
  */
 
 type CacheEntry<T> = { value: T; expiresAt: number };
@@ -18,4 +20,8 @@ export async function getOrCompute<T>(key: string, ttlMs: number, compute: () =>
   const value = await compute();
   store.set(key, { value, expiresAt: Date.now() + ttlMs });
   return value;
+}
+
+export function invalidate(key: string): void {
+  store.delete(key);
 }

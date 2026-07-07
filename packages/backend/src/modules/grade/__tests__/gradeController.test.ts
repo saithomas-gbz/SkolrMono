@@ -5,9 +5,15 @@ import type { FastifyRequest, FastifyReply, RouteGenericInterface } from 'fastif
 import type { CreateGradeBody, UpdateGradeBody } from '../controllers/gradeController';
 
 const teacherTeachesCourseMock = mock();
+const invalidateMock = mock();
 
 mock.module('../lib/classServiceClient', () => ({
   teacherTeachesCourse: teacherTeachesCourseMock,
+}));
+
+mock.module('../lib/ttlCache', () => ({
+  getOrCompute: (_key: string, _ttlMs: number, compute: () => unknown) => compute(),
+  invalidate: invalidateMock,
 }));
 
 mock.module('../generated/prisma/client', () => ({
@@ -122,6 +128,7 @@ describe('GradeController', () => {
     prismaMock.class.findUnique.mockReset();
     prismaMock.course.findUnique.mockReset();
     teacherTeachesCourseMock.mockReset();
+    invalidateMock.mockReset();
 
     (mockReply.status as ReturnType<typeof mock>).mockReset();
     (mockReply.send as ReturnType<typeof mock>).mockReset();
@@ -221,6 +228,9 @@ describe('GradeController', () => {
         data: sampleGrade,
         message: 'Grade created successfully',
       });
+      expect(invalidateMock).toHaveBeenCalledWith('user:user-1');
+      expect(invalidateMock).toHaveBeenCalledWith('class:class-1');
+      expect(invalidateMock).toHaveBeenCalledWith('assignment:assignment-1');
     });
 
     it('should return 404 when assignment is missing', async () => {
@@ -301,6 +311,9 @@ describe('GradeController', () => {
         data: { ...sampleGrade, value: 18 },
         message: 'Grade updated successfully',
       });
+      expect(invalidateMock).toHaveBeenCalledWith('user:user-1');
+      expect(invalidateMock).toHaveBeenCalledWith('class:class-1');
+      expect(invalidateMock).toHaveBeenCalledWith('assignment:assignment-1');
     });
 
     it('should return 404 when grade is missing', async () => {
@@ -326,6 +339,9 @@ describe('GradeController', () => {
         data: sampleGrade,
         message: 'Grade deleted successfully',
       });
+      expect(invalidateMock).toHaveBeenCalledWith('user:user-1');
+      expect(invalidateMock).toHaveBeenCalledWith('class:class-1');
+      expect(invalidateMock).toHaveBeenCalledWith('assignment:assignment-1');
     });
 
     it('should return 404 when grade is missing', async () => {

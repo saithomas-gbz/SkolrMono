@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { invalidate } from '../lib/ttlCache';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
@@ -339,6 +340,10 @@ export default {
           });
         }
       });
+
+      invalidate(`assignment:${id}`);
+      invalidate(`class:${assignment.classId}`);
+      for (const entry of entries) invalidate(`user:${entry.userId}`);
 
       return reply.status(200).send({ message: 'Grades updated successfully' });
     } catch (error) {

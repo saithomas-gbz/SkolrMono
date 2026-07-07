@@ -4,6 +4,7 @@ import type { FastifyReply } from 'fastify';
 // Bypasse le cache TTL pour des tests déterministes (pas d'état partagé entre cas).
 mock.module('../lib/ttlCache', () => ({
   getOrCompute: (_key: string, _ttlMs: number, compute: () => unknown) => compute(),
+  invalidate: mock(),
 }));
 
 mock.module('../db', () => ({
