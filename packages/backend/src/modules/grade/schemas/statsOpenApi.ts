@@ -141,6 +141,7 @@ export const getAssignmentStatsSchema = {
     200: { type: 'object', properties: { data: assignmentStats, message: { type: 'string' } }, required: ['data', 'message'] },
     401: errorBody,
     403: errorBody,
+    404: errorBody,
     500: errorBody,
   },
 } as const;

@@ -10,6 +10,7 @@ mock.module('../db', () => ({
   default: {
     grade: { findMany: mock(), count: mock() },
     user: { findUnique: mock(), findMany: mock() },
+    assignment: { findUnique: mock() },
   },
 }));
 
@@ -22,9 +23,11 @@ const statsController = (await import('../controllers/statsController')).default
 const db = (await import('../db')).default as unknown as {
   grade: { findMany: ReturnType<typeof mock>; count: ReturnType<typeof mock> };
   user: { findUnique: ReturnType<typeof mock>; findMany: ReturnType<typeof mock> };
+  assignment: { findUnique: ReturnType<typeof mock> };
 };
-const { getClassIdsForTeacher } = (await import('../lib/classServiceClient')) as unknown as {
+const { getClassIdsForTeacher, teacherTeachesCourse } = (await import('../lib/classServiceClient')) as unknown as {
   getClassIdsForTeacher: ReturnType<typeof mock>;
+  teacherTeachesCourse: ReturnType<typeof mock>;
 };
 
 function buildReply(): FastifyReply {
@@ -49,13 +52,26 @@ function gradeFixture(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function assignmentFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'assignment-1',
+    classId: 'class-1',
+    courseId: 'course-1',
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   db.grade.findMany.mockReset();
   db.grade.count.mockReset();
   db.user.findUnique.mockReset();
   db.user.findMany.mockReset();
+  db.assignment.findUnique.mockReset();
+  db.assignment.findUnique.mockResolvedValue(assignmentFixture());
   getClassIdsForTeacher.mockReset();
   getClassIdsForTeacher.mockResolvedValue([]);
+  teacherTeachesCourse.mockReset();
+  teacherTeachesCourse.mockResolvedValue(true);
 });
 
 describe('getClassStats', () => {
@@ -151,7 +167,10 @@ describe('getAssignmentStats', () => {
       gradeFixture({ value: 10 }),
       gradeFixture({ value: 15 }),
     ]);
-    const req = { params: { assignmentId: 'assignment-1' } } as unknown as GetAssignmentStatsRequest;
+    const req = {
+      params: { assignmentId: 'assignment-1' },
+      gradeUser: { userId: 'admin-1', email: '', role: 'ADMIN' },
+    } as unknown as GetAssignmentStatsRequest;
     const reply = buildReply();
 
     await statsController.getAssignmentStats(req, reply);
@@ -172,7 +191,10 @@ describe('getAssignmentStats', () => {
   it('renvoie des null quand aucune note GRADED', async () => {
     db.grade.count.mockResolvedValue(5);
     db.grade.findMany.mockResolvedValue([]);
-    const req = { params: { assignmentId: 'assignment-1' } } as unknown as GetAssignmentStatsRequest;
+    const req = {
+      params: { assignmentId: 'assignment-1' },
+      gradeUser: { userId: 'admin-1', email: '', role: 'ADMIN' },
+    } as unknown as GetAssignmentStatsRequest;
     const reply = buildReply();
 
     await statsController.getAssignmentStats(req, reply);
@@ -183,5 +205,49 @@ describe('getAssignmentStats', () => {
     expect(call.data.max).toBeNull();
     expect(call.data.average).toBeNull();
     expect(call.data.median).toBeNull();
+  });
+
+  it("renvoie 404 si l'assignment est introuvable", async () => {
+    db.assignment.findUnique.mockResolvedValue(null);
+    const req = {
+      params: { assignmentId: 'missing' },
+      gradeUser: { userId: 'admin-1', email: '', role: 'ADMIN' },
+    } as unknown as GetAssignmentStatsRequest;
+    const reply = buildReply();
+
+    await statsController.getAssignmentStats(req, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(404);
+    expect(db.grade.findMany).not.toHaveBeenCalled();
+  });
+
+  it("renvoie 403 si un TEACHER n'enseigne pas le cours de l'assignment", async () => {
+    teacherTeachesCourse.mockResolvedValue(false);
+    const req = {
+      params: { assignmentId: 'assignment-1' },
+      gradeUser: { userId: 'teacher-1', email: '', role: 'TEACHER' },
+    } as unknown as GetAssignmentStatsRequest;
+    const reply = buildReply();
+
+    await statsController.getAssignmentStats(req, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(403);
+    expect(db.grade.findMany).not.toHaveBeenCalled();
+  });
+
+  it("autorise un TEACHER qui enseigne le cours de l'assignment", async () => {
+    teacherTeachesCourse.mockResolvedValue(true);
+    db.grade.count.mockResolvedValue(0);
+    db.grade.findMany.mockResolvedValue([]);
+    const req = {
+      params: { assignmentId: 'assignment-1' },
+      gradeUser: { userId: 'teacher-1', email: '', role: 'TEACHER' },
+    } as unknown as GetAssignmentStatsRequest;
+    const reply = buildReply();
+
+    await statsController.getAssignmentStats(req, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(200);
+    expect(teacherTeachesCourse).toHaveBeenCalledWith('class-1', 'teacher-1', 'course-1');
   });
 });

@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { weightedAverage, median, rankOf, gradeDistributionBuckets } from '../lib/stats';
-import { getClassIdsForTeacher } from '../lib/classServiceClient';
+import { getClassIdsForTeacher, teacherTeachesCourse } from '../lib/classServiceClient';
 import { getOrCompute } from '../lib/ttlCache';
 
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
@@ -159,6 +159,19 @@ export default {
   ) => {
     try {
       const { assignmentId } = request.params;
+      const gradeUser = request.gradeUser!;
+
+      const assignment = await db.assignment.findUnique({ where: { id: assignmentId } });
+      if (!assignment) {
+        return reply.status(404).send({ error: 'Assignment not found' });
+      }
+
+      if (gradeUser.role === 'TEACHER') {
+        const allowed = await teacherTeachesCourse(assignment.classId, gradeUser.userId, assignment.courseId);
+        if (!allowed) {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+      }
 
       const data = await getOrCompute(`assignment:${assignmentId}`, STATS_TTL_MS, async () => {
         const [totalCount, gradedRows] = await Promise.all([
