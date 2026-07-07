@@ -43,13 +43,20 @@ onMounted(async () => {
 
   try {
     const classes = await fetchClassesByTeacherId(userId.value);
-    const stats = await Promise.all(
+    const results = await Promise.allSettled(
       classes.map(async (c) => {
         const classStats = await fetchClassStats(c.id);
         return { classId: c.id, className: c.name, average: classStats.average };
       }),
     );
-    classAverages.value = stats;
+    classAverages.value = results
+      .filter((r): r is PromiseFulfilledResult<{ classId: string; className: string; average: number | null }> => r.status === 'fulfilled')
+      .map((r) => r.value);
+
+    if (classAverages.value.length === 0 && classes.length > 0) {
+      const firstError = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+      fetchError.value = normalizeApiError(firstError?.reason);
+    }
   } catch (e) {
     fetchError.value = normalizeApiError(e);
   } finally {
