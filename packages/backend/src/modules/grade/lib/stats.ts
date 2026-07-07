@@ -43,7 +43,7 @@ export function rankOf(
   return { position, totalStudents: averages.length };
 }
 
-export type DistributionBucket = { label: string; min: number; max: number; count: number };
+type DistributionBucket = { label: string; min: number; max: number; count: number };
 
 /** Même découpage 5 tranches [0,20] que `histogramBuckets()` côté frontend (useGrade.ts). */
 export function gradeDistributionBuckets(
