@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
-import { weightedAverage, median, rankOf, gradeDistributionBuckets } from '../lib/stats';
+import { weightedAverage, median, rankOf, gradeDistributionBuckets, groupGradesByCourse } from '../lib/stats';
 import { getClassIdsForTeacher, teacherTeachesCourse } from '../lib/classServiceClient';
 import { getOrCompute } from '../lib/ttlCache';
 
@@ -14,26 +14,10 @@ interface WeightedEntry {
   status: GradeStatus;
 }
 
-interface CourseGroup {
-  courseId: string;
-  courseName: string;
-  subjectName: string | null;
-  entries: WeightedEntry[];
-}
-
 function groupByCourse(
   grades: { courseId: string; value: number | null; status: GradeStatus; assignment: { coefficient: number }; course: { name: string; subject: { name: string } | null } }[],
-): Map<string, CourseGroup> {
-  const map = new Map<string, CourseGroup>();
-  for (const g of grades) {
-    let group = map.get(g.courseId);
-    if (!group) {
-      group = { courseId: g.courseId, courseName: g.course.name, subjectName: g.course.subject?.name ?? null, entries: [] };
-      map.set(g.courseId, group);
-    }
-    group.entries.push({ value: g.value, coefficient: g.assignment.coefficient, status: g.status });
-  }
-  return map;
+) {
+  return groupGradesByCourse(grades, (g) => ({ value: g.value, coefficient: g.assignment.coefficient, status: g.status }));
 }
 
 export default {

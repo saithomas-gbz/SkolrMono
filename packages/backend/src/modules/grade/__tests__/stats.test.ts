@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { weightedAverage, median, rankOf, gradeDistributionBuckets } from '../lib/stats';
+import { weightedAverage, median, rankOf, gradeDistributionBuckets, groupGradesByCourse } from '../lib/stats';
 
 describe('weightedAverage', () => {
   it('renvoie null sans note GRADED', () => {
@@ -79,5 +79,28 @@ describe('gradeDistributionBuckets', () => {
   it('ignore les valeurs hors bornes', () => {
     const buckets = gradeDistributionBuckets([-1, 25]);
     expect(buckets.reduce((acc, b) => acc + b.count, 0)).toBe(0);
+  });
+});
+
+describe('groupGradesByCourse', () => {
+  const course1 = { name: 'Mathématiques', subject: { name: 'Sciences' } };
+  const course2 = { name: 'Français', subject: null };
+
+  it('groupe les notes par courseId et applique le mapper à chaque entrée', () => {
+    const grades = [
+      { courseId: 'course-1', course: course1, value: 10 },
+      { courseId: 'course-1', course: course1, value: 20 },
+      { courseId: 'course-2', course: course2, value: 15 },
+    ];
+    const groups = groupGradesByCourse(grades, (g) => ({ value: g.value }));
+
+    expect(groups.size).toBe(2);
+    expect(groups.get('course-1')).toEqual({
+      courseId: 'course-1',
+      courseName: 'Mathématiques',
+      subjectName: 'Sciences',
+      entries: [{ value: 10 }, { value: 20 }],
+    });
+    expect(groups.get('course-2')?.subjectName).toBeNull();
   });
 });

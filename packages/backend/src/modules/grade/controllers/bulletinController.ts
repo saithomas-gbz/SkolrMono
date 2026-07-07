@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import PDFDocument from 'pdfkit';
 import db from '../db';
-import { weightedAverage } from '../lib/stats';
+import { weightedAverage, groupGradesByCourse } from '../lib/stats';
 
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
 
@@ -170,26 +170,14 @@ export default {
       });
 
       // Group by course
-      const courseMap = new Map<string, CourseGroup>();
-      for (const g of grades) {
-        let group = courseMap.get(g.courseId);
-        if (!group) {
-          group = {
-            courseName: g.course.name,
-            subjectName: g.course.subject?.name ?? null,
-            entries: [],
-          };
-          courseMap.set(g.courseId, group);
-        }
-        group.entries.push({
-          title: g.assignment.title,
-          date: g.assignment.assignedAt,
-          value: g.value,
-          maxScore: g.assignment.maxScore,
-          coefficient: g.assignment.coefficient,
-          status: g.status as GradeStatus,
-        });
-      }
+      const courseMap = groupGradesByCourse(grades, (g) => ({
+        title: g.assignment.title,
+        date: g.assignment.assignedAt,
+        value: g.value,
+        maxScore: g.assignment.maxScore,
+        coefficient: g.assignment.coefficient,
+        status: g.status as GradeStatus,
+      }));
 
       const courseGroups = [...courseMap.values()].sort((a, b) =>
         a.courseName.localeCompare(b.courseName),

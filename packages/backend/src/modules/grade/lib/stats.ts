@@ -1,5 +1,21 @@
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
 
+export function groupGradesByCourse<G extends { courseId: string; course: { name: string; subject: { name: string } | null } }, T>(
+  grades: G[],
+  mapEntry: (g: G) => T,
+): Map<string, { courseId: string; courseName: string; subjectName: string | null; entries: T[] }> {
+  const map = new Map<string, { courseId: string; courseName: string; subjectName: string | null; entries: T[] }>();
+  for (const g of grades) {
+    let group = map.get(g.courseId);
+    if (!group) {
+      group = { courseId: g.courseId, courseName: g.course.name, subjectName: g.course.subject?.name ?? null, entries: [] };
+      map.set(g.courseId, group);
+    }
+    group.entries.push(mapEntry(g));
+  }
+  return map;
+}
+
 export function weightedAverage(
   entries: { value: number | null; coefficient: number; status: GradeStatus }[],
 ): number | null {
