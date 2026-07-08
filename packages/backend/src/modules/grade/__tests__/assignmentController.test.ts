@@ -9,9 +9,15 @@ import type {
 } from '../controllers/assignmentController';
 
 const teacherTeachesCourseMock = mock();
+const invalidateMock = mock();
 
 mock.module('../lib/classServiceClient', () => ({
   teacherTeachesCourse: teacherTeachesCourseMock,
+}));
+
+mock.module('../lib/ttlCache', () => ({
+  getOrCompute: (_key: string, _ttlMs: number, compute: () => unknown) => compute(),
+  invalidate: invalidateMock,
 }));
 
 mock.module('../db', () => ({
@@ -120,6 +126,7 @@ beforeEach(() => {
   (mockReply.status as ReturnType<typeof mock>).mockClear().mockReturnValue(mockReply);
   (mockReply.send as ReturnType<typeof mock>).mockClear().mockReturnValue(mockReply);
   teacherTeachesCourseMock.mockReset();
+  invalidateMock.mockReset();
   Object.values(prismaMock.assignment).forEach((m) => (m as ReturnType<typeof mock>).mockReset());
   Object.values(prismaMock.grade).forEach((m) => (m as ReturnType<typeof mock>).mockReset());
   prismaMock.user.findUnique.mockReset();
@@ -131,14 +138,29 @@ beforeEach(() => {
 
 describe('getAssignments', () => {
   it('returns a list of assignments', async () => {
-    prismaMock.assignment.findMany.mockResolvedValue([sampleAssignment]);
+    prismaMock.assignment.findMany.mockResolvedValue([{ ...sampleAssignment, grades: [] }]);
     const req = createMockRequest({ query: {} });
     await assignmentController.getAssignments(req as FastifyRequest<{ Querystring: Record<string, unknown> }>, mockReply);
     expect(mockReply.status).toHaveBeenCalledWith(200);
     expect(mockReply.send).toHaveBeenCalledWith({
-      data: [sampleAssignment],
+      data: [{ ...sampleAssignment, gradedCount: 0, totalCount: 0 }],
       message: 'Assignments fetched successfully',
     });
+  });
+
+  it('computes gradedCount/totalCount from the assignment grades', async () => {
+    prismaMock.assignment.findMany.mockResolvedValue([
+      {
+        ...sampleAssignment,
+        grades: [{ status: 'GRADED' }, { status: 'GRADED' }, { status: 'PENDING' }],
+      },
+    ]);
+    const req = createMockRequest({ query: { teacherId: 'teacher-1' } });
+    await assignmentController.getAssignments(req as FastifyRequest<{ Querystring: Record<string, unknown> }>, mockReply);
+    const call = (mockReply.send as ReturnType<typeof mock>).mock.calls[0]?.[0];
+    expect(call?.data[0].gradedCount).toBe(2);
+    expect(call?.data[0].totalCount).toBe(3);
+    expect(call?.data[0].grades).toBeUndefined();
   });
 });
 
@@ -293,6 +315,23 @@ describe('batchUpdateGrades', () => {
       mockReply,
     );
     expect(mockReply.status).toHaveBeenCalledWith(404);
+  });
+
+  it('invalide le cache stats des clés concernées après une écriture réussie', async () => {
+    prismaMock.assignment.findUnique.mockResolvedValue({ ...sampleAssignment, status: 'PUBLISHED' });
+    prismaMock.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => fn({ grade: { upsert: mock() } }));
+    const req = createMockRequest<{ Params: { id: string }; Body: BatchUpdateGradesBody }>({
+      params: { id: 'assignment-1' },
+      body: { entries: [{ userId: 'user-1', status: 'GRADED', value: 15 }] },
+    });
+    await assignmentController.batchUpdateGrades(
+      req as FastifyRequest<{ Params: { id: string }; Body: BatchUpdateGradesBody }>,
+      mockReply,
+    );
+    expect(mockReply.status).toHaveBeenCalledWith(200);
+    expect(invalidateMock).toHaveBeenCalledWith('assignment:assignment-1');
+    expect(invalidateMock).toHaveBeenCalledWith('class:class-1');
+    expect(invalidateMock).toHaveBeenCalledWith('user:user-1');
   });
 });
 

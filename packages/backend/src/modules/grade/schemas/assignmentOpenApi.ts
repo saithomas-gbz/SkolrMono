@@ -36,6 +36,9 @@ const assignmentEntity = {
     course: assignmentCourseRef,
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
+    /** Renseignés uniquement par la liste (dashboard enseignant, issue #97). */
+    gradedCount: { type: 'number' },
+    totalCount: { type: 'number' },
   },
   required: ['id', 'title', 'classId', 'courseId', 'teacherId', 'assignedAt', 'maxScore', 'coefficient', 'status', 'createdAt', 'updatedAt'],
 } as const;

@@ -24,6 +24,7 @@ nav:
   school_students: "Élèves (établissement)"
   schedule: Emploi du temps
   absences: Absences
+  statistics: Statistiques
   my_absences: Mes absences
   my_grades: Mes notes
   family_space: Espace famille
@@ -339,6 +340,10 @@ grades:
     published: Publié
     closed: Clôturé
     graded_count: "{graded} / {total} noté | {graded} / {total} notés"
+    stats_min: Min
+    stats_max: Max
+    stats_average: Moyenne
+    stats_median: Médiane
   new_assignment:
     title: Nouveau devoir
     label: "Intitulé *"
@@ -382,6 +387,32 @@ teacher:
     joined_on: Inscrit le
     manage_grades: Gérer les notes
     gradebook: Carnet
+  dashboard:
+    today_sessions_title: Sessions du jour
+    no_sessions_today: Aucun cours prévu aujourd'hui.
+    see_planning: "Voir le planning →"
+    unjustified_absences_title: Absences non justifiées
+    unjustified_absences_count: "{count} absence non justifiée | {count} absences non justifiées"
+    see_absences: "Voir les absences →"
+    recent_assignments_title: Devoirs récents
+    no_recent_assignments: Aucun devoir créé récemment.
+    grades_entered: "{graded}/{total} notes saisies"
+    enter_grades: Saisir les notes
+    class_average_title: Moyenne de classe
+    no_classes: "Vous n'enseignez dans aucune classe."
+
+stats:
+  page_title: Statistiques
+  no_classes: Aucune classe en base pour le moment.
+  class_label: Classe
+  choose_class: Choisir une classe
+  course_average_title: Moyenne par matière
+  distribution_title: Distribution des notes
+  no_course_average: Aucune moyenne disponible pour cette classe.
+  rank_badge: "{position}e / {total}"
+  course_average_dataset_label: Moyenne /20
+  average_axis_title: Moyenne (/20)
+  subject_axis_title: Matière
 
 messages:
   title: Messages

@@ -50,7 +50,7 @@ import { CHART_PRIMARY, CHART_PRIMARY_AREA_FILL } from '~/themes/tokens';
 
 const api = useApi();
 const { userId } = useAuth();
-const { normalizeApiError } = useGrade();
+const { normalizeApiError, roundScore } = useGrade();
 
 const gradesUrl = computed(() =>
   userId.value ? `/grade/grades/user/${userId.value}` : null,
@@ -131,10 +131,6 @@ const chartOptions = {
     },
   },
 };
-
-function roundScore(value: number): string {
-  return String(Math.round(value * 10) / 10);
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso);

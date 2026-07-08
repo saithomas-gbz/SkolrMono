@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { invalidate } from '../lib/ttlCache';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
@@ -114,11 +115,17 @@ export default {
           ...(teacherId ? { teacherId } : {}),
           ...(status ? { status: status as AssignmentStatus } : {}),
         },
-        include: assignmentInclude,
+        include: { ...assignmentInclude, grades: { select: { status: true } } },
         orderBy: { assignedAt: 'desc' },
       });
 
-      return reply.status(200).send({ data: assignments, message: 'Assignments fetched successfully' });
+      const data = assignments.map(({ grades, ...assignment }) => ({
+        ...assignment,
+        gradedCount: grades.filter((g) => g.status === 'GRADED').length,
+        totalCount: grades.length,
+      }));
+
+      return reply.status(200).send({ data, message: 'Assignments fetched successfully' });
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'Internal server error' });
@@ -333,6 +340,10 @@ export default {
           });
         }
       });
+
+      invalidate(`assignment:${id}`);
+      invalidate(`class:${assignment.classId}`);
+      for (const entry of entries) invalidate(`user:${entry.userId}`);
 
       return reply.status(200).send({ message: 'Grades updated successfully' });
     } catch (error) {

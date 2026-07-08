@@ -61,6 +61,7 @@ export type AbsenceFilters = {
   userId?: string;
   role?: 'STUDENT' | 'TEACHER';
   justified?: boolean;
+  teacherId?: string;
 };
 
 export type JustificationStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';

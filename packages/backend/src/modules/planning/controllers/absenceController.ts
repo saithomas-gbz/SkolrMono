@@ -3,12 +3,14 @@ import db from '../../../shared/db';
 import type { AbsenceRole } from '../../../generated/prisma/client';
 import { publish } from '../../../shared/events';
 import { getChildIds } from '../lib/parentServiceClient';
+import { getClassIdsForTeacher } from '../lib/classServiceClient';
 
 export type AbsenceFilters = {
   sessionId?: string;
   userId?: string;
   role?: AbsenceRole;
   justified?: boolean;
+  teacherId?: string;
 };
 
 type CreateAbsenceBody = {
@@ -28,7 +30,7 @@ export async function getAbsences(
   req: FastifyRequest<{ Querystring: AbsenceFilters }>,
   reply: FastifyReply,
 ) {
-  const { sessionId, userId, role, justified } = req.query;
+  const { sessionId, userId, role, justified, teacherId } = req.query;
   const planningUser = req.planningUser;
 
   /** Un élève (`USER`) ne voit que ses propres absences, quel que soit le `userId` demandé (issue #80). */
@@ -45,12 +47,20 @@ export async function getAbsences(
     }
   }
 
+  /** Restreint aux absences des classes de ce prof (dashboard enseignant, issue #97). */
+  let sessionFilter: { classId: { in: string[] } } | undefined;
+  if (teacherId) {
+    const teacherClassIds = await getClassIdsForTeacher(teacherId);
+    sessionFilter = { classId: { in: teacherClassIds } };
+  }
+
   const absences = await db.absence.findMany({
     where: {
       ...(sessionId && { sessionId }),
       ...(userIdFilter && { userId: userIdFilter }),
       ...(role && { role }),
       ...(justified !== undefined && { justified }),
+      ...(sessionFilter && { session: sessionFilter }),
     },
     orderBy: { createdAt: 'desc' },
   });

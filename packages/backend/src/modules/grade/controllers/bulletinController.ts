@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import PDFDocument from 'pdfkit';
 import db from '../db';
+import { weightedAverage, groupGradesByCourse } from '../lib/stats';
 
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
 
@@ -15,16 +16,6 @@ interface CourseGroup {
     coefficient: number;
     status: GradeStatus;
   }[];
-}
-
-function weightedAverage(
-  entries: { value: number | null; coefficient: number; status: GradeStatus }[],
-): number | null {
-  const graded = entries.filter((e) => e.status === 'GRADED' && e.value !== null);
-  if (graded.length === 0) return null;
-  const totalWeight = graded.reduce((acc, e) => acc + e.coefficient, 0);
-  const weightedSum = graded.reduce((acc, e) => acc + (e.value ?? 0) * e.coefficient, 0);
-  return weightedSum / totalWeight;
 }
 
 function formatDate(date: Date): string {
@@ -179,26 +170,14 @@ export default {
       });
 
       // Group by course
-      const courseMap = new Map<string, CourseGroup>();
-      for (const g of grades) {
-        let group = courseMap.get(g.courseId);
-        if (!group) {
-          group = {
-            courseName: g.course.name,
-            subjectName: g.course.subject?.name ?? null,
-            entries: [],
-          };
-          courseMap.set(g.courseId, group);
-        }
-        group.entries.push({
-          title: g.assignment.title,
-          date: g.assignment.assignedAt,
-          value: g.value,
-          maxScore: g.assignment.maxScore,
-          coefficient: g.assignment.coefficient,
-          status: g.status as GradeStatus,
-        });
-      }
+      const courseMap = groupGradesByCourse(grades, (g) => ({
+        title: g.assignment.title,
+        date: g.assignment.assignedAt,
+        value: g.value,
+        maxScore: g.assignment.maxScore,
+        coefficient: g.assignment.coefficient,
+        status: g.status as GradeStatus,
+      }));
 
       const courseGroups = [...courseMap.values()].sort((a, b) =>
         a.courseName.localeCompare(b.courseName),

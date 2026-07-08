@@ -10,6 +10,9 @@ const DEV_ACCOUNTS = {
   user: { email: 'dev.user@skolr.local', password: 'dev-user-123', role: 'USER' },
   teacher: { email: 'dev.teacher@skolr.local', password: 'dev-teacher-123', role: 'TEACHER' },
   student: { email: 'dev.student@skolr.local', password: 'dev-student-123', role: 'USER' },
+  // Parent de Léa Martin (issue #81 seed) — utilisé pour le rôle PARENT dans
+  // les redirections par rôle du dashboard (issue #97).
+  parent: { email: 'parent.martin@skolr.local', password: 'dev-parent-123', role: 'PARENT' },
 } as const;
 
 type DevAccountKey = keyof typeof DEV_ACCOUNTS;
@@ -33,9 +36,11 @@ export async function loginAs(page: Page, account: DevAccountKey): Promise<void>
   await page.locator('#login-password input').fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
 
-  // La page /dashboard charge ses propres chunks JS (widgets, i18n, ...) après
-  // la redirection : prévoir plus large que le timeout d'assertion par défaut.
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  // `/dashboard` n'est qu'un redirecteur par rôle (issue #97) : on atterrit
+  // ensuite sur /admin, /teacher, /student ou /parent selon le compte. Ces
+  // pages chargent leurs propres chunks JS (widgets, i18n, ...) après la
+  // redirection : prévoir plus large que le timeout d'assertion par défaut.
+  await expect(page).toHaveURL(/\/(admin|teacher|student|parent)(\/|$|\?)/, { timeout: 15_000 });
 }
 
 /**
