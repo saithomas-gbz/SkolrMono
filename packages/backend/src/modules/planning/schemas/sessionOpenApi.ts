@@ -13,13 +13,22 @@ const sessionProperties = {
 
 export const sessionSchema = {
   list: {
-    description: 'Get sessions — filtrable par classId, studentId, teacherId, startAt, endAt',
+    description:
+      'Get sessions — filtrage appliqué côté serveur selon le rôle (RBAC). ' +
+      'Élève : ses classes ; parent : classes de ses enfants ; enseignant : ses séances ' +
+      '(scope=mine) ou toutes celles d\'une de ses classes (scope=class + classId, 403 sinon) ; ' +
+      'admin : filtres libres classId/studentId/teacherId.',
     querystring: {
       type: 'object',
       properties: {
         classId: { type: 'string', format: 'uuid' },
         studentId: { type: 'string', format: 'uuid' },
         teacherId: { type: 'string', format: 'uuid' },
+        scope: {
+          type: 'string',
+          enum: ['mine', 'class'],
+          description: 'Enseignant uniquement : "mine" (ses séances, défaut) ou "class" (emploi du temps complet de la classe).',
+        },
         from: { type: 'string', format: 'date-time' },
         to: { type: 'string', format: 'date-time' },
       },

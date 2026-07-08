@@ -19,6 +19,8 @@ const props = defineProps<{
   courseNames?: Map<string, string>;
   teacherNames?: Map<string, string>;
   canEdit?: boolean;
+  /** Id du prof connecté : ses séances sont mises en évidence (vue classe). */
+  currentUserId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -37,14 +39,16 @@ const events = computed(() =>
     const color       = courseColor(s.courseId);
     const courseName  = props.courseNames?.get(s.courseId) ?? null;
     const teacherName = props.teacherNames?.get(s.teacherId) ?? null;
+    const isMine      = props.currentUserId != null && s.teacherId === props.currentUserId;
     return {
       id: s.id,
       title: courseName ?? '',
       start: s.startAt,
       end: s.endAt,
-      extendedProps: { session: s, courseName, teacherName },
+      extendedProps: { session: s, courseName, teacherName, isMine },
       backgroundColor: color.bg,
       borderColor: color.border,
+      classNames: isMine ? ['is-mine'] : [],
     };
   }),
 );
@@ -53,11 +57,13 @@ function buildEventHtml(
   courseName: string | null,
   teacherName: string | null,
   room: string | null,
+  isMine: boolean,
 ): string {
+  const mineEl    = isMine      ? `<span class="ev-mine">${t('planning.mine_badge')}</span>` : '';
   const courseEl  = courseName  ? `<span class="ev-course">${courseName}</span>`   : '';
   const teacherEl = teacherName ? `<span class="ev-teacher">${teacherName}</span>` : '';
   const roomEl    = room        ? `<span class="ev-room">🏫 ${room}</span>`        : '';
-  return `<div class="ev-body">${courseEl}${teacherEl}${roomEl}</div>`;
+  return `<div class="ev-body">${mineEl}${courseEl}${teacherEl}${roomEl}</div>`;
 }
 
 function handleEventClick(arg: EventClickArg) {
@@ -82,12 +88,13 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   buttonText: { today: t('planning.today'), prev: '‹', next: '›' },
   events: events.value,
   eventContent: (arg) => {
-    const { courseName, teacherName, session } = arg.event.extendedProps as {
+    const { courseName, teacherName, session, isMine } = arg.event.extendedProps as {
       session: Session;
       courseName: string | null;
       teacherName: string | null;
+      isMine: boolean;
     };
-    return { html: buildEventHtml(courseName, teacherName, session.room) };
+    return { html: buildEventHtml(courseName, teacherName, session.room, isMine) };
   },
   eventClick: handleEventClick,
   dateClick: props.canEdit ? (arg) => emit('slot-click', arg.date) : undefined,
@@ -127,6 +134,24 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   cursor: pointer;
   border-radius: 4px;
   overflow: hidden;
+}
+
+/* Séances du prof connecté : bordure marquée + léger halo (vue classe) */
+.weekly-calendar :deep(.fc-event.is-mine) {
+  border-width: 2px;
+  box-shadow: 0 0 0 1px var(--p-primary-color) inset;
+}
+
+.weekly-calendar :deep(.ev-mine) {
+  align-self: flex-start;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--p-primary-color);
+  color: var(--p-primary-contrast-color, #fff);
 }
 
 .weekly-calendar :deep(.fc-timegrid-slot) {

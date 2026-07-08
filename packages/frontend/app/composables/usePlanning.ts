@@ -44,6 +44,8 @@ export type SessionFilters = {
   classId?: string;
   studentId?: string;
   teacherId?: string;
+  /** Enseignant : 'mine' (ses séances, défaut) ou 'class' (emploi du temps complet d'une de ses classes). */
+  scope?: 'mine' | 'class';
   from?: string;
   to?: string;
 };

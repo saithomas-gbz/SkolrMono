@@ -11,8 +11,11 @@ mock.module('../../../shared/events', () => ({
   publish: mock(() => Promise.resolve()),
 }));
 
+// Superset des exports de classServiceClient : bun applique mock.module globalement,
+// et sessionController importe aussi getClassIdsForStudent — le mock doit tout fournir.
 mock.module('../lib/classServiceClient', () => ({
   getClassIdsForTeacher: mock(() => Promise.resolve<string[]>([])),
+  getClassIdsForStudent: mock(() => Promise.resolve<string[]>([])),
 }));
 
 mock.module('../lib/parentServiceClient', () => ({

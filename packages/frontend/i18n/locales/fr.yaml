@@ -227,7 +227,13 @@ planning:
   title: Emploi du temps
   all_classes: Toutes les classes
   all_students: Tous les élèves
+  all_teachers: Tous les professeurs
   student_filter: "Filtrer par élève"
+  teacher_filter: "Filtrer par professeur"
+  view_mode: "Mode d'affichage"
+  view_mine: Mes matières
+  view_class: Vue classe
+  mine_badge: Moi
   add: Ajouter
   loading: "Chargement…"
   today: "Aujourd'hui"
