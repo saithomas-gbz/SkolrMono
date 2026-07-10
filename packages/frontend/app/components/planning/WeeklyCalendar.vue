@@ -53,17 +53,11 @@ const events = computed(() =>
   }),
 );
 
-function buildEventHtml(
-  courseName: string | null,
-  teacherName: string | null,
-  room: string | null,
-  isMine: boolean,
-): string {
-  const mineEl    = isMine      ? `<span class="ev-mine">${t('planning.mine_badge')}</span>` : '';
+function buildEventHtml(courseName: string | null, teacherName: string | null, room: string | null): string {
   const courseEl  = courseName  ? `<span class="ev-course">${courseName}</span>`   : '';
   const teacherEl = teacherName ? `<span class="ev-teacher">${teacherName}</span>` : '';
   const roomEl    = room        ? `<span class="ev-room">🏫 ${room}</span>`        : '';
-  return `<div class="ev-body">${mineEl}${courseEl}${teacherEl}${roomEl}</div>`;
+  return `<div class="ev-body">${courseEl}${teacherEl}${roomEl}</div>`;
 }
 
 function handleEventClick(arg: EventClickArg) {
@@ -88,13 +82,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   buttonText: { today: t('planning.today'), prev: '‹', next: '›' },
   events: events.value,
   eventContent: (arg) => {
-    const { courseName, teacherName, session, isMine } = arg.event.extendedProps as {
+    const { courseName, teacherName, session } = arg.event.extendedProps as {
       session: Session;
       courseName: string | null;
       teacherName: string | null;
-      isMine: boolean;
     };
-    return { html: buildEventHtml(courseName, teacherName, session.room, isMine) };
+    return { html: buildEventHtml(courseName, teacherName, session.room) };
   },
   eventClick: handleEventClick,
   dateClick: props.canEdit ? (arg) => emit('slot-click', arg.date) : undefined,
@@ -140,18 +133,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 .weekly-calendar :deep(.fc-event.is-mine) {
   border-width: 2px;
   box-shadow: 0 0 0 1px var(--p-primary-color) inset;
-}
-
-.weekly-calendar :deep(.ev-mine) {
-  align-self: flex-start;
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color, #fff);
 }
 
 .weekly-calendar :deep(.fc-timegrid-slot) {

@@ -5,34 +5,15 @@
         <div class="card-header">
           <span>{{ $t('planning.title') }}</span>
           <div class="card-header-actions">
-            <SelectButton
-              v-if="isTeacher && !isAdmin"
-              v-model="teacherView"
-              :options="teacherViewOptions"
-              option-label="label"
-              option-value="value"
-              :allow-empty="false"
-              :aria-label="$t('planning.view_mode')"
-            />
             <Select
-              v-if="showClassSelect"
+              v-if="isTeacher || isAdmin"
               v-model="selectedClassId"
-              :options="classSelectOptions"
+              :options="scopeSelectOptions"
               option-label="label"
               option-value="value"
-              :placeholder="$t('planning.all_classes')"
+              :placeholder="isAdmin ? $t('planning.all_classes') : undefined"
+              :aria-label="$t('planning.view_mode')"
               :show-clear="isAdmin"
-              class="filter-select"
-            />
-            <Select
-              v-if="isAdmin && selectedClassId"
-              v-model="selectedStudentId"
-              :options="studentOptions"
-              option-label="label"
-              option-value="value"
-              :placeholder="$t('planning.all_students')"
-              :aria-label="$t('planning.student_filter')"
-              show-clear
               class="filter-select"
             />
             <Select
@@ -116,19 +97,19 @@ const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isStudent = computed(() => hasRole('USER'));
 const canEdit = computed(() => isAdmin.value || isTeacher.value);
 
-// Vue enseignant : « Mes matières » (défaut) ou « Vue classe ». Deep-link ?view=mine|class.
-const initialView = route.query.view;
-const teacherView = ref<'mine' | 'class'>(initialView === 'class' ? 'class' : 'mine');
-const teacherViewOptions = computed(() => [
-  { label: t('planning.view_mine'), value: 'mine' },
-  { label: t('planning.view_class'), value: 'class' },
-]);
+// Sentinelle pour l'option « Mes matières » du dropdown prof — un modelValue
+// PrimeVue à `null` est traité comme « aucune sélection » et n'afficherait pas
+// l'option correspondante même si elle existe dans la liste.
+const TEACHER_MINE = 'mine';
 
 // Filtres — deep-links ?classId=&teacherId=
 const selectedClassId = ref<string | null>(
-  typeof route.query.classId === 'string' ? route.query.classId : null,
+  typeof route.query.classId === 'string'
+    ? route.query.classId
+    : isTeacher.value && !isAdmin.value
+      ? TEACHER_MINE
+      : null,
 );
-const selectedStudentId = ref<string | null>(null);
 const selectedTeacherId = ref<string | null>(
   typeof route.query.teacherId === 'string' ? route.query.teacherId : null,
 );
@@ -140,11 +121,8 @@ const { data: classesResponse } = await useFetch<ClassesApiResponse>('/class/cla
 });
 const classes = computed(() => classesResponse.value?.data ?? []);
 const classOptions = computed(() => classes.value.map((c) => ({ label: c.name, value: c.id })));
-const selectedClass = computed(
-  () => classes.value.find((c) => c.id === selectedClassId.value) ?? null,
-);
 
-// Classes où le prof connecté enseigne (select « Vue classe »).
+// Classes où le prof connecté enseigne (dropdown « Affichage »).
 const teacherClasses = ref<SkolrClass[]>([]);
 const teacherClassOptions = computed(() =>
   teacherClasses.value.map((c) => ({ label: c.name, value: c.id })),
@@ -174,39 +152,12 @@ onMounted(async () => {
   }
 });
 
-// Le select de classe s'affiche pour l'admin (toutes les classes) ou pour le prof en « Vue classe » (ses classes).
-const showClassSelect = computed(
-  () => isAdmin.value || (isTeacher.value && !isAdmin.value && teacherView.value === 'class'),
-);
-const classSelectOptions = computed(() =>
-  isAdmin.value ? classOptions.value : teacherClassOptions.value,
-);
-
-// Passer en « Vue classe » sans classe choisie → présélectionner la première classe du prof.
-watch([teacherView, teacherClassOptions], ([view, options]) => {
-  if (view === 'class' && !selectedClassId.value && options.length > 0) {
-    selectedClassId.value = options[0]!.value;
-  }
-});
-
-// Noms des élèves de la classe sélectionnée (pour peupler le select élève)
-const studentProfiles = ref<{ id: string; name: string | null; email: string }[]>([]);
-watch(selectedClass, async (cls) => {
-  selectedStudentId.value = null;
-  const studentIds = cls?.students?.map((s) => s.studentId) ?? [];
-  if (studentIds.length === 0) {
-    studentProfiles.value = [];
-    return;
-  }
-  try {
-    studentProfiles.value = await fetchUsersByIds(studentIds);
-  } catch {
-    // non-bloquant : le select élève sera vide si le fetch échoue
-    studentProfiles.value = [];
-  }
-});
-const studentOptions = computed(() =>
-  studentProfiles.value.map((p) => ({ label: p.name ?? p.email, value: p.id })),
+// Options du dropdown « Affichage » : « Mes matières » + classes du prof (prof),
+// ou toutes les classes (admin) — pattern unifié pour les deux rôles.
+const scopeSelectOptions = computed(() =>
+  isAdmin.value
+    ? classOptions.value
+    : [{ label: t('planning.view_mine'), value: TEACHER_MINE }, ...teacherClassOptions.value],
 );
 
 // Noms des matières (grade-service)
@@ -233,7 +184,7 @@ const filters = computed<SessionFilters>(() => {
     return {};
   }
   if (isTeacher.value && !isAdmin.value) {
-    if (teacherView.value === 'class' && selectedClassId.value) {
+    if (selectedClassId.value && selectedClassId.value !== TEACHER_MINE) {
       return { scope: 'class', classId: selectedClassId.value };
     }
     return { scope: 'mine' };
@@ -241,18 +192,15 @@ const filters = computed<SessionFilters>(() => {
   // Admin : filtres libres et combinables.
   return {
     ...(selectedClassId.value && { classId: selectedClassId.value }),
-    ...(selectedStudentId.value && { studentId: selectedStudentId.value }),
     ...(selectedTeacherId.value && { teacherId: selectedTeacherId.value }),
   };
 });
 
 // Synchroniser l'état des filtres avec l'URL (deep links partageables).
-watch([teacherView, selectedClassId, selectedTeacherId], ([view, classId, teacherId]) => {
+watch([selectedClassId, selectedTeacherId], ([classId, teacherId]) => {
   if (import.meta.server) return;
   const nextQuery = { ...route.query };
-  if (isTeacher.value && !isAdmin.value) nextQuery.view = view;
-  else delete nextQuery.view;
-  if (classId) nextQuery.classId = classId;
+  if (classId && classId !== TEACHER_MINE) nextQuery.classId = classId;
   else delete nextQuery.classId;
   if (isAdmin.value && teacherId) nextQuery.teacherId = teacherId;
   else delete nextQuery.teacherId;
