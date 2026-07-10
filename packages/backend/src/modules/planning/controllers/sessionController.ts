@@ -1,11 +1,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
-import { getClassIdsForStudent } from '../lib/classServiceClient';
+import { getClassIdsForStudent, getClassIdsForTeacher } from '../lib/classServiceClient';
+import { getChildIds } from '../lib/parentServiceClient';
 
 type SessionFilters = {
   classId?: string;
   studentId?: string;
   teacherId?: string;
+  scope?: 'mine' | 'class';
   from?: string;
   to?: string;
 };
@@ -32,25 +34,58 @@ export async function getSessions(
   req: FastifyRequest<{ Querystring: SessionFilters }>,
   reply: FastifyReply,
 ) {
-  const { classId, studentId, teacherId, from, to } = req.query;
+  const { classId, studentId, teacherId, scope, from, to } = req.query;
+  const planningUser = req.planningUser;
 
-  // Session n'a pas de champ par élève : on résout studentId -> classId(s) via class-service
-  // pour que le filtre ait un effet réel (et non un simple pass-through du classId déjà fourni).
+  // Filtre effectif dérivé du rôle (RBAC serveur, issue #77) : on ne fait pas
+  // confiance aux query params bruts — chaque rôle est restreint à son périmètre.
+  // Session n'a pas de champ par élève : on résout studentId/enfants -> classId(s)
+  // via le module class pour que le filtre ait un effet réel.
   let classWhere: { equals: string } | { in: string[] } | undefined;
-  if (studentId) {
-    const studentClassIds = await getClassIdsForStudent(studentId);
-    if (classId && !studentClassIds.includes(classId)) {
-      return reply.send([]);
+  let teacherWhere: string | undefined;
+
+  if (planningUser && (planningUser.role === 'USER' || planningUser.role === 'PARENT')) {
+    // Élève : ses classes ; Parent : classes de ses enfants.
+    const students =
+      planningUser.role === 'USER' ? [planningUser.userId] : await getChildIds(planningUser.userId);
+    const classIdLists = await Promise.all(students.map((id) => getClassIdsForStudent(id)));
+    const allowedClassIds = [...new Set(classIdLists.flat())];
+    if (classId) {
+      if (!allowedClassIds.includes(classId)) return reply.send([]);
+      classWhere = { equals: classId };
+    } else {
+      classWhere = { in: allowedClassIds };
     }
-    classWhere = classId ? { equals: classId } : { in: studentClassIds };
-  } else if (classId) {
-    classWhere = { equals: classId };
+  } else if (planningUser && (planningUser.role === 'TEACHER' || planningUser.role === 'STAFF')) {
+    if (scope === 'class' && classId) {
+      // Vue « Emploi du temps de la classe » : autorisée seulement si le prof y enseigne.
+      const teacherClassIds = await getClassIdsForTeacher(planningUser.userId);
+      if (!teacherClassIds.includes(classId)) {
+        return reply.status(403).send({ error: 'Forbidden' });
+      }
+      classWhere = { equals: classId };
+    } else {
+      // Vue « Mes matières » (défaut) : uniquement ses propres séances.
+      teacherWhere = planningUser.userId;
+    }
+  } else {
+    // ADMIN / PLATFORM_ADMIN : pass-through des filtres fournis.
+    if (studentId) {
+      const studentClassIds = await getClassIdsForStudent(studentId);
+      if (classId && !studentClassIds.includes(classId)) {
+        return reply.send([]);
+      }
+      classWhere = classId ? { equals: classId } : { in: studentClassIds };
+    } else if (classId) {
+      classWhere = { equals: classId };
+    }
+    if (teacherId) teacherWhere = teacherId;
   }
 
   const sessions = await db.session.findMany({
     where: {
       ...(classWhere && { classId: classWhere }),
-      ...(teacherId && { teacherId }),
+      ...(teacherWhere && { teacherId: teacherWhere }),
       ...(from || to
         ? {
             startAt: {
