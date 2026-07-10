@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
 
 /**
  * Comptes de démonstration seedés par `packages/backend/prisma/seed.ts`
@@ -41,6 +41,21 @@ export async function loginAs(page: Page, account: DevAccountKey): Promise<void>
   // pages chargent leurs propres chunks JS (widgets, i18n, ...) après la
   // redirection : prévoir plus large que le timeout d'assertion par défaut.
   await expect(page).toHaveURL(/\/(admin|teacher|student|parent)(\/|$|\?)/, { timeout: 15_000 });
+}
+
+/**
+ * Connexion API pure (`POST /api/auth/login`), sans passer par le formulaire
+ * ni une page. Pour les specs `*-api.spec.ts` qui pilotent l'API directement
+ * via la fixture `request`.
+ */
+export async function loginApi(
+  request: APIRequestContext,
+  account: DevAccountKey,
+): Promise<{ token: string; userId: string }> {
+  const { email, password } = DEV_ACCOUNTS[account];
+  const res = await request.post('/api/auth/login', { data: { email, password } });
+  const { token, user } = (await res.json()) as { token: string; user: { id: string } };
+  return { token, userId: user.id };
 }
 
 /**
