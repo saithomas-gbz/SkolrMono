@@ -51,19 +51,26 @@ const events = computed(() =>
       title: courseName ?? '',
       start: s.startAt,
       end: s.endAt,
-      extendedProps: { session: s, courseName, teacherName, isMine },
+      extendedProps: { session: s, courseName, teacherName, isMine, accentColor: color.border, textColor: color.text },
       backgroundColor: color.bg,
-      borderColor: color.border,
+      borderColor: 'transparent',
       classNames: isMine ? ['is-mine'] : [],
     };
   }),
 );
 
-function buildEventHtml(courseName: string | null, teacherName: string | null, room: string | null): string {
+function buildEventHtml(
+  courseName: string | null,
+  teacherName: string | null,
+  room: string | null,
+  accentColor: string,
+  textColor: string,
+): string {
   const courseEl  = courseName  ? `<span class="ev-course">${courseName}</span>`   : '';
   const teacherEl = teacherName ? `<span class="ev-teacher">${teacherName}</span>` : '';
   const roomEl    = room        ? `<span class="ev-room">🏫 ${room}</span>`        : '';
-  return `<div class="ev-body">${courseEl}${teacherEl}${roomEl}</div>`;
+  const style = `border-left:3px solid ${accentColor}; color:${textColor}`;
+  return `<div class="ev-body" style="${style}">${courseEl}${teacherEl}${roomEl}</div>`;
 }
 
 function handleEventClick(arg: EventClickArg) {
@@ -88,12 +95,14 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   buttonText: { today: t('planning.today'), prev: '‹', next: '›' },
   events: events.value,
   eventContent: (arg) => {
-    const { courseName, teacherName, session } = arg.event.extendedProps as {
+    const { courseName, teacherName, session, accentColor, textColor } = arg.event.extendedProps as {
       session: Session;
       courseName: string | null;
       teacherName: string | null;
+      accentColor: string;
+      textColor: string;
     };
-    return { html: buildEventHtml(courseName, teacherName, session.room) };
+    return { html: buildEventHtml(courseName, teacherName, session.room, accentColor, textColor) };
   },
   eventClick: handleEventClick,
   dateClick: canEdit.value ? (arg) => emit('slot-click', arg.date) : undefined,
@@ -112,9 +121,13 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 .weekly-calendar :deep(.fc) {
   font-family: inherit;
   font-size: 0.875rem;
+  --fc-border-color: var(--skolr-color-divider);
+  --fc-now-indicator-color: var(--skolr-color-accent);
+  --fc-today-bg-color: var(--skolr-color-accent-100);
 }
 
 .weekly-calendar :deep(.fc-button) {
+  border-radius: 0;
   background: var(--p-primary-color);
   border-color: var(--p-primary-color);
 }
@@ -131,7 +144,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
 .weekly-calendar :deep(.fc-event) {
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 0;
   overflow: hidden;
 }
 
