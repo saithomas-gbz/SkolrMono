@@ -1,24 +1,86 @@
 /**
- * Tokens applicatifs Skolr — source unique de vérité pour la charte graphique.
- * Cf. issue #55. Les composants Vue ne doivent jamais écrire de hex en dur :
- * toujours `var(--skolr-*)` (ici) ou `var(--p-*)` (preset PrimeVue, app/themes/skolr.ts).
+ * Tokens applicatifs Skolr — source unique de vérité pour la charte graphique
+ * "Modernist" (issue #124, refonte shell + navigation). Les composants Vue ne
+ * doivent jamais écrire de hex en dur : toujours `var(--skolr-*)` (ici) ou
+ * `var(--p-*)` (preset PrimeVue, app/themes/skolr.ts).
  */
 :root {
-  --skolr-color-brand-navy: #12263a;
-  --skolr-color-brand-cream: #ede5a6;
-  --skolr-color-brand-green: #498467;
+  /* — primitives — */
+  --skolr-color-bg: #f3f2f2;
+  --skolr-color-surface: #eae9e9;
+  --skolr-color-text: #201e1d;
 
-  --skolr-color-text: #1a1a1a;
+  --skolr-color-accent: #ec3013;
+  --skolr-color-accent-100: #fff2ef;
+  --skolr-color-accent-200: #ffe0d9;
+  --skolr-color-accent-300: #ffc4b8;
+  --skolr-color-accent-400: #ff9783;
+  --skolr-color-accent-500: #ff563c;
+  --skolr-color-accent-600: #dd2b0f;
+  --skolr-color-accent-700: #ae1800;
+  --skolr-color-accent-800: #7c1405;
+  --skolr-color-accent-900: #4d170e;
+
+  --skolr-color-accent-2: #e15b47;
+  --skolr-color-accent-2-100: #fff2ef;
+  --skolr-color-accent-2-500: #ef6853;
+  --skolr-color-accent-2-800: #71261b;
+
+  --skolr-color-neutral-100: #f8f4f4;
+  --skolr-color-neutral-200: #eae7e7;
+  --skolr-color-neutral-300: #d7d3d3;
+  --skolr-color-neutral-400: #bab6b6;
+  --skolr-color-neutral-500: #9b9797;
+  --skolr-color-neutral-600: #7d7979;
+  --skolr-color-neutral-700: #605d5d;
+  --skolr-color-neutral-800: #444141;
+  --skolr-color-neutral-900: #2d2b2b;
+
+  /* Hard rule divider (2px lines under headers/rails) — deliberately strong. */
+  --skolr-color-divider: color-mix(in srgb, var(--skolr-color-text) 40%, transparent);
+
+  --skolr-space-1: 4px;
+  --skolr-space-2: 8px;
+  --skolr-space-3: 12px;
+  --skolr-space-4: 16px;
+  --skolr-space-6: 24px;
+  --skolr-space-8: 32px;
+
+  --skolr-radius: 0px;
+
+  --skolr-shadow-sm: 0 1px 2px color-mix(in srgb, var(--skolr-color-neutral-900) 14%, transparent);
+  --skolr-shadow-md: 0 3px 10px color-mix(in srgb, var(--skolr-color-neutral-900) 16%, transparent);
+  --skolr-shadow-lg: 0 12px 32px color-mix(in srgb, var(--skolr-color-neutral-900) 22%, transparent);
+
+  --skolr-font-family: 'Archivo', system-ui, sans-serif;
+
+  /* — legacy alias names, kept so existing components (var(--p-*, var(--skolr-*))
+     fallbacks) keep working unmodified — values now point at the tokens above. */
+  --skolr-color-brand-navy: var(--skolr-color-text);
+  --skolr-color-brand-green: var(--skolr-color-accent);
   --skolr-color-text-muted: color-mix(in srgb, var(--skolr-color-text) 55%, transparent);
-
-  --skolr-color-page-bg: #faf8f0;
-  --skolr-color-surface-hover: color-mix(in srgb, var(--skolr-color-brand-navy) 5%, transparent);
-  --skolr-color-border: color-mix(in srgb, var(--skolr-color-brand-navy) 14%, transparent);
-
-  --skolr-font-family: 'DM Sans', system-ui, sans-serif;
+  --skolr-color-page-bg: var(--skolr-color-bg);
+  --skolr-color-surface-hover: color-mix(in srgb, var(--skolr-color-text) 5%, transparent);
+  --skolr-color-border: color-mix(in srgb, var(--skolr-color-text) 14%, transparent);
 }
 
 body {
   background: var(--skolr-color-page-bg);
   font-family: var(--skolr-font-family);
+}
+
+/* Defensive override: some PrimeVue Aura component radii are resolved from
+   internal semantic/primitive $dt paths that definePreset doesn't expose
+   1:1 (see app/themes/skolr.ts). Pinning the compiled --p-*-border-radius
+   custom properties here guarantees the "hard rules, zero radius" look even
+   if a preset-level override misses a token path. */
+:root {
+  --p-border-radius-none: 0px;
+  --p-border-radius-xs: 0px;
+  --p-border-radius-sm: 0px;
+  --p-border-radius-md: 0px;
+  --p-border-radius-lg: 0px;
+  --p-border-radius-xl: 0px;
+  --p-content-border-radius: 0px;
+  --p-form-field-border-radius: 0px;
 }
