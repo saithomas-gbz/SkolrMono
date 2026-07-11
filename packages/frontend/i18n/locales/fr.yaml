@@ -310,6 +310,19 @@ planning:
     recurrence_weekly: Hebdomadaire
     recurrence_biweekly: Bi-hebdomadaire
 
+homework:
+  title: Devoirs
+  this_week: Cette semaine
+  next_week: Semaine prochaine
+  done: Fait
+  empty_column: Rien ici.
+  due_on: "À rendre {date}"
+  submitted_on: "Rendu {date}"
+  no_due_date: Sans échéance
+  overdue: En retard
+  restricted: "Cette page est réservée aux élèves."
+  loading: "Chargement de vos devoirs…"
+
 parent:
   dashboard_title: Mes enfants
   no_children: Aucun enfant rattaché à votre compte.
