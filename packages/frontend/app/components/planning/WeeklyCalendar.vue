@@ -28,6 +28,12 @@ const emit = defineEmits<{
   (e: 'slot-click', date: Date): void;
 }>();
 
+const sessions       = computed(() => props.sessions);
+const courseNames    = computed(() => props.courseNames);
+const teacherNames   = computed(() => props.teacherNames);
+const currentUserId  = computed(() => props.currentUserId);
+const canEdit        = computed(() => props.canEdit);
+
 // Couleur par matière (déterministe sur courseId)
 function courseColor(courseId: string) {
   const hash = courseId.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -35,11 +41,11 @@ function courseColor(courseId: string) {
 }
 
 const events = computed(() =>
-  props.sessions.map((s) => {
+  sessions.value.map((s) => {
     const color       = courseColor(s.courseId);
-    const courseName  = props.courseNames?.get(s.courseId) ?? null;
-    const teacherName = props.teacherNames?.get(s.teacherId) ?? null;
-    const isMine      = props.currentUserId != null && s.teacherId === props.currentUserId;
+    const courseName  = courseNames.value?.get(s.courseId) ?? null;
+    const teacherName = teacherNames.value?.get(s.teacherId) ?? null;
+    const isMine      = currentUserId.value != null && s.teacherId === currentUserId.value;
     return {
       id: s.id,
       title: courseName ?? '',
@@ -90,7 +96,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     return { html: buildEventHtml(courseName, teacherName, session.room) };
   },
   eventClick: handleEventClick,
-  dateClick: props.canEdit ? (arg) => emit('slot-click', arg.date) : undefined,
+  dateClick: canEdit.value ? (arg) => emit('slot-click', arg.date) : undefined,
   height: 'auto',
   expandRows: true,
   nowIndicator: true,
