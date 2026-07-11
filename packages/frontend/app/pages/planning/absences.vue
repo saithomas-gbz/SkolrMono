@@ -10,7 +10,7 @@
         <template v-else>
           <TabView>
             <TabPanel :header="$t('planning.absences.students_tab')">
-              <PlanningAbsenceTable :filters="{ role: 'STUDENT' }" />
+              <PlanningAttendanceRoster />
             </TabPanel>
             <TabPanel :header="$t('planning.absences.teachers_tab')">
               <PlanningAbsenceTable :filters="{ role: 'TEACHER' }" />
@@ -28,8 +28,13 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
 
+const { t } = useI18n();
 const { hasRole } = useAuth();
 const canAccess = computed(() => hasRole('TEACHER', 'STAFF', 'ADMIN'));
+
+// Titre par défaut ; PlanningAttendanceRoster le précise ("Classe — Cours,
+// Salle") une fois une séance chargée dans l'onglet Élèves.
+usePageHeader().setPageHeader({ title: t('planning.absences.title') });
 </script>
 
 <style scoped>

@@ -259,6 +259,11 @@ planning:
     teachers_tab: Professeurs
     session: Session
     user_id: Utilisateur
+    roster:
+      no_sessions: Aucune séance aujourd'hui.
+      present: Présent
+      absent: Absent
+      subtitle: "{count} élèves"
     justified: Justifiée
     reason: Motif
     no_absences: Aucune absence enregistrée.
