@@ -6,27 +6,17 @@
     </div>
 
     <template v-else>
-      <div class="kpi-card">
-        <span class="kpi-value">{{ kpis.students ?? '—' }}</span>
-        <span class="kpi-label">{{ $t('admin.kpi.students') }}</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-value">{{ kpis.classes ?? '—' }}</span>
-        <span class="kpi-label">{{ $t('admin.kpi.classes') }}</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-value">{{ kpis.courses ?? '—' }}</span>
-        <span class="kpi-label">{{ $t('admin.kpi.subjects') }}</span>
-      </div>
-      <div class="kpi-card">
-        <span class="kpi-value">{{ kpis.absences ?? '—' }}</span>
-        <span class="kpi-label">{{ $t('admin.kpi.absences') }}</span>
-      </div>
+      <KpiCard :value="kpis.students ?? '—'" :label="$t('admin.kpi.students')" />
+      <KpiCard :value="kpis.classes ?? '—'" :label="$t('admin.kpi.classes')" />
+      <KpiCard :value="kpis.courses ?? '—'" :label="$t('admin.kpi.subjects')" />
+      <KpiCard :value="kpis.absences ?? '—'" :label="$t('admin.kpi.absences')" />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import KpiCard from '~/components/ui/KpiCard.vue';
+
 const pending = ref(true);
 const kpis = ref<{ students: number | null; classes: number | null; courses: number | null; absences: number | null }>({
   students: null,
@@ -73,37 +63,15 @@ onMounted(async () => {
   width: 100%;
 }
 
+.kpi-cards :deep(.kpi-card) {
+  flex: 1 1 min(100%, 10rem);
+}
+
 .kpi-loading {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 0;
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
-}
-
-.kpi-card {
-  flex: 1 1 min(100%, 10rem);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 1.25rem 1rem;
-  border-radius: 0.75rem;
-  background: var(--p-surface-50, var(--skolr-color-surface-hover));
-  border: 1px solid var(--p-surface-200, var(--skolr-color-border));
-}
-
-.kpi-value {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--p-primary-color, var(--skolr-color-brand-green));
-}
-
-.kpi-label {
-  font-size: 0.8rem;
-  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
-  text-align: center;
 }
 </style>

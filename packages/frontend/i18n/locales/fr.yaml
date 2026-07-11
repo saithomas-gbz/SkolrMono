@@ -17,8 +17,6 @@ common:
   student_count: "{count} élève | {count} élèves"
 
 nav:
-  menu: Menu
-  navigation: Navigation
   home: Accueil
   dashboard: Tableau de bord
   my_students: Mes élèves
@@ -38,6 +36,11 @@ nav:
   administration: Administration
   profile: Mon profil
   logout: Déconnexion
+  role_user: Élève
+  role_teacher: Enseignant
+  role_staff: Vie scolaire
+  role_parent: Parent
+  role_admin: Administrateur
 
 auth:
   email: Email
