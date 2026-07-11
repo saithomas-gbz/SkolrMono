@@ -1,17 +1,28 @@
 <template>
   <div class="page">
-    <div class="admin-full-width">
+    <div class="kpi-row">
       <AdminKpiCards />
     </div>
+
+    <div class="main-grid">
+      <Card>
+        <template #title>{{ $t('admin.dashboard.attendance_chart.title') }}</template>
+        <template #content>
+          <AttendanceWeekChart />
+        </template>
+      </Card>
+      <Card>
+        <template #title>{{ $t('admin.dashboard.needs_attention.title') }}</template>
+        <template #content>
+          <NeedsAttentionList />
+        </template>
+      </Card>
+    </div>
+
     <Card>
-      <template #title>
-        <div class="card-title-row">
-          <span>{{ $t('dashboard.billing_title') }}</span>
-          <NuxtLink to="/admin/billing" class="card-link">{{ $t('dashboard.see_all') }}</NuxtLink>
-        </div>
-      </template>
+      <template #title>{{ $t('dashboard.global_grade_distribution') }}</template>
       <template #content>
-        <AdminBillingWidget />
+        <ChartGradesChart :initial-class-id="initialClassId" />
       </template>
     </Card>
     <Card>
@@ -20,18 +31,7 @@
         <ChartClassesChart />
       </template>
     </Card>
-    <Card>
-      <template #title>{{ $t('dashboard.global_grade_distribution') }}</template>
-      <template #content>
-        <ChartGradesChart :initial-class-id="initialClassId" />
-      </template>
-    </Card>
-    <Card>
-      <template #title>{{ $t('dashboard.recent_absences') }}</template>
-      <template #content>
-        <AdminAbsencesWidget />
-      </template>
-    </Card>
+
     <Card class="admin-full-width">
       <template #title>
         <span>{{ $t('dashboard.student_overview') }}</span>
@@ -45,9 +45,15 @@
 </template>
 
 <script setup lang="ts">
+import AttendanceWeekChart from '~/components/admin/AttendanceWeekChart.vue';
+import NeedsAttentionList from '~/components/admin/NeedsAttentionList.vue';
+
 definePageMeta({ middleware: ['auth', 'admin'] });
 
+const { t } = useI18n();
 const route = useRoute();
+
+usePageHeader().setPageHeader({ title: t('dashboard.title') });
 
 const initialClassId = computed(() => {
   const q = route.query.classId;
@@ -68,6 +74,21 @@ const initialClassId = computed(() => {
 
 .admin-full-width {
   flex: 1 1 100%;
+}
+
+.kpi-row {
+  flex: 1 1 100%;
+}
+
+.main-grid {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.main-grid :deep(.p-card) {
+  flex: initial;
 }
 
 .card-title-row {
