@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "i18n:check": "bun run scripts/check-i18n-keys.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
@@ -27,6 +28,8 @@
   },
   "devDependencies": {
     "@primeuix/themes": "^2.0.3",
-    "h3": "^1.15.11"
+    "@types/js-yaml": "^4.0.9",
+    "h3": "^1.15.11",
+    "js-yaml": "^4.1.1"
   }
 }
