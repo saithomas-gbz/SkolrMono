@@ -1,19 +1,16 @@
 <template>
   <div class="page">
+    <Teleport to="#topbar-actions">
+      <Button
+        v-if="canAccess && !pending && courseGroups.length > 0"
+        icon="pi pi-download"
+        :label="downloading ? $t('grades.my_grades.downloading') : $t('grades.my_grades.download_bulletin')"
+        :loading="downloading"
+        size="small"
+        @click="downloadBulletin"
+      />
+    </Teleport>
     <Card>
-      <template #title>
-        <div class="title-row">
-          <span>{{ $t('grades.my_grades.title') }}</span>
-          <Button
-            v-if="canAccess && !pending && courseGroups.length > 0"
-            icon="pi pi-download"
-            :label="downloading ? $t('grades.my_grades.downloading') : $t('grades.my_grades.download_bulletin')"
-            :loading="downloading"
-            size="small"
-            @click="downloadBulletin"
-          />
-        </div>
-      </template>
       <template #content>
         <Message v-if="!canAccess" severity="warn" :closable="false">
           {{ $t('grades.my_grades.restricted') }}
@@ -30,41 +27,58 @@
           <template v-else>
             <p v-if="courseGroups.length === 0" class="empty">{{ $t('grades.my_grades.empty') }}</p>
 
-            <div v-else class="course-groups">
-              <Card v-for="group in courseGroups" :key="group.course.id" class="course-card">
-                <template #title>
-                  <div class="course-title-row">
-                    <span>{{ group.course.name }}</span>
-                    <Tag
-                      :value="
-                        group.average !== null
-                          ? `${$t('grades.my_grades.average')} ${roundScore(group.average)}/20`
-                          : $t('grades.my_grades.no_average')
-                      "
-                      :severity="gradeSeverity(group.average)"
-                    />
-                  </div>
-                </template>
-                <template #content>
-                  <DataTable :value="group.grades" data-key="id" class="table">
-                    <Column :header="$t('grades.my_grades.date')">
-                      <template #body="{ data }">{{ formatDate(data.createdAt) }}</template>
-                    </Column>
-                    <Column :header="$t('grades.my_grades.grade')">
-                      <template #body="{ data }">
-                        <Tag
-                          :value="statusLabel(data)"
-                          :severity="data.status === 'GRADED' ? gradeSeverity(data.value) : 'secondary'"
-                        />
-                      </template>
-                    </Column>
-                    <Column :header="$t('grades.my_grades.comment')">
-                      <template #body="{ data }">{{ data.comment ?? '—' }}</template>
-                    </Column>
-                  </DataTable>
-                </template>
-              </Card>
-            </div>
+            <template v-else>
+              <div v-if="stats" class="kpi-row">
+                <KpiCard
+                  :value="stats.average !== null ? roundScore(stats.average) : '—'"
+                  :label="$t('grades.my_grades.kpi_overall')"
+                />
+                <KpiCard
+                  v-if="bestSubject"
+                  :value="roundScore(bestSubject.average!)"
+                  :label="`${$t('grades.my_grades.kpi_best')} — ${bestSubject.courseName}`"
+                  variant="accent"
+                />
+                <KpiCard
+                  v-if="worstSubject"
+                  :value="roundScore(worstSubject.average!)"
+                  :label="`${$t('grades.my_grades.kpi_worst')} — ${worstSubject.courseName}`"
+                />
+                <KpiCard
+                  v-if="trendDelta !== null"
+                  :value="`${trendDelta > 0 ? '+' : ''}${roundScore(trendDelta)}`"
+                  :label="$t('grades.my_grades.kpi_trend')"
+                />
+              </div>
+
+              <Accordion :value="0" class="course-groups">
+                <AccordionPanel v-for="(group, index) in courseGroups" :key="group.course.id" :value="index">
+                  <AccordionHeader>
+                    <div class="course-title-row">
+                      <span>{{ group.course.name }}</span>
+                      <Tag
+                        :value="
+                          group.average !== null
+                            ? `${$t('grades.my_grades.average')} ${roundScore(group.average)}/20`
+                            : $t('grades.my_grades.no_average')
+                        "
+                        :severity="gradeSeverity(group.average)"
+                      />
+                    </div>
+                  </AccordionHeader>
+                  <AccordionContent>
+                    <div v-for="grade in group.grades" :key="grade.id" class="grade-row">
+                      <span class="grade-date">{{ formatDate(grade.createdAt) }}</span>
+                      <span class="grade-comment">{{ grade.comment ?? '—' }}</span>
+                      <Tag
+                        :value="statusLabel(grade)"
+                        :severity="grade.status === 'GRADED' ? gradeSeverity(grade.value) : 'secondary'"
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionPanel>
+              </Accordion>
+            </template>
           </template>
         </template>
       </template>
@@ -73,24 +87,48 @@
 </template>
 
 <script setup lang="ts">
-import { useGrade, averageGradeValues, type GradeCourse, type GradeEntity } from '~/composables/useGrade';
+import { useGrade, averageGradeValues, type GradeCourse, type GradeEntity, type UserStats } from '~/composables/useGrade';
 import { useAuthTokenCookie } from '~/composables/authSession';
+import KpiCard from '~/components/ui/KpiCard.vue';
 
 definePageMeta({ middleware: ['auth'] });
 
 const { t } = useI18n();
 const { hasRole, userId } = useAuth();
-const { fetchGradesByUserId, normalizeApiError, roundScore } = useGrade();
+const { fetchGradesByUserId, fetchUserStats, normalizeApiError, roundScore } = useGrade();
 const config = useRuntimeConfig();
 const authTokenCookie = useAuthTokenCookie();
 const toast = useToast();
 
 const canAccess = computed(() => hasRole('USER'));
 
+usePageHeader().setPageHeader({ title: t('grades.my_grades.title') });
+
 const grades = ref<GradeEntity[]>([]);
+const stats = ref<UserStats | null>(null);
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 const downloading = ref(false);
+
+const bestSubject = computed(() => {
+  const withAverage = (stats.value?.byCourse ?? []).filter((c) => c.average !== null);
+  return withAverage.length === 0
+    ? null
+    : withAverage.reduce((best, c) => (c.average! > best.average! ? c : best));
+});
+
+const worstSubject = computed(() => {
+  const withAverage = (stats.value?.byCourse ?? []).filter((c) => c.average !== null);
+  return withAverage.length === 0
+    ? null
+    : withAverage.reduce((worst, c) => (c.average! < worst.average! ? c : worst));
+});
+
+const trendDelta = computed(() => {
+  const trend = stats.value?.trend ?? [];
+  if (trend.length < 2) return null;
+  return trend[trend.length - 1]!.average - trend[trend.length - 2]!.average;
+});
 
 type CourseGroup = {
   course: GradeCourse;
@@ -128,6 +166,12 @@ async function load() {
     fetchError.value = normalizeApiError(e);
   } finally {
     pending.value = false;
+  }
+  try {
+    stats.value = await fetchUserStats(userId.value);
+  } catch {
+    // Non-bloquant : le header KPI ne s'affiche simplement pas si les stats échouent.
+    stats.value = null;
   }
 }
 
@@ -190,14 +234,6 @@ async function downloadBulletin() {
   gap: 1rem;
 }
 
-.title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-}
-
 .loading {
   display: flex;
   align-items: center;
@@ -210,10 +246,12 @@ async function downloadBulletin() {
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
-.course-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--skolr-color-divider);
+  margin-bottom: 1rem;
 }
 
 .course-title-row {
@@ -224,7 +262,27 @@ async function downloadBulletin() {
   width: 100%;
 }
 
-.table {
-  font-size: 0.9rem;
+.grade-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--skolr-color-divider);
+}
+
+.grade-row:last-child {
+  border-bottom: none;
+}
+
+.grade-date {
+  font-size: 0.8rem;
+  color: var(--skolr-color-text-muted);
+  width: 6rem;
+  flex: none;
+}
+
+.grade-comment {
+  flex: 1;
+  min-width: 0;
 }
 </style>

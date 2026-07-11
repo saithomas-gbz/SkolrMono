@@ -376,9 +376,10 @@ grades:
     empty: Aucune note enregistrée pour le moment.
     average: Moyenne
     no_average: Pas encore de moyenne
-    date: Date
-    grade: Note
-    comment: Appréciation
+    kpi_overall: Moyenne générale
+    kpi_best: Meilleure matière
+    kpi_worst: À travailler
+    kpi_trend: Vs. trimestre précédent
     download_bulletin: Télécharger le bulletin PDF
     downloading: Téléchargement…
     download_error: "Impossible de générer le bulletin. Veuillez réessayer."
