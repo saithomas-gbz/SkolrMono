@@ -16,7 +16,7 @@ export default defineNuxtConfig({
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
         {
           rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap",
+          href: "https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap",
         },
       ],
     },
