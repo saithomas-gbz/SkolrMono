@@ -234,6 +234,12 @@ planning:
   add: Ajouter
   loading: "Chargement…"
   today: "Aujourd'hui"
+  greeting_morning: "Bonjour, {name}"
+  greeting_afternoon: "Bon après-midi, {name}"
+  greeting_evening: "Bonsoir, {name}"
+  today_summary: "{date} — {count} cours aujourd'hui, prochain : {course} à {time}"
+  today_summary_last: "{date} — {count} cours aujourd'hui, dernier en cours : {course}"
+  today_summary_none: "{date} — aucun cours aujourd'hui"
   absences:
     title: Gestion des absences
     restricted: "Cette page est réservée aux enseignants et administrateurs."

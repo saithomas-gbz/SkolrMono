@@ -87,7 +87,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const api = useApi();
-const { hasRole, userId } = useAuth();
+const { hasRole, userId, user } = useAuth();
 const { fetchSessions, deleteSession } = usePlanning();
 const { fetchUsersByIds, fetchAllUsers } = useUser();
 const { fetchClassesByTeacherId } = useClass();
@@ -233,6 +233,62 @@ watch(sessions, async (newSessions) => {
     teacherProfiles.value = await fetchUsersByIds(ids);
   } catch {
     // non-bloquant : le calendrier affichera juste l'ID si le fetch échoue
+  }
+});
+
+// TopBar : côté élève, reprend le ton "greeting" du sketch (flagship screen) ;
+// les autres rôles gardent un titre générique.
+const { setPageHeader } = usePageHeader();
+const firstName = computed(() => user.value?.name?.split(/\s+/)[0] ?? '');
+
+function greetingKey(hour: number) {
+  if (hour < 12) return 'planning.greeting_morning';
+  if (hour < 18) return 'planning.greeting_afternoon';
+  return 'planning.greeting_evening';
+}
+
+const todaySummary = computed(() => {
+  const now = new Date();
+  const dateLabel = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(now);
+  const todaysSessions = sessions.value
+    .filter((s) => new Date(s.startAt).toDateString() === now.toDateString())
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+  if (todaysSessions.length === 0) {
+    return t('planning.today_summary_none', { date: dateLabel });
+  }
+  const next = todaysSessions.find((s) => new Date(s.endAt) > now);
+  if (!next) {
+    const last = todaysSessions[todaysSessions.length - 1]!;
+    return t('planning.today_summary_last', {
+      date: dateLabel,
+      count: todaysSessions.length,
+      course: courseNames.value.get(last.courseId) ?? '',
+    });
+  }
+  const timeLabel = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(
+    new Date(next.startAt),
+  );
+  return t('planning.today_summary', {
+    date: dateLabel,
+    count: todaysSessions.length,
+    course: courseNames.value.get(next.courseId) ?? '',
+    time: timeLabel,
+  });
+});
+
+watchEffect(() => {
+  if (isStudent.value && firstName.value) {
+    setPageHeader({
+      title: t(greetingKey(new Date().getHours()), { name: firstName.value }),
+      subtitle: todaySummary.value,
+    });
+  } else {
+    setPageHeader({ title: t('planning.title') });
   }
 });
 
