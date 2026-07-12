@@ -17,7 +17,8 @@ test.describe('Parcours statistiques enseignant (issue #96, PR #118)', () => {
     // Navigation vers la page /statistics (accès réservé ADMIN/TEACHER/STAFF).
     await page.goto('/statistics');
     await expect(page).toHaveURL(/\/statistics/);
-    await expect(page.getByText('Statistiques', { exact: true })).toBeVisible();
+    // Scopé au contenu : le NavRail expose aussi un lien « Statistiques ».
+    await expect(page.getByRole('main').getByText('Statistiques', { exact: true })).toBeVisible();
 
     // Une classe est présélectionnée par défaut (useChartClassSelection) : les
     // deux graphiques doivent atteindre un état stable avec des données.

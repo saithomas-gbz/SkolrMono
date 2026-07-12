@@ -33,7 +33,8 @@ test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', (
     // --- Enseignant : dropdown « Affichage », valeur par défaut « Mes matières » ---
     await loginAs(page, 'teacher');
     await page.goto('/planning');
-    await expect(page.getByText('Emploi du temps', { exact: true })).toBeVisible();
+    // Scopé au contenu : le NavRail expose aussi un lien « Emploi du temps ».
+    await expect(page.getByRole('main').getByText('Emploi du temps', { exact: true })).toBeVisible();
 
     // Un seul dropdown de portée (fusion de l'ancien SelectButton + select classe
     // conditionnel), présélectionné sur « Mes matières ».
@@ -65,7 +66,7 @@ test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', (
     await page.context().clearCookies();
     await loginAs(page, 'admin');
     await page.goto('/planning');
-    await expect(page.getByText('Emploi du temps', { exact: true })).toBeVisible();
+    await expect(page.getByRole('main').getByText('Emploi du temps', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Filtrer par professeur')).toBeVisible();
     // Le filtre élève (redondant avec le filtre classe) a été retiré côté UI.
     await expect(page.getByLabel('Filtrer par élève')).toHaveCount(0);
