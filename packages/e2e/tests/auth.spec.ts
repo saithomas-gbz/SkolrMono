@@ -25,8 +25,10 @@ test.describe('Authentification & gardes de route', () => {
   }) => {
     await loginAs(page, 'user');
 
-    await page.getByRole('button', { name: 'Menu' }).click();
-    await page.getByRole('button', { name: 'Déconnexion' }).click();
+    // Le menu profil est ouvert via l'avatar de la TopBar (`<Avatar class="avatar">`),
+    // la déconnexion est un item du `<Menu>` PrimeVue (role menuitem, `nav.logout`).
+    await page.locator('.avatar').click();
+    await page.getByRole('menuitem', { name: 'Déconnexion' }).click();
     await expect(page).toHaveURL(/\/auth\/login/);
 
     // La garde `auth` renvoie de nouveau au login sur une page protégée.

@@ -5,8 +5,8 @@ test('le dashboard et la barre applicative s’affichent après connexion', asyn
 }) => {
   await expect(page).toHaveURL(/\/student/);
 
-  // Raccourci messagerie de la barre supérieure (aria-label `nav.messages`).
-  await expect(page.getByRole('button', { name: 'Messages' })).toBeVisible();
+  // Lien messagerie du NavRail (libellé `nav.messages`).
+  await expect(page.getByRole('link', { name: 'Messages' })).toBeVisible();
   // Cloche de notifications (aria-label `notifications.aria_label`).
   await expect(page.getByRole('button', { name: /^Notifications/ })).toBeVisible();
 });
