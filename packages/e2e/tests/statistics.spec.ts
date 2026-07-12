@@ -5,7 +5,8 @@ test.describe('/statistics accessible uniquement à ADMIN/TEACHER/STAFF (issue #
     await loginAs(page, 'teacher');
     await page.goto('/statistics');
     await expect(page).toHaveURL(/\/statistics/);
-    await expect(page.getByText('Statistiques', { exact: true })).toBeVisible();
+    // Scopé au contenu : le NavRail expose aussi un lien « Statistiques ».
+    await expect(page.getByRole('main').getByText('Statistiques', { exact: true })).toBeVisible();
   });
 
   test('ADMIN accède à /statistics', async ({ page }) => {
