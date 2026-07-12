@@ -1,4 +1,4 @@
-export type PageHeader = {
+type PageHeader = {
   title: string;
   subtitle?: string;
 };
