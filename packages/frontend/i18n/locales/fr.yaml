@@ -105,10 +105,8 @@ dashboard:
   grade_distribution: Distribution des notes
   my_students: Mes élèves
   global_grade_distribution: Distribution globale des notes
-  recent_absences: "Absences récentes (7 jours)"
   student_overview: Aperçu des élèves
   see_all: "Voir tout →"
-  billing_title: Facturation
   my_classes: Mes classes
   grade_progress: Évolution de mes notes
   grade_repartition: Répartition de mes notes
@@ -168,6 +166,22 @@ admin:
     classes: Classes
     subjects: Matières
     absences: "Absences (7 jours)"
+  dashboard:
+    attendance_chart:
+      title: Absences par jour
+      loading: "Chargement…"
+      mon: Lun
+      tue: Mar
+      wed: Mer
+      thu: Jeu
+      fri: Ven
+    needs_attention:
+      title: À surveiller
+      loading: "Chargement…"
+      empty: Rien à signaler cette semaine.
+      unexcused: "{name} — {count} absences non justifiées"
+      urgent: Urgent
+      watch: À surveiller
   absences_widget:
     no_absences: "Aucune absence ces 7 derniers jours."
     justified: Justifiée
@@ -213,8 +227,6 @@ billing:
   checkout_success: "Paiement confirmé. Votre abonnement sera actif dès la confirmation de Stripe."
   checkout_canceled: "Le paiement a été annulé."
   establishment_not_found: "Aucun établissement n'est associé à votre compte. Contactez le support Skolr."
-  widget_no_subscription: Aucun abonnement actif
-  widget_see_billing: "Voir la facturation →"
   plan_label:
     STARTER: Starter
     STANDARD: Standard
