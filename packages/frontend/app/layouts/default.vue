@@ -62,6 +62,7 @@ const navLinks = computed<ShellNavLink[]>(() => {
   if (isStudent.value) {
     links.push({ label: t('nav.my_absences'), to: '/planning/my-absences', icon: 'pi-table' });
     links.push({ label: t('nav.my_grades'), to: '/grades/my-grades', icon: 'pi-book' });
+    links.push({ label: t('homework.title'), to: '/homework', icon: 'pi-check-square' });
   }
 
   if (isTeacher.value) {
