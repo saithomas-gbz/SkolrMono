@@ -1,6 +1,22 @@
 <script setup lang="ts">
+const { t } = useI18n();
+const route = useRoute();
+const toast = useToast();
+
 definePageMeta({
   middleware: ['guest'],
+});
+
+// Redirigé ici après invalidation de session (401/403 via `useApi`) : signaler à l'utilisateur.
+onMounted(() => {
+  if (route.query.expired) {
+    toast.add({
+      severity: 'warn',
+      summary: t('auth.session_expired.summary'),
+      detail: t('auth.session_expired.detail'),
+      life: 5000,
+    });
+  }
 });
 </script>
 

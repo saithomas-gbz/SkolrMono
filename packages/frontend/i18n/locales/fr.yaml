@@ -45,6 +45,9 @@ nav:
 auth:
   email: Email
   password: Mot de passe
+  session_expired:
+    summary: Session expirée
+    detail: "Votre session a expiré, veuillez vous reconnecter."
   login:
     title: Connexion
     submit: Se connecter
