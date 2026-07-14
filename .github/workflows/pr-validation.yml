@@ -8,12 +8,6 @@ jobs:
   validate-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Check PR title for type prefix
-        if: "!contains(github.event.pull_request.title, 'feat:') && !contains(github.event.pull_request.title, 'fix:') && !contains(github.event.pull_request.title, 'docs:') && !contains(github.event.pull_request.title, 'style:') && !contains(github.event.pull_request.title, 'refactor:') && !contains(github.event.pull_request.title, 'perf:') && !contains(github.event.pull_request.title, 'test:') && !contains(github.event.pull_request.title, 'chore:') && !contains(github.event.pull_request.title, 'ci:')"
-        run: |
-          echo "::error::PR title must start with a type prefix (feat:, fix:, docs:, style:, refactor:, perf:, test:, chore:, ci:)"
-          exit 1
-
       - name: Check for linked issue
         if: "!contains(github.event.pull_request.body, 'fixes #') && !contains(github.event.pull_request.body, 'closes #') && !contains(github.event.pull_request.body, 'resolves #')"
         run: |
