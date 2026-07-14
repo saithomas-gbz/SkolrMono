@@ -7,6 +7,7 @@ type JwtPayload = {
   userId?: string;
   email?: string;
   role?: string;
+  exp?: number;
 };
 
 function decodeBase64Url(segment: string): string {
@@ -17,25 +18,38 @@ function decodeBase64Url(segment: string): string {
   return Buffer.from(base64, 'base64').toString('utf8');
 }
 
-/** Dérive `AuthUser` depuis le JWT auth-service (`userId`, `email`, `role`). */
-export function authUserFromToken(token: string): AuthUser | null {
+function decodeJwtPayload(token: string): JwtPayload | null {
   const segment = token.split('.')[1];
   if (!segment) {
     return null;
   }
   try {
-    const payload = JSON.parse(decodeBase64Url(segment)) as JwtPayload;
-    if (!payload.userId || !payload.email || !payload.role) {
-      return null;
-    }
-    return {
-      id: payload.userId,
-      email: payload.email,
-      role: payload.role,
-    };
+    return JSON.parse(decodeBase64Url(segment)) as JwtPayload;
   } catch {
     return null;
   }
+}
+
+/** Dérive `AuthUser` depuis le JWT auth-service (`userId`, `email`, `role`). */
+export function authUserFromToken(token: string): AuthUser | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.userId || !payload.email || !payload.role) {
+    return null;
+  }
+  return {
+    id: payload.userId,
+    email: payload.email,
+    role: payload.role,
+  };
+}
+
+/** `true` si le token est indécodable, dépourvu de claim `exp`, ou déjà expiré. */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload || typeof payload.exp !== 'number') {
+    return true;
+  }
+  return payload.exp * 1000 <= Date.now();
 }
 
 const AUTH_COOKIE_OPTIONS = { sameSite: 'lax' as const, default: () => null };
@@ -46,4 +60,24 @@ export function useAuthTokenCookie() {
 
 export function useAuthUserCookie() {
   return useCookie<AuthUser | null>(AUTH_USER_COOKIE, AUTH_COOKIE_OPTIONS);
+}
+
+export function useAuthTokenState() {
+  const cookie = useAuthTokenCookie();
+  return useState<string | null>(AUTH_TOKEN_COOKIE, () => cookie.value ?? null);
+}
+
+export function useAuthUserState() {
+  const cookie = useAuthUserCookie();
+  return useState<AuthUser | null>(AUTH_USER_COOKIE, () => cookie.value ?? null);
+}
+
+export function writeAuthToken(token: string | null) {
+  useAuthTokenState().value = token;
+  useAuthTokenCookie().value = token;
+}
+
+export function writeAuthUser(user: AuthUser | null) {
+  useAuthUserState().value = user;
+  useAuthUserCookie().value = user;
 }

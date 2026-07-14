@@ -18,11 +18,13 @@
     </template>
 
     <slot />
-    <Toast position="bottom-right" />
   </AppShell>
   <div v-else class="guest-root">
     <slot />
   </div>
+  <!-- Hors du `v-if` : le toast doit rester monté même en état invité (page login),
+       où l'interceptor de session signale une expiration (#137). -->
+  <Toast position="bottom-right" />
 </template>
 
 <script setup lang="ts">
