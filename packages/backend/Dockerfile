@@ -3,6 +3,10 @@ WORKDIR /app
 
 COPY package.json bun.lock tsconfig.json ./
 
+# Fixtures de dev partagées : prisma/seed.ts importe ../../../scripts/seed/dev-users
+# (résout /app/scripts/seed/dev-users). Sans ça, `prisma db seed` plante dans l'image (#88).
+COPY scripts/seed/ ./scripts/seed/
+
 COPY packages/backend/ ./packages/backend/
 
 WORKDIR /app/packages/backend
