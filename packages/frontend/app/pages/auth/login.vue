@@ -1,6 +1,27 @@
 <script setup lang="ts">
+const { t } = useI18n();
+const route = useRoute();
+const toast = useToast();
+
 definePageMeta({
   middleware: ['guest'],
+});
+
+// Redirigé ici après invalidation de session (401/403 via `useApi`) : signaler à l'utilisateur.
+// `nextTick` : le `<Toast>` du layout est monté après cette page (frère suivant dans le
+// template) et ne s'abonne au bus PrimeVue qu'à son propre montage — sans ce délai, l'event
+// `add` serait émis avant l'abonnement et le toast perdu.
+onMounted(async () => {
+  if (!route.query.expired) {
+    return;
+  }
+  await nextTick();
+  toast.add({
+    severity: 'warn',
+    summary: t('auth.session_expired.summary'),
+    detail: t('auth.session_expired.detail'),
+    life: 5000,
+  });
 });
 </script>
 

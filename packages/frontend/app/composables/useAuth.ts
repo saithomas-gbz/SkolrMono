@@ -1,7 +1,10 @@
 import {
   authUserFromToken,
-  useAuthTokenCookie,
-  useAuthUserCookie,
+  isTokenExpired,
+  useAuthTokenState,
+  useAuthUserState,
+  writeAuthToken,
+  writeAuthUser,
 } from '~/composables/authSession';
 
 /** Forme minimale des erreurs $fetch / ofetch (évite une dépendance directe pour Knip). */
@@ -81,26 +84,28 @@ export function useAuthCredentialPolicy(email: Ref<string>, password: Ref<string
 }
 export function useAuth() {
   const api = useApi();
-  const authTokenCookie = useAuthTokenCookie();
-  const authUserCookie = useAuthUserCookie();
-  const isLoggedIn = computed(() => Boolean(authTokenCookie.value?.trim()));
-  const user = computed(() => authUserCookie.value);
-  const userId = computed(() => authUserCookie.value?.id ?? null);
-  const role = computed(() => authUserCookie.value?.role ?? null);
+  const authToken = useAuthTokenState();
+  const authUser = useAuthUserState();
+  const isLoggedIn = computed(() => {
+    const token = authToken.value?.trim();
+    return Boolean(token) && !isTokenExpired(token as string);
+  });
+  const user = computed(() => authUser.value);
+  const userId = computed(() => authUser.value?.id ?? null);
+  const role = computed(() => authUser.value?.role ?? null);
 
-  function setSession(token: string, authUser?: AuthUser) {
-    authTokenCookie.value = token;
-    const resolvedUser = authUser ?? authUserFromToken(token);
-    authUserCookie.value = resolvedUser;
+  function setSession(token: string, sessionUser?: AuthUser) {
+    writeAuthToken(token);
+    writeAuthUser(sessionUser ?? authUserFromToken(token));
   }
 
   function clearSession() {
-    authTokenCookie.value = null;
-    authUserCookie.value = null;
+    writeAuthToken(null);
+    writeAuthUser(null);
   }
 
   function hasRole(...roles: AuthRole[]) {
-    const currentRole = authUserCookie.value?.role;
+    const currentRole = authUser.value?.role;
     return Boolean(currentRole && roles.includes(currentRole));
   }
 

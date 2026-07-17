@@ -10,6 +10,14 @@ mock.module('../lib/classServiceClient', () => ({
   teacherTeachesCourse: teacherTeachesCourseMock,
 }));
 
+// Le contrôleur appelle publish(...).catch(...). shared/events est mocké
+// globalement par d'autres fichiers de la suite (mock.module est global au
+// process) — on l'ancre ici pour que ces tests ne dépendent pas de l'ordre
+// de chargement (sinon un mock voisin renvoyant non-Promise casse le .catch).
+mock.module('../../../shared/events', () => ({
+  publish: mock(() => Promise.resolve()),
+}));
+
 mock.module('../generated/prisma/client', () => ({
   PrismaClient: class {
     grade = { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() };
