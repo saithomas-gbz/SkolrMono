@@ -25,7 +25,7 @@ mock.module('../../../shared/db', () => ({
 }));
 
 mock.module('../../../shared/events', () => ({
-  publish: mock(),
+  publish: mock(() => Promise.resolve()),
 }));
 
 const prismaMock = db as unknown as {
