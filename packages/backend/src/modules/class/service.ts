@@ -59,3 +59,21 @@ export async function getClassTeacherIds(classId: string): Promise<string[]> {
   });
   return [...new Set(rows.map((r) => r.teacherId))];
 }
+
+/**
+ * RGPD — rattachements de classe de l'utilisateur (comme enseignant et/ou élève).
+ * Le domaine `class` ne stocke qu'un `userId` nu, aucune PII directe.
+ */
+export async function collectRgpdData(userId: string) {
+  const [asTeacher, asStudent] = await Promise.all([
+    db.classTeacher.findMany({
+      where: { teacherId: userId },
+      select: { classId: true, isPrincipal: true },
+    }),
+    db.classStudent.findMany({
+      where: { studentId: userId },
+      select: { classId: true, joinedAt: true },
+    }),
+  ]);
+  return { asTeacher, asStudent };
+}

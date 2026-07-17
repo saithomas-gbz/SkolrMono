@@ -24,16 +24,25 @@ function verifyToken(request: FastifyRequest): AuthJwtPayload | null {
 }
 
 /**
+ * Termine la requête depuis un préhandler asynchrone. Le `await` est essentiel :
+ * sans lui, Fastify poursuit vers le handler de route malgré la réponse déjà
+ * envoyée (le handler s'exécute alors indûment et peut déclencher un double envoi).
+ */
+async function deny(reply: FastifyReply, status: number, error: string): Promise<void> {
+  await reply.status(status).send({ error });
+}
+
+/**
  * Invitations réservées à l'ADMIN de son propre établissement — jamais au PLATFORM_ADMIN,
  * qui n'appartient à aucun établissement et ne doit pas créer de comptes à la place d'un client.
  */
 export async function requireEstablishmentAdmin(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (payload.role !== 'ADMIN' || !payload.establishmentId) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.authUser = payload;
 }
@@ -44,7 +53,7 @@ const ADMIN_ROLES = ['ADMIN', 'PLATFORM_ADMIN'];
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   request.authUser = payload;
 }
@@ -56,10 +65,10 @@ export async function requireSelfOrAdmin(
 ) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (!ADMIN_ROLES.includes(payload.role) && payload.userId !== request.params.id) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.authUser = payload;
 }

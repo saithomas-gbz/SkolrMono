@@ -3,6 +3,8 @@ import userController from '../controllers/userController';
 import { requireAuth, requireSelfOrAdmin } from '../../../shared/jwt/authGuard';
 import {
   meRouteSchema,
+  exportMyDataRouteSchema,
+  eraseMyAccountRouteSchema,
   getUsersByIdsRouteSchema,
   getUserByIdRouteSchema,
   createUserRouteSchema,
@@ -14,6 +16,17 @@ import {
 
 const userRoutes = async (fastify: FastifyInstance) => {
   fastify.get('/me', { schema: meRouteSchema }, userController.me);
+  // RGPD — export (accès/portabilité) et effacement du compte de l'appelant.
+  fastify.get(
+    '/me/export',
+    { schema: exportMyDataRouteSchema, preHandler: requireAuth },
+    userController.exportMyData,
+  );
+  fastify.delete(
+    '/me',
+    { schema: eraseMyAccountRouteSchema, preHandler: requireAuth },
+    userController.eraseMyAccount,
+  );
   fastify.get('/users', { schema: getUsersByIdsRouteSchema }, userController.getUsersByIds);
   fastify.get('/users/:id', { schema: getUserByIdRouteSchema }, userController.getUserById);
   fastify.post('/users', { schema: createUserRouteSchema }, userController.createUser);

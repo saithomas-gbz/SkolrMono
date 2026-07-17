@@ -1,12 +1,55 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 import bcrypt from 'bcrypt';
+import { collectPersonalData, anonymizeUser } from '../lib/rgpdService';
 
 type Role = 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PLATFORM_ADMIN' | 'PARENT';
 
 const userController = {
   me: async (request: FastifyRequest, reply: FastifyReply) => {
     return reply.send(request.user);
+  },
+
+  // RGPD — droit d'accès / portabilité (art. 15 & 20) : export JSON de toutes
+  // les données personnelles de l'utilisateur authentifié.
+  exportMyData: async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = request.authUser;
+      if (!auth) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+
+      const data = await collectPersonalData(auth.userId, auth.email);
+
+      return reply
+        .header('Content-Type', 'application/json; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="skolr-export-${auth.userId}.json"`)
+        .send(data);
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
+  },
+
+  // RGPD — droit à l'effacement (art. 17) : anonymise le compte de l'utilisateur
+  // authentifié (soft-delete + scrub PII), les enregistrements liés sont conservés.
+  eraseMyAccount: async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const auth = request.authUser;
+      if (!auth) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+
+      const erased = await anonymizeUser(auth.userId);
+      if (!erased) {
+        return reply.status(404).send({ error: 'User not found' });
+      }
+
+      return reply.send({ message: 'Account anonymized successfully' });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Internal server error' });
+    }
   },
 
   getUserById: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -171,16 +214,18 @@ const userController = {
     }
   },
 
+  // Suppression admin — anonymisation RGPD (soft-delete) plutôt que hard delete :
+  // supprime les comptes/jetons, scrub la PII et conserve la ligne pour ne pas
+  // orpheliner les données cross-schema (grades, absences, messages…).
   deleteUser: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string };
 
-      const existing = await db.user.findUnique({ where: { id } });
-      if (!existing) {
+      const erased = await anonymizeUser(id);
+      if (!erased) {
         return reply.status(404).send({ error: 'User not found' });
       }
 
-      await db.user.delete({ where: { id } });
       return reply.send({ message: 'User deleted successfully' });
     } catch (error) {
       request.log.error(error);
@@ -196,13 +241,12 @@ const userController = {
         return reply.status(400).send({ error: 'No IDs provided' });
       }
 
-      const result = await db.user.deleteMany({
-        where: { id: { in: ids } },
-      });
+      const results = await Promise.all(ids.map((id) => anonymizeUser(id)));
+      const count = results.filter(Boolean).length;
 
       return reply.send({
-        message: `${result.count} user(s) deleted successfully`,
-        count: result.count,
+        message: `${count} user(s) deleted successfully`,
+        count,
       });
     } catch (error) {
       request.log.error(error);
