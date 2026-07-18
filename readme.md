@@ -166,6 +166,30 @@ cd packages/backend && bun test src
 
 Tests E2E frontend (Playwright) : voir `packages/e2e`.
 
+## Releases
+
+Les versions sont publiées sous forme d'images Docker sur **GHCR** :
+
+- `ghcr.io/saithomas-gbz/skolr-backend`
+- `ghcr.io/saithomas-gbz/skolr-frontend`
+
+Couper une version (déclenche le workflow `.github/workflows/release.yml` : build + push
+des images taguées `X.Y.Z` / `X.Y` / `latest`, puis création de la GitHub Release) :
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Les tags de pré-release (`v1.0.0-rc.1`) produisent une pré-release et **ne** mettent **pas**
+à jour le tag `latest`. Tester une version publiée sans rebuild :
+
+```bash
+SKOLR_VERSION=1.0.0 docker compose -f docker-compose.release.yml up -d
+```
+
+Historique des changements : voir [CHANGELOG.md](CHANGELOG.md).
+
 ## Contribution
 
 Les contributions sont les bienvenues ! Veuillez suivre ces étapes pour contribuer :

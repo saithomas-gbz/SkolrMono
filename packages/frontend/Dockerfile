@@ -26,6 +26,10 @@ FROM oven/bun:latest AS production
 WORKDIR /app
 
 COPY --from=build /app/.output /app/
+# .output n'est pas autonome (nuxt.config.ts: nitro.externals.trace=false) et
+# référence des deps externalisées (ex. @sentry/core) à l'exécution.
+COPY --from=build /app/node_modules /app/node_modules
 
+ENV PORT=3003
 EXPOSE 3003
 ENTRYPOINT ["bun", "run", "/app/server/index.mjs"]
