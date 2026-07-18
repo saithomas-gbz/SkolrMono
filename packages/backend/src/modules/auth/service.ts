@@ -31,7 +31,7 @@ export async function getUserIdsByRole(role: string): Promise<string[]> {
 // ---------------------------------------------------------------------------
 
 /** Sujet d'un traitement RGPD : l'utilisateur concerné, identifié par id + email. */
-export type RgpdSubject = { userId: string; email: string };
+type RgpdSubject = { userId: string; email: string };
 
 /**
  * Données personnelles du domaine `auth` (profil, comptes OAuth, jetons).

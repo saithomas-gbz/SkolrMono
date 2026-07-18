@@ -59,6 +59,26 @@ export function useUser() {
     });
   }
 
+  /**
+   * RGPD — droit d'accès / portabilité : télécharge l'ensemble des données
+   * personnelles de l'utilisateur authentifié (JSON). Suit le motif blob + ancre
+   * utilisé pour les autres téléchargements (cf. `usePlanning`).
+   */
+  async function exportMyData(): Promise<void> {
+    const blob = await api<Blob>('/auth/me/export', { responseType: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'skolr-export.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /** RGPD — droit à l'effacement : anonymise le compte de l'utilisateur authentifié. */
+  async function deleteMyAccount() {
+    return api<{ message: string }>('/auth/me', { method: 'DELETE' });
+  }
+
   async function fetchAllUsers() {
     const roles = ['TEACHER', 'USER', 'STAFF', 'ADMIN', 'PARENT'];
     const responses = await Promise.all(
@@ -80,6 +100,8 @@ export function useUser() {
     fetchAllUsers,
     updateProfile,
     changePassword,
+    exportMyData,
+    deleteMyAccount,
     normalizeApiError,
   };
 }

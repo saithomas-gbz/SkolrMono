@@ -97,6 +97,26 @@ profile:
   update_success: Profil mis à jour avec succès.
   password_update_success: Mot de passe mis à jour avec succès.
   load_error: Impossible de charger votre profil.
+  rgpd:
+    title: Mes données (RGPD)
+    description: >-
+      Conformément au RGPD, vous pouvez télécharger l'ensemble de vos données
+      personnelles ou demander la suppression de votre compte.
+    export_button: Télécharger mes données
+    export_success: Export de vos données téléchargé.
+    export_error: Impossible d'exporter vos données. Réessayez plus tard.
+    delete_button: Supprimer mon compte
+    delete_dialog_title: Supprimer mon compte
+    delete_dialog_body: >-
+      Cette action anonymise définitivement votre compte : vos informations
+      personnelles sont effacées et vous ne pourrez plus vous connecter. Les
+      enregistrements liés (notes, absences, messages) sont conservés de façon
+      anonyme. Cette opération est irréversible.
+    delete_confirm_label: Pour confirmer, saisissez « {word} »
+    delete_confirm_word: SUPPRIMER
+    delete_confirm: Supprimer définitivement
+    delete_cancel: Annuler
+    delete_error: Impossible de supprimer votre compte. Réessayez plus tard.
 
 dashboard:
   title: Tableau de bord
