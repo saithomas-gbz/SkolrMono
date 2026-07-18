@@ -120,6 +120,62 @@
         </div>
       </template>
     </Card>
+
+    <Card v-if="!loading && !loadError" class="card">
+      <template #title>{{ $t('profile.rgpd.title') }}</template>
+      <template #content>
+        <p class="rgpd-description">{{ $t('profile.rgpd.description') }}</p>
+      </template>
+      <template #footer>
+        <div class="footer-actions">
+          <Button
+            severity="secondary"
+            icon="pi pi-download"
+            :loading="exporting"
+            :label="$t('profile.rgpd.export_button')"
+            @click="exportData"
+          />
+          <Button
+            severity="danger"
+            icon="pi pi-trash"
+            :label="$t('profile.rgpd.delete_button')"
+            @click="deleteDialogVisible = true"
+          />
+        </div>
+      </template>
+    </Card>
+
+    <Dialog
+      v-model:visible="deleteDialogVisible"
+      modal
+      :header="$t('profile.rgpd.delete_dialog_title')"
+      :style="{ width: '30rem', maxWidth: '90vw' }"
+    >
+      <div class="delete-dialog">
+        <Message severity="warn" :closable="false">{{ $t('profile.rgpd.delete_dialog_body') }}</Message>
+        <div class="field">
+          <label for="delete-confirm">{{ $t('profile.rgpd.delete_confirm_label', { word: confirmWord }) }}</label>
+          <InputText id="delete-confirm" v-model="deleteConfirmInput" class="full-width" fluid variant="outlined" />
+        </div>
+      </div>
+      <template #footer>
+        <Button
+          text
+          severity="secondary"
+          :label="$t('profile.rgpd.delete_cancel')"
+          :disabled="deleting"
+          @click="deleteDialogVisible = false"
+        />
+        <Button
+          severity="danger"
+          icon="pi pi-trash"
+          :loading="deleting"
+          :disabled="!deleteConfirmed"
+          :label="$t('profile.rgpd.delete_confirm')"
+          @click="confirmDelete"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -130,9 +186,16 @@ import { normalizeUserError } from '~/composables/useUser';
 definePageMeta({ middleware: ['auth'] });
 
 const { t } = useI18n();
-const { userId, setSession } = useAuth();
+const toast = useToast();
+const { userId, setSession, clearSession } = useAuth();
 const authTokenCookie = useAuthTokenCookie();
-const { fetchUsersByIds, updateProfile, changePassword: changePasswordRequest } = useUser();
+const {
+  fetchUsersByIds,
+  updateProfile,
+  changePassword: changePasswordRequest,
+  exportMyData,
+  deleteMyAccount,
+} = useUser();
 
 const loading = ref(true);
 const loadError = ref<string | null>(null);
@@ -266,6 +329,50 @@ async function savePassword() {
     passwordSaving.value = false;
   }
 }
+
+// RGPD — export & effacement --------------------------------------------------
+
+const exporting = ref(false);
+const deleteDialogVisible = ref(false);
+const deleteConfirmInput = ref('');
+const deleting = ref(false);
+
+const confirmWord = computed(() => t('profile.rgpd.delete_confirm_word'));
+const deleteConfirmed = computed(() => deleteConfirmInput.value.trim() === confirmWord.value);
+
+// Réinitialise la saisie de confirmation à chaque ouverture/fermeture du dialogue.
+watch(deleteDialogVisible, () => {
+  deleteConfirmInput.value = '';
+});
+
+async function exportData() {
+  exporting.value = true;
+  try {
+    await exportMyData();
+    toast.add({ severity: 'success', summary: t('profile.rgpd.export_success'), life: 4000 });
+  } catch (e) {
+    console.error(e);
+    toast.add({ severity: 'error', summary: t('profile.rgpd.export_error'), life: 5000 });
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function confirmDelete() {
+  if (!deleteConfirmed.value) {
+    return;
+  }
+  deleting.value = true;
+  try {
+    await deleteMyAccount();
+    clearSession();
+    await navigateTo('/auth/login');
+  } catch (e) {
+    console.error(e);
+    toast.add({ severity: 'error', summary: t('profile.rgpd.delete_error'), life: 5000 });
+    deleting.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -305,6 +412,17 @@ async function savePassword() {
 
 .full-width {
   width: 100%;
+}
+
+.rgpd-description {
+  color: var(--p-text-muted-color);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.delete-dialog {
+  display: grid;
+  gap: 1rem;
 }
 
 .loading {

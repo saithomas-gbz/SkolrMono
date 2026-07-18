@@ -30,6 +30,7 @@ model User {
   oauthId         String?
   role            Role     @default(USER)
   establishmentId String?
+  deletedAt       DateTime? // RGPD : compte anonymisé (droit à l'effacement) — la ligne est conservée pour l'intégrité référentielle
 
   accounts Account[]
 

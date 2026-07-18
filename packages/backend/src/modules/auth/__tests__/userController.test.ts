@@ -5,35 +5,54 @@ import db from '../../../shared/db';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { User } from '../../../generated/prisma/client';
 
-mock.module('../../../shared/db', () => ({
-  default: {
-    user: {
-      findUnique: mock(),
-      findMany: mock(),
-      create: mock(),
-      update: mock(),
-      delete: mock(),
-      deleteMany: mock(),
-    },
-  },
-}));
+// Un mock Prisma couvrant tous les modèles touchés par l'orchestrateur RGPD
+// (export + effacement traversent tous les schémas). `$transaction` exécute le
+// callback interactif avec le mock lui-même comme client de transaction.
+type ModelMock = Record<string, ReturnType<typeof mock>>;
+const model = (): ModelMock => ({
+  findUnique: mock(),
+  findFirst: mock(),
+  findMany: mock(),
+  create: mock(),
+  update: mock(),
+  updateMany: mock(),
+  delete: mock(),
+  deleteMany: mock(),
+});
 
-type MockedDb = {
-  user: {
-    findUnique: ReturnType<typeof mock>;
-    findMany: ReturnType<typeof mock>;
-    create: ReturnType<typeof mock>;
-    update: ReturnType<typeof mock>;
-    delete: ReturnType<typeof mock>;
-    deleteMany: ReturnType<typeof mock>;
-  };
+const dbMock: Record<string, ModelMock> & {
+  $transaction: (cb: (tx: unknown) => unknown) => Promise<unknown>;
+} = {
+  user: model(),
+  account: model(),
+  passwordResetToken: model(),
+  invitationToken: model(),
+  classTeacher: model(),
+  classStudent: model(),
+  gradeUser: model(),
+  grade: model(),
+  assignment: model(),
+  session: model(),
+  absence: model(),
+  absenceJustification: model(),
+  conversationParticipant: model(),
+  message: model(),
+  messageRead: model(),
+  notification: model(),
+  establishmentMember: model(),
+  establishment: model(),
+  parentStudent: model(),
+  $transaction: async (cb) => cb(dbMock),
 };
 
-const prismaMock = db as unknown as MockedDb;
+mock.module('../../../shared/db', () => ({ default: dbMock }));
+
+const prismaMock = db as unknown as typeof dbMock & { user: ModelMock };
 
 const makeReply = () =>
   ({
     status: mock().mockReturnThis(),
+    header: mock().mockReturnThis(),
     send: mock().mockReturnThis(),
   }) as unknown as FastifyReply;
 
@@ -57,6 +76,7 @@ const mockUser: User = {
   oauthId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
+  deletedAt: null,
 };
 
 const userWithoutPassword = (u: User) => {
@@ -70,12 +90,20 @@ describe('UserController', () => {
 
   beforeEach(() => {
     reply = makeReply();
-    prismaMock.user.findUnique.mockReset();
-    prismaMock.user.findMany.mockReset();
-    prismaMock.user.create.mockReset();
-    prismaMock.user.update.mockReset();
-    prismaMock.user.delete.mockReset();
-    prismaMock.user.deleteMany.mockReset();
+    // Réinitialise chaque modèle avec des valeurs par défaut sûres pour que les
+    // fonctions de collecte/anonymisation (Promise.all) ne renvoient jamais undefined.
+    for (const value of Object.values(prismaMock)) {
+      if (typeof value !== 'object' || value === null) continue;
+      const m = value as ModelMock;
+      m.findMany?.mockReset().mockResolvedValue([]);
+      m.findUnique?.mockReset().mockResolvedValue(null);
+      m.findFirst?.mockReset().mockResolvedValue(null);
+      m.create?.mockReset().mockResolvedValue({});
+      m.update?.mockReset().mockResolvedValue({});
+      m.updateMany?.mockReset().mockResolvedValue({ count: 0 });
+      m.delete?.mockReset().mockResolvedValue({});
+      m.deleteMany?.mockReset().mockResolvedValue({ count: 0 });
+    }
   });
 
   // ---------------------------------------------------------------------------
@@ -465,15 +493,22 @@ describe('UserController', () => {
   // deleteUser
   // ---------------------------------------------------------------------------
   describe('deleteUser', () => {
-    it('should delete user and return success message', async () => {
-      prismaMock.user.findUnique.mockResolvedValue(mockUser);
-      prismaMock.user.delete.mockResolvedValue(mockUser);
+    it('should anonymize the user (soft-delete) and return success message', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ email: mockUser.email });
 
       const request = makeRequest({ params: { id: 'user-1' } });
 
       await userController.deleteUser(request, reply);
 
-      expect(prismaMock.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+      // Plus de hard delete : la ligne est conservée et scrubbée.
+      expect(prismaMock.user.delete).not.toHaveBeenCalled();
+      expect(prismaMock.account.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({ deletedAt: expect.any(Date), password: null }),
+        }),
+      );
       expect(reply.send).toHaveBeenCalledWith({ message: 'User deleted successfully' });
     });
 
@@ -485,7 +520,7 @@ describe('UserController', () => {
 
       expect(reply.status).toHaveBeenCalledWith(404);
       expect(reply.send).toHaveBeenCalledWith({ error: 'User not found' });
-      expect(prismaMock.user.delete).not.toHaveBeenCalled();
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
 
     it('should return 500 on unexpected error', async () => {
@@ -503,19 +538,32 @@ describe('UserController', () => {
   // massDeleteUsers
   // ---------------------------------------------------------------------------
   describe('massDeleteUsers', () => {
-    it('should delete multiple users and return count', async () => {
-      prismaMock.user.deleteMany.mockResolvedValue({ count: 3 });
+    it('should anonymize multiple users and return the count', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ email: mockUser.email });
 
       const request = makeRequest({ body: { ids: ['u1', 'u2', 'u3'] } });
 
       await userController.massDeleteUsers(request, reply);
 
-      expect(prismaMock.user.deleteMany).toHaveBeenCalledWith({
-        where: { id: { in: ['u1', 'u2', 'u3'] } },
-      });
+      expect(prismaMock.user.update).toHaveBeenCalledTimes(3);
       expect(reply.send).toHaveBeenCalledWith({
         message: '3 user(s) deleted successfully',
         count: 3,
+      });
+    });
+
+    it('should count only the users that existed', async () => {
+      prismaMock.user.findUnique
+        .mockResolvedValueOnce({ email: mockUser.email })
+        .mockResolvedValueOnce(null);
+
+      const request = makeRequest({ body: { ids: ['u1', 'ghost'] } });
+
+      await userController.massDeleteUsers(request, reply);
+
+      expect(reply.send).toHaveBeenCalledWith({
+        message: '1 user(s) deleted successfully',
+        count: 1,
       });
     });
 
@@ -526,7 +574,7 @@ describe('UserController', () => {
 
       expect(reply.status).toHaveBeenCalledWith(400);
       expect(reply.send).toHaveBeenCalledWith({ error: 'No IDs provided' });
-      expect(prismaMock.user.deleteMany).not.toHaveBeenCalled();
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
 
     it('should return 400 when ids is missing', async () => {
@@ -539,13 +587,114 @@ describe('UserController', () => {
     });
 
     it('should return 500 on unexpected error', async () => {
-      prismaMock.user.deleteMany.mockRejectedValue(new Error('DB failure'));
+      prismaMock.user.findUnique.mockRejectedValue(new Error('DB failure'));
       const request = makeRequest({ body: { ids: ['u1'] } });
 
       await userController.massDeleteUsers(request, reply);
 
       expect(reply.status).toHaveBeenCalledWith(500);
       expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // exportMyData (RGPD — droit d'accès / portabilité)
+  // ---------------------------------------------------------------------------
+  describe('exportMyData', () => {
+    const authUser = { userId: 'user-1', email: mockUser.email, role: 'USER' };
+
+    it('should aggregate personal data across domains and set a download header', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(userWithoutPassword(mockUser));
+      prismaMock.notification.findMany.mockResolvedValue([
+        { type: 'grade', title: 'Nouvelle note', body: '...', read: false, metadata: null, createdAt: new Date() },
+      ]);
+
+      const request = makeRequest({ authUser } as Partial<FastifyRequest>);
+
+      await userController.exportMyData(request, reply);
+
+      expect(reply.header).toHaveBeenCalledWith(
+        'Content-Disposition',
+        'attachment; filename="skolr-export-user-1.json"',
+      );
+      expect(reply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: { userId: 'user-1', email: mockUser.email },
+          exportedAt: expect.any(String),
+          notification: { notifications: expect.arrayContaining([expect.objectContaining({ type: 'grade' })]) },
+        }),
+      );
+    });
+
+    it('should return 401 when unauthenticated', async () => {
+      const request = makeRequest({ authUser: undefined } as Partial<FastifyRequest>);
+
+      await userController.exportMyData(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Unauthorized' });
+    });
+
+    it('should return 500 on unexpected error', async () => {
+      prismaMock.user.findUnique.mockRejectedValue(new Error('DB failure'));
+      const request = makeRequest({ authUser } as Partial<FastifyRequest>);
+
+      await userController.exportMyData(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(500);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Internal server error' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // eraseMyAccount (RGPD — droit à l'effacement)
+  // ---------------------------------------------------------------------------
+  describe('eraseMyAccount', () => {
+    const authUser = { userId: 'user-1', email: mockUser.email, role: 'USER' };
+
+    it('should anonymize the account and clear duplicated PII', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({ email: mockUser.email });
+
+      const request = makeRequest({ authUser } as Partial<FastifyRequest>);
+
+      await userController.eraseMyAccount(request, reply);
+
+      expect(prismaMock.passwordResetToken.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({
+            deletedAt: expect.any(Date),
+            name: null,
+            oauthId: null,
+            email: expect.stringContaining('@anonymized.skolr.local'),
+          }),
+        }),
+      );
+      // Copie d'identité dans le domaine grade anonymisée par email.
+      expect(prismaMock.gradeUser.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { email: mockUser.email } }),
+      );
+      expect(reply.send).toHaveBeenCalledWith({ message: 'Account anonymized successfully' });
+    });
+
+    it('should return 404 when the user no longer exists', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      const request = makeRequest({ authUser } as Partial<FastifyRequest>);
+
+      await userController.eraseMyAccount(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should return 401 when unauthenticated', async () => {
+      const request = makeRequest({ authUser: undefined } as Partial<FastifyRequest>);
+
+      await userController.eraseMyAccount(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(401);
+      expect(reply.send).toHaveBeenCalledWith({ error: 'Unauthorized' });
     });
   });
 });

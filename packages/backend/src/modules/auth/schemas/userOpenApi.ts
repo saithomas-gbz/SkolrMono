@@ -32,6 +32,37 @@ export const meRouteSchema = {
   },
 } as const;
 
+export const exportMyDataRouteSchema = {
+  description:
+    "RGPD — droit d'accès et à la portabilité (art. 15 & 20) : exporte en JSON l'ensemble des données personnelles de l'utilisateur authentifié (auth, class, grade, planning, message, notification, billing, parent).",
+  tags: [userTag],
+  response: {
+    // Agrégat multi-domaines volumineux et évolutif : on documente la route sans
+    // figer chaque sous-champ (le contrat reste « JSON des données perso »).
+    200: { type: 'object', additionalProperties: true },
+    401: errorBody,
+    500: errorBody,
+  },
+} as const;
+
+export const eraseMyAccountRouteSchema = {
+  description:
+    "RGPD — droit à l'effacement (art. 17) : anonymise le compte de l'utilisateur authentifié (soft-delete + suppression des comptes OAuth/jetons et scrub des données personnelles). Les enregistrements liés sont conservés, rattachés à une identité anonyme.",
+  tags: [userTag],
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+      required: ['message'],
+    },
+    401: errorBody,
+    404: errorBody,
+    500: errorBody,
+  },
+} as const;
+
 export const getUsersByIdsRouteSchema = {
   description: 'Batch lookup of users by IDs and/or role (au moins un des deux filtres)',
   tags: [userTag],

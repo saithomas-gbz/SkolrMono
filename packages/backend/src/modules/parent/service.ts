@@ -25,3 +25,21 @@ export async function getParentIds(studentId: string): Promise<string[]> {
   });
   return [...new Set(rows.map((r) => r.parentId))];
 }
+
+/**
+ * RGPD — liens de parenté de l'utilisateur, qu'il soit le parent ou l'élève.
+ * Seuls des `userId` nus sont stockés ici (aucune PII directe).
+ */
+export async function collectRgpdData(userId: string) {
+  const [asParent, asChild] = await Promise.all([
+    db.parentStudent.findMany({
+      where: { parentId: userId },
+      select: { studentId: true, linkType: true, isPrimary: true, createdAt: true },
+    }),
+    db.parentStudent.findMany({
+      where: { studentId: userId },
+      select: { parentId: true, linkType: true, isPrimary: true, createdAt: true },
+    }),
+  ]);
+  return { asParent, asChild };
+}

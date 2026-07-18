@@ -22,7 +22,8 @@ const authController = {
 
       const user = await db.user.findUnique({ where: { email } });
 
-      if (!user || !user.password) {
+      // Un compte anonymisé (droit à l'effacement RGPD) ne peut plus se connecter.
+      if (!user || !user.password || user.deletedAt) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
