@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { deny } from '../../../shared/jwt/authGuard';
 
 interface PlanningJwtPayload {
   userId: string;
@@ -27,7 +28,7 @@ function verifyToken(request: FastifyRequest): PlanningJwtPayload | null {
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   request.planningUser = payload;
 }
@@ -36,10 +37,10 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
 export async function requireStaff(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (!['TEACHER', 'STAFF', 'ADMIN'].includes(payload.role)) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.planningUser = payload;
 }

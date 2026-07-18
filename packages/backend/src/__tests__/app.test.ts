@@ -8,11 +8,15 @@ import { buildApp } from '../app';
  */
 describe('backend app integration', () => {
   let app: FastifyInstance;
+  let baseUrl: string;
 
   beforeAll(async () => {
     process.env.JWT_SECRET ??= 'test-secret';
     app = await buildApp();
-    await app.ready();
+    // On écoute réellement : le refus d'auth d'un préhandler (via `reply.send`)
+    // s'observe correctement en HTTP réel, alors que `light-my-request`
+    // (`app.inject`) présente un artefact de double écriture d'en-têtes.
+    baseUrl = await app.listen({ port: 0, host: '127.0.0.1' });
   });
 
   afterAll(async () => {
@@ -44,7 +48,8 @@ describe('backend app integration', () => {
   });
 
   it('protège les routes authentifiées (401 sans token)', async () => {
-    const res = await app.inject({ method: 'GET', url: '/grade/courses' });
-    expect(res.statusCode).toBe(401);
+    const res = await fetch(`${baseUrl}/grade/courses`);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'Unauthorized' });
   });
 });

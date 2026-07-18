@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { deny } from '../../../shared/jwt/authGuard';
 
 interface BillingJwtPayload {
   userId: string;
@@ -32,10 +33,10 @@ function verifyToken(request: FastifyRequest): BillingJwtPayload | null {
 export async function requireEstablishmentAdmin(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (payload.role !== 'ADMIN' || !payload.establishmentId) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.billingUser = payload;
 }
@@ -44,10 +45,10 @@ export async function requireEstablishmentAdmin(request: FastifyRequest, reply: 
 export async function requirePlatformAdmin(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (payload.role !== 'PLATFORM_ADMIN') {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.billingUser = payload;
 }
