@@ -24,11 +24,13 @@ function verifyToken(request: FastifyRequest): AuthJwtPayload | null {
 }
 
 /**
- * Termine la requête depuis un préhandler asynchrone. Le `await` est essentiel :
- * sans lui, Fastify poursuit vers le handler de route malgré la réponse déjà
- * envoyée (le handler s'exécute alors indûment et peut déclencher un double envoi).
+ * Termine la requête depuis un préhandler d'auth avec une réponse d'erreur JSON.
+ * Le `await` est essentiel : dans un hook asynchrone Fastify, il garantit que la
+ * réponse est bien envoyée et que le handler de route ne s'exécute pas. La réponse
+ * passe par le pipeline normal (`onSend`), donc conserve les en-têtes de sécurité
+ * et de rate-limiting. Réutilisé par les gardes de tous les domaines.
  */
-async function deny(reply: FastifyReply, status: number, error: string): Promise<void> {
+export async function deny(reply: FastifyReply, status: number, error: string): Promise<void> {
   await reply.status(status).send({ error });
 }
 
@@ -54,6 +56,18 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
   const payload = verifyToken(request);
   if (!payload) {
     return deny(reply, 401, 'Unauthorized');
+  }
+  request.authUser = payload;
+}
+
+/** Réserve la route aux ADMIN / PLATFORM_ADMIN (gestion de comptes : création, suppression). */
+export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
+  const payload = verifyToken(request);
+  if (!payload) {
+    return deny(reply, 401, 'Unauthorized');
+  }
+  if (!ADMIN_ROLES.includes(payload.role)) {
+    return deny(reply, 403, 'Forbidden');
   }
   request.authUser = payload;
 }

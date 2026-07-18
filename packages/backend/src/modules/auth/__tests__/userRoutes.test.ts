@@ -83,7 +83,7 @@ describe('UserRoutes', () => {
     ]);
     const app = await buildTestApp();
 
-    const res = await app.inject({ method: 'GET', url: '/users?role=TEACHER' });
+    const res = await app.inject({ method: 'GET', url: '/users?role=TEACHER', headers: authHeader(app) });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toHaveLength(1);
@@ -95,7 +95,7 @@ describe('UserRoutes', () => {
     ]);
     const app = await buildTestApp();
 
-    const res = await app.inject({ method: 'GET', url: '/users?ids=u1' });
+    const res = await app.inject({ method: 'GET', url: '/users?ids=u1', headers: authHeader(app) });
 
     expect(res.statusCode).toBe(200);
     expect(res.json().data).toHaveLength(1);

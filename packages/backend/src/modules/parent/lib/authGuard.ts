@@ -1,4 +1,5 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
+import { deny } from '../../../shared/jwt/authGuard';
 
 interface ParentJwtPayload {
   userId: string;
@@ -27,10 +28,10 @@ function verifyToken(request: FastifyRequest): ParentJwtPayload | null {
 export async function requireParent(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (payload.role !== 'PARENT') {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.parentUser = payload;
 }
@@ -39,10 +40,10 @@ export async function requireParent(request: FastifyRequest, reply: FastifyReply
 export async function requireAdminOrStaff(request: FastifyRequest, reply: FastifyReply) {
   const payload = verifyToken(request);
   if (!payload) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    return deny(reply, 401, 'Unauthorized');
   }
   if (!['ADMIN', 'STAFF'].includes(payload.role)) {
-    return reply.status(403).send({ error: 'Forbidden' });
+    return deny(reply, 403, 'Forbidden');
   }
   request.parentUser = payload;
 }

@@ -31,9 +31,22 @@ function buildGoogleErrorUrl(): string {
   return process.env.GOOGLE_OAUTH_ERROR_URL ?? 'http://localhost:3003/auth/error';
 }
 
+// Limites resserrées sur les routes d'authentification (anti brute-force),
+// surchargeables par env. La limite globale s'applique par ailleurs.
+const loginRateLimit = {
+  rateLimit: { max: Number(process.env.RATE_LIMIT_LOGIN_MAX ?? 30), timeWindow: '1 minute' },
+};
+const registerRateLimit = {
+  rateLimit: { max: Number(process.env.RATE_LIMIT_REGISTER_MAX ?? 10), timeWindow: '1 minute' },
+};
+
 const authRoutes = async (fastify: FastifyInstance) => {
-  fastify.post('/login', { schema: loginRouteSchema }, authController.login);
-  fastify.post('/register', { schema: registerRouteSchema }, authController.register);
+  fastify.post('/login', { schema: loginRouteSchema, config: loginRateLimit }, authController.login);
+  fastify.post(
+    '/register',
+    { schema: registerRouteSchema, config: registerRateLimit },
+    authController.register,
+  );
 
   fastify.get(
     '/login/google/callback',
