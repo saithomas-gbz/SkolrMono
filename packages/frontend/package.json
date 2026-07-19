@@ -10,7 +10,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "i18n:check": "bun run scripts/check-i18n-keys.ts"
+    "i18n:check": "bun run scripts/check-i18n-keys.ts",
+    "test": "bun test app"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
