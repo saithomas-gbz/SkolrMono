@@ -7,6 +7,7 @@
   "main": "dist/app.js",
   "scripts": {
     "test": "NODE_ENV=test bun test src",
+    "test:coverage": "NODE_ENV=test bun test src --coverage --coverage-reporter=text --coverage-reporter=lcov",
     "dev": "bun --watch run src/app.ts",
     "build": "bun build ./src/app.ts --outdir ./dist --target node --external @prisma/client --external .prisma/client --external @fastify/websocket --external ws",
     "start": "bun run ./dist/app.js",
