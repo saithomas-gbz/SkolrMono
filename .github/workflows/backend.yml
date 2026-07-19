@@ -51,9 +51,17 @@ jobs:
 
     - name: Test backend (all modules)
       working-directory: packages/backend
-      run: bun test src
+      run: bun run test:coverage
       env:
         NODE_ENV: test
+
+    - name: Upload coverage report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-coverage
+        path: packages/backend/coverage
+        retention-days: 7
 
     - name: Apply migrations (single multi-schema DB)
       working-directory: packages/backend
