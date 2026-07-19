@@ -1,5 +1,5 @@
 <template>
-  <nav class="bottom-tab-bar">
+  <nav class="bottom-tab-bar" :aria-label="$t('nav.main_navigation')">
     <NuxtLink
       v-for="link in links"
       :key="link.to"
@@ -7,6 +7,7 @@
       class="tab-icon"
       active-class="tab-icon-active"
       :aria-label="link.label"
+      :aria-current="route.path === link.to ? 'page' : undefined"
     >
       <i class="pi" :class="link.icon" />
     </NuxtLink>
@@ -19,6 +20,8 @@ import type { ShellNavLink } from './NavRail.vue';
 defineProps<{
   links: ShellNavLink[];
 }>();
+
+const route = useRoute();
 </script>
 
 <style scoped>

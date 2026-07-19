@@ -19,9 +19,9 @@
 
     <slot />
   </AppShell>
-  <div v-else class="guest-root">
+  <main v-else id="main-content" class="guest-root">
     <slot />
-  </div>
+  </main>
   <!-- Hors du `v-if` : le toast doit rester monté même en état invité (page login),
        où l'interceptor de session signale une expiration (#137). -->
   <Toast position="bottom-right" />

@@ -1,11 +1,13 @@
 <template>
   <div class="app-shell">
+    <a href="#main-content" class="skip-link">{{ $t('nav.skip_to_content') }}</a>
+
     <NavRail :links="links" :admin-links="adminLinks" :bottom-link="bottomLink" />
 
     <div class="app-shell-main">
       <TopBar />
       <slot name="banner" />
-      <main class="app-shell-content">
+      <main id="main-content" class="app-shell-content" tabindex="-1">
         <slot />
       </main>
     </div>
@@ -51,6 +53,24 @@ const bottomTabLinks = computed(() => links.value.slice(0, 4));
 .app-shell-content {
   flex: 1;
   padding: 0;
+}
+
+/* Visible seulement au focus clavier — n'affecte jamais le rendu normal. */
+.skip-link {
+  position: fixed;
+  top: -100%;
+  left: var(--skolr-space-2);
+  z-index: 100;
+  padding: var(--skolr-space-2) var(--skolr-space-4);
+  background: var(--skolr-color-bg);
+  color: var(--skolr-color-text);
+  outline: 2px solid var(--skolr-color-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--skolr-space-2);
 }
 
 .app-shell-bottom-tabs {

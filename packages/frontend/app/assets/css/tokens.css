@@ -58,7 +58,9 @@
      fallbacks) keep working unmodified — values now point at the tokens above. */
   --skolr-color-brand-navy: var(--skolr-color-text);
   --skolr-color-brand-green: var(--skolr-color-accent);
-  --skolr-color-text-muted: color-mix(in srgb, var(--skolr-color-text) 55%, transparent);
+  /* 65% (pas 55%) : seuil nécessaire pour un contraste WCAG AA >= 4.5:1
+     sur --skolr-color-bg et --skolr-color-surface (cf. docs/security/accessibility.md). */
+  --skolr-color-text-muted: color-mix(in srgb, var(--skolr-color-text) 65%, transparent);
   --skolr-color-page-bg: var(--skolr-color-bg);
   --skolr-color-surface-hover: color-mix(in srgb, var(--skolr-color-text) 5%, transparent);
   --skolr-color-border: color-mix(in srgb, var(--skolr-color-text) 14%, transparent);
@@ -83,4 +85,12 @@ body {
   --p-border-radius-xl: 0px;
   --p-content-border-radius: 0px;
   --p-form-field-border-radius: 0px;
+
+  /* Contraste : le blanc sur --skolr-color-accent (primary.500, #ec3013) ne
+     donne que 4.20:1, sous le seuil AA (4.5:1) pour du texte de bouton.
+     accent-600/700 existent déjà dans la rampe et passent (4.74:1+) — cf.
+     docs/security/accessibility.md. */
+  --p-button-primary-background: var(--skolr-color-accent-600);
+  --p-button-primary-hover-background: var(--skolr-color-accent-700);
+  --p-button-primary-active-background: var(--skolr-color-accent-700);
 }
