@@ -1,7 +1,7 @@
 # Soutenance RNCP 39583 — trame de slides, script de démo, Q&A
 
 > Support de préparation de la soutenance « Expert en développement logiciel » (RNCP 39583).
-> Mapping vers les codes de compétences officiels (grille d'évaluation RNCP 39583, 4 blocs) réalisé — voir §2. Détail compétence par compétence pour le Bloc 2, avec preuves fichier par fichier : voir l'audit dans l'historique de la conversation ayant produit les issues #156/#157/#158/#159/#160.
+> Mapping vers les codes de compétences officiels (grille d'évaluation RNCP 39583, 4 blocs) réalisé — voir §2. Détail compétence par compétence pour les 4 compétences éliminatoires du Bloc 2, avec preuves fichier par fichier : voir `docs/security/accessibility.md`, `docs/tests/cahier-de-recettes.md`, `docs/tests/strategy.md` et `docs/architecture/architecture.md`.
 
 ---
 
