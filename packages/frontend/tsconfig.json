@@ -1,5 +1,18 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
+  // "compilerOptions.paths" ci-dessous n'est PAS utilisé par Nuxt (qui lit
+  // .nuxt/tsconfig.app.json via "references", généré par `nuxt prepare`,
+  // ignoré par git) : c'est uniquement pour que `bun test` résolve l'alias
+  // "~/" — Bun lit le tsconfig.json le plus proche du fichier importé et ne
+  // suit pas "references" (spécifique à tsc). Confirmé que `nuxt prepare` ne
+  // réécrit pas ce fichier (voir PR #158).
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"],
+      "@/*": ["./app/*"]
+    }
+  },
   "files": [],
   "references": [
     {

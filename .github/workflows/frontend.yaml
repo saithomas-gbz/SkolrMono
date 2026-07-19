@@ -26,6 +26,10 @@ jobs:
     - name: Lint
       run: bun run lint
 
+    - name: Unit tests
+      working-directory: packages/frontend
+      run: bun run test
+
     - name: Check i18n keys
       working-directory: packages/frontend
       run: bun run i18n:check
