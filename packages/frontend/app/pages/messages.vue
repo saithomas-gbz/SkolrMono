@@ -28,7 +28,11 @@
           :key="conv.id"
           class="conversation-item"
           :class="{ active: selectedConversationId === conv.id }"
+          role="button"
+          tabindex="0"
           @click="selectConversation(conv)"
+          @keydown.enter="selectConversation(conv)"
+          @keydown.space.prevent="selectConversation(conv)"
         >
           <div class="conv-name">
             <Badge

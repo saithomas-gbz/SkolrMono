@@ -12,13 +12,15 @@
     <Tag :value="roleLabel" severity="secondary" class="role-tag" />
     <NotificationBell />
 
-    <Avatar
-      :label="initials"
-      shape="circle"
-      class="avatar"
-      :aria-label="user?.name || user?.email"
+    <Button
+      class="avatar-trigger"
+      text
+      rounded
+      :aria-label="$t('nav.open_user_menu', { name: user?.name || user?.email })"
       @click="toggleMenu"
-    />
+    >
+      <Avatar :label="initials" shape="circle" class="avatar" aria-hidden="true" />
+    </Button>
     <Menu ref="menuRef" :model="menuItems" :popup="true" />
   </header>
 </template>
@@ -105,8 +107,12 @@ function toggleMenu(event: MouseEvent) {
   white-space: nowrap;
 }
 
-.avatar {
+.avatar-trigger {
+  padding: 0;
   cursor: pointer;
+}
+
+.avatar {
   background: var(--skolr-color-neutral-800);
   color: #fff;
   font-weight: 800;

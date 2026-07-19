@@ -1,5 +1,5 @@
 <template>
-  <nav class="nav-rail">
+  <nav class="nav-rail" :aria-label="$t('nav.main_navigation')">
     <NuxtLink to="/" class="brand">
       <span class="brand-name">skolr<span class="brand-dot">.</span></span>
     </NuxtLink>
@@ -11,6 +11,7 @@
         :to="link.to"
         class="nav-item"
         :class="{ 'nav-item-active': isActive(link.to) }"
+        :aria-current="isActive(link.to) ? 'page' : undefined"
       >
         <i class="nav-icon pi" :class="link.icon" />
         <span class="nav-label">{{ link.label }}</span>
@@ -24,6 +25,7 @@
           :to="link.to"
           class="nav-item"
           :class="{ 'nav-item-active': isActive(link.to) }"
+          :aria-current="isActive(link.to) ? 'page' : undefined"
         >
           <i class="nav-icon pi" :class="link.icon" />
           <span class="nav-label">{{ link.label }}</span>
@@ -36,6 +38,7 @@
         :to="bottomLink.to"
         class="nav-item"
         :class="{ 'nav-item-active': isActive(bottomLink.to) }"
+        :aria-current="isActive(bottomLink.to) ? 'page' : undefined"
       >
         <i class="nav-icon pi" :class="bottomLink.icon" />
         <span class="nav-label">{{ bottomLink.label }}</span>
