@@ -60,10 +60,7 @@ function buildRequest(
       }
     }
     return {
-      headers: { authorization: 'Bearer valid-token' },
-      server: {
-        jwt: { verify: mock(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' })) },
-      },
+      messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
       params: { conversationId: 'conv-1', ...params },
       body,
       isMultipart: mock(() => true),
@@ -71,10 +68,7 @@ function buildRequest(
     } as unknown as FastifyRequest<{ Params: { conversationId: string }; Body: { content: string } }>;
   }
   return {
-    headers: { authorization: 'Bearer valid-token' },
-    server: {
-      jwt: { verify: mock(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' })) },
-    },
+    messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
     params: { conversationId: 'conv-1', ...params },
     body,
     isMultipart: mock(() => false),
@@ -229,27 +223,6 @@ describe('messageController.getMessages', () => {
     prismaMock.message.findMany.mockReset();
   });
 
-  it('returns 401 when unauthenticated', async () => {
-    const request = {
-      headers: { authorization: '' },
-      server: {
-        jwt: {
-          verify: mock(() => {
-            throw new Error('invalid token');
-          }),
-        },
-      },
-      params: { conversationId: 'conv-1' },
-      isMultipart: mock(() => false),
-    } as unknown as FastifyRequest<{ Params: { conversationId: string } }>;
-    const reply = buildReply();
-
-    await messageController.getMessages(request, reply);
-
-    expect(reply.status).toHaveBeenCalledWith(401);
-    expect(prismaMock.message.findMany).not.toHaveBeenCalled();
-  });
-
   it('returns 403 when the requester is not a participant', async () => {
     prismaMock.conversationParticipant.findUnique.mockResolvedValue(null);
     const request = buildRequest();
@@ -298,19 +271,6 @@ describe('messageController.downloadAttachment', () => {
 
   afterEach(() => {
     getStorageProviderSpy.mockRestore();
-  });
-
-  it('retourne 401 si non authentifié', async () => {
-    const request = {
-      headers: { authorization: '' },
-      server: { jwt: { verify: mock(() => { throw new Error('invalid token'); }) } },
-      params: { conversationId: 'conv-1', attachmentId: 'att-1' },
-    } as unknown as FastifyRequest<{ Params: { conversationId: string; attachmentId: string } }>;
-    const reply = buildReply();
-
-    await messageController.downloadAttachment(request, reply);
-
-    expect(reply.status).toHaveBeenCalledWith(401);
   });
 
   it('retourne 403 si non participant', async () => {

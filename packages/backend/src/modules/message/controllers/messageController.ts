@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { publish } from '../../../shared/events';
 import db from '../../../shared/db';
-import { getUserId } from './conversationController';
 import * as presence from '../utils/presence';
 import { getStorageProvider } from '../lib/storage';
 
@@ -17,8 +16,7 @@ export default {
     request: FastifyRequest<{ Params: { conversationId: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const participant = await db.conversationParticipant.findUnique({
       where: {
@@ -43,8 +41,7 @@ export default {
     request: FastifyRequest<{ Params: { conversationId: string }; Body: { content?: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const participant = await db.conversationParticipant.findUnique({
       where: {
@@ -137,8 +134,7 @@ export default {
     request: FastifyRequest<{ Params: { conversationId: string; attachmentId: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const participant = await db.conversationParticipant.findUnique({
       where: {

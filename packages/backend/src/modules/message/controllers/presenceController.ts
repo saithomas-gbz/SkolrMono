@@ -1,5 +1,4 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { getUserId } from './conversationController';
 import * as presence from '../utils/presence';
 
 export default {
@@ -7,9 +6,8 @@ export default {
     request: FastifyRequest<{ Querystring: { userIds?: string | string[] } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
-
+    // `requireAuth` (préhandler) garantit l'authentification ; l'identité de
+    // l'appelant n'est pas utilisée ici (présence interrogée pour des tiers).
     const raw = request.query.userIds;
     const userIds = Array.isArray(raw) ? raw : raw ? [raw] : [];
 

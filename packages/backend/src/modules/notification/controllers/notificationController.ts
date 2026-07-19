@@ -1,27 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 
-interface JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
-function getUserId(request: FastifyRequest): string | null {
-  try {
-    const payload = request.server.jwt.verify(
-      (request.headers.authorization ?? '').replace('Bearer ', ''),
-    ) as JwtPayload;
-    return payload.userId ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export default {
   getNotifications: async (request: FastifyRequest<{ Querystring: { unread?: string } }>, reply: FastifyReply) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.notificationUser!.userId;
 
     const unreadOnly = request.query.unread === 'true';
     const notifications = await db.notification.findMany({
@@ -33,16 +15,14 @@ export default {
   },
 
   getUnreadCount: async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.notificationUser!.userId;
 
     const count = await db.notification.count({ where: { userId, read: false } });
     return reply.status(200).send({ count });
   },
 
   markAsRead: async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.notificationUser!.userId;
 
     const existing = await db.notification.findUnique({ where: { id: request.params.id } });
     if (!existing || existing.userId !== userId) {
@@ -57,8 +37,7 @@ export default {
   },
 
   markAllAsRead: async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.notificationUser!.userId;
 
     await db.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
     return reply.status(200).send({ message: 'All notifications marked as read' });

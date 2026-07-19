@@ -1,6 +1,12 @@
 import { describe, it, expect, mock } from 'bun:test';
-import { requireAuth, requireStaff, requireSelfOrStaff } from '../lib/authGuard';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+
+const findUniqueParentStudent = mock();
+mock.module('../db', () => ({
+  default: { parentStudent: { findUnique: findUniqueParentStudent } },
+}));
+
+const { requireAuth, requireStaff, requireSelfOrStaff } = await import('../lib/authGuard');
 
 function buildRequest(verify: ReturnType<typeof mock>, params: Record<string, string> = {}): FastifyRequest {
   return {
@@ -109,5 +115,31 @@ describe('requireSelfOrStaff', () => {
     await requireSelfOrStaff(request as never, reply);
 
     expect(reply.status).not.toHaveBeenCalled();
+  });
+
+  it("laisse passer un PARENT consultant les notes d'un enfant auquel il est lié", async () => {
+    findUniqueParentStudent.mockResolvedValueOnce({ id: 'link1', parentId: 'p1', studentId: 'u2' });
+    const payload = { userId: 'p1', email: 'parent@skolr.local', role: 'PARENT' };
+    const request = buildRequest(mock(() => payload), { userId: 'u2' });
+    const reply = buildReply();
+
+    await requireSelfOrStaff(request as never, reply);
+
+    expect(findUniqueParentStudent).toHaveBeenCalledWith({
+      where: { parentId_studentId: { parentId: 'p1', studentId: 'u2' } },
+    });
+    expect(reply.status).not.toHaveBeenCalled();
+    expect(request.gradeUser).toEqual(payload);
+  });
+
+  it("renvoie 403 pour un PARENT consultant les notes d'un élève auquel il n'est pas lié", async () => {
+    findUniqueParentStudent.mockResolvedValueOnce(null);
+    const payload = { userId: 'p1', email: 'parent@skolr.local', role: 'PARENT' };
+    const request = buildRequest(mock(() => payload), { userId: 'u3' });
+    const reply = buildReply();
+
+    await requireSelfOrStaff(request as never, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(403);
   });
 });
