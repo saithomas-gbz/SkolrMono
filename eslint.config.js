@@ -42,10 +42,6 @@ export default defineConfig(
     plugins: { 'vuejs-accessibility': pluginVueA11y },
     rules: {
       ...pluginVueA11y.configs['flat/recommended'].rules,
-      // PrimeVue Avatar/Button/Menu forward keyboard handling internally;
-      // this rule false-positives on our AppShell skip-link + composed
-      // Button-wrapping-Avatar pattern (see TopBar.vue).
-      'vuejs-accessibility/click-events-have-key-events': 'warn',
     },
   },
 );

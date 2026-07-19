@@ -37,6 +37,7 @@ Un audit RGAA complet (106 critères) est disproportionné pour un projet solo. 
 | A6 | 3.2 — Contraste texte atténué | ❌ 3.66:1 / 3.57:1 (sous 4.5:1) | ✅ Mix 55%→65% → 4.96:1 / 4.78:1 | ✅ |
 | A7 | 3.2 — Contraste boutons primaires | ❌ Blanc sur accent-500 : 4.20:1 | ✅ accent-600 en fond : 4.74:1 | ✅ |
 | A8 | 11.1 — Étiquettes de formulaires | ✅ Déjà conforme (spot-check) | — | ✅ Vérifié |
+| A9 | 7.1 — Compatibilité clavier (listes cliquables) | ❌ Notifications et conversations : `<li @click>` sans équivalent clavier | ✅ `role="button"`, `tabindex="0"`, `@keydown.enter`/`@keydown.space` | ✅ |
 
 ---
 
@@ -74,12 +75,17 @@ Un audit RGAA complet (106 critères) est disproportionné pour un projet solo. 
 
 ### A7 — Contraste des boutons primaires
 **Constat / calcul** : le texte blanc des boutons PrimeVue "primary" (fond `#ec3013`, accent-500) donnait 4.20:1, sous 4.5:1.
-**Correctif** : surcharge des tokens compilés PrimeVue (`--p-button-primary-background` etc.) vers `--skolr-color-accent-600` (`#dd2b0f`, déjà présent dans la rampe existante) plutôt que de modifier la rampe sémantique `primary` entière dans `themes/skolr.ts` (qui aurait aussi changé les couleurs de nav actives, focus rings…). Même pattern "defensive override" déjà utilisé dans `tokens.css` pour les radius.
-**Vérifié** : 4.74:1, calculé et confirmé devtools.
+**Correctif** : d'abord tenté via une surcharge globale des tokens compilés (`--p-button-primary-background` dans `tokens.css`) — **inefficace en pratique** : PrimeVue injecte au runtime son propre `:root { --p-button-primary-background: var(--p-primary-color); ... }`, placé plus tard dans le document que la feuille de style statique du projet ; à spécificité CSS égale, c'est la déclaration la plus tardive qui l'emporte, donc la surcharge globale était silencieusement écrasée (vérifié en inspectant le HTML rendu : une seule déclaration survivait, celle de PrimeVue). Corrigé en passant par la surcharge de composant `components.button.colorScheme.light.root.primary.*` dans `themes/skolr.ts` (`{primary.600}`/`{primary.700}`), qui fait partie de la même génération de thème que PrimeVue — plus de conflit d'ordre possible.
+**Vérifié** : `--p-button-primary-background` résout vers `--p-primary-600` (`#dd2b0f`) dans le HTML rendu, confirmé après correction (une seule déclaration désormais, contre deux en conflit avant) — 4.74:1.
 
 ### A8 — Étiquettes de formulaires
 **Constat / vérification** : spot-check sur les formulaires d'authentification (login, register) — les champs PrimeVue InputText utilisent correctement `label`/`for`+`id` ou `aria-label`.
 **Statut** : conforme, aucun correctif nécessaire dans le périmètre audité.
+
+### A9 — Compatibilité clavier des listes cliquables
+**Constat** : `NotificationBell.vue` (liste de notifications) et `pages/messages.vue` (liste de conversations) utilisaient des `<li @click="...">` — élément non interactif avec gestionnaire de clic mais sans équivalent clavier (détecté par `eslint-plugin-vuejs-accessibility/click-events-have-key-events`, pas une trouvaille manuelle).
+**Correctif** : `role="button"`, `tabindex="0"`, `@keydown.enter` et `@keydown.space.prevent` ajoutés sur les deux éléments, appelant le même handler que `@click`.
+**Vérifié** : `bun run lint` → 0 erreur, 0 avertissement (le lint local avait initialement affiché 2 avertissements sur ces deux fichiers, corrigés plutôt que juste passés en `warn`).
 
 ---
 
@@ -89,7 +95,7 @@ Un audit RGAA complet (106 critères) est disproportionné pour un projet solo. 
 |------------|---------|
 | Focus visible | Défauts PrimeVue Aura (contour au focus sur boutons/liens/champs) non surchargés — conformes tels quels |
 | Tableaux de données (PrimeVue DataTable) | En-têtes de colonnes structurés nativement par le composant ; non audité exhaustivement (hors scope) |
-| ESLint a11y | `eslint-plugin-vuejs-accessibility` (règles `flat/recommended`) activé sur `packages/frontend/**/*.vue` dans `eslint.config.js` et câblé dans `.github/workflows/frontend.yaml` (`bun run lint`, absent auparavant) — 0 erreur sur les 75 fichiers `.vue`, 2 avertissements assumés (`click-events-have-key-events` sur des gestionnaires de clic déjà couverts par un comportement clavier natif du composant) |
+| ESLint a11y | `eslint-plugin-vuejs-accessibility` (règles `flat/recommended`) activé sur `packages/frontend/**/*.vue` dans `eslint.config.js` et câblé dans `.github/workflows/frontend.yaml` (`bun run lint`, absent auparavant) — 0 erreur, 0 avertissement sur les 75 fichiers `.vue` (les 2 avertissements initiaux ont été corrigés, voir A9) |
 
 ---
 
@@ -98,7 +104,6 @@ Un audit RGAA complet (106 critères) est disproportionné pour un projet solo. 
 - Audit RGAA complet (106 critères) si le produit devient public.
 - Audit outillé automatisé (axe-core / Lighthouse CI) en complément de la revue manuelle.
 - `aria-describedby` entre les messages d'erreur de formulaire (`<small class="p-error">`) et leurs champs — gap RGAA 11.9 réel mais touchant trop de fichiers pour ce passage.
-- Durcir `click-events-have-key-events` de `warn` à `error` une fois les deux occurrences restantes traitées.
 
 ---
 

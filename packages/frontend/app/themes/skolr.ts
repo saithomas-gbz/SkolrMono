@@ -70,6 +70,35 @@ const Skolr = definePreset(Aura, {
       },
     },
   },
+  components: {
+    button: {
+      colorScheme: {
+        light: {
+          root: {
+            primary: {
+              // Contraste : blanc sur primary.500 (#ec3013) ne donne que 4.20:1
+              // (< seuil AA 4.5:1). primary.600/700 passent (4.74:1+). Surcharge
+              // au niveau du composant (pas juste --skolr-color-text-muted-style
+              // CSS globale) : le style Button de PrimeVue est injecté au
+              // runtime, après les CSS statiques du projet dans le document —
+              // une surcharge `:root` dans tokens.css se fait donc silencieusement
+              // regagner par la déclaration --p-button-primary-background propre
+              // de PrimeVue (même sélecteur `:root`, mais plus tardive dans le
+              // document = priorité en cas d'égalité de spécificité). Passer par
+              // `components.button` fait partie de la même génération de thème
+              // que PrimeVue, donc pas de conflit d'ordre. Voir docs/security/accessibility.md (A7).
+              background: '{primary.600}',
+              hoverBackground: '{primary.700}',
+              activeBackground: '{primary.700}',
+              borderColor: '{primary.600}',
+              hoverBorderColor: '{primary.700}',
+              activeBorderColor: '{primary.700}',
+            },
+          },
+        },
+      },
+    },
+  },
 });
 
 export default Skolr;
