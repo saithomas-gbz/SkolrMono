@@ -40,7 +40,11 @@
           :key="notif.id"
           class="notif-item"
           :class="{ unread: !notif.read }"
+          role="button"
+          tabindex="0"
           @click="handleClick(notif)"
+          @keydown.enter="handleClick(notif)"
+          @keydown.space.prevent="handleClick(notif)"
         >
           <div class="notif-title">{{ notif.title }}</div>
           <div class="notif-body">{{ notif.body }}</div>

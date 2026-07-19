@@ -41,6 +41,9 @@ nav:
   role_staff: Vie scolaire
   role_parent: Parent
   role_admin: Administrateur
+  main_navigation: Navigation principale
+  skip_to_content: Aller au contenu principal
+  open_user_menu: "Menu utilisateur de {name}"
 
 auth:
   email: Email
