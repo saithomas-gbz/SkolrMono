@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { deny } from '../../../shared/jwt/authGuard';
+import db from '@/modules/grade/db';
 
 interface GradeJwtPayload {
   userId: string;
@@ -47,7 +48,11 @@ export async function requireStaff(request: FastifyRequest, reply: FastifyReply)
   request.gradeUser = payload;
 }
 
-/** Un élève ne peut consulter que ses propres notes (params.userId) ; TEACHER/STAFF/ADMIN voient tout. */
+/**
+ * Un élève ne peut consulter que ses propres notes (params.userId) ; TEACHER/STAFF/ADMIN
+ * voient tout ; un PARENT peut consulter les notes d'un élève auquel il est lié
+ * (table `parentStudent`, cf. gestion des liens parents ↔ enfants côté admin).
+ */
 export async function requireSelfOrStaff(
   request: FastifyRequest<{ Params: { userId: string } }>,
   reply: FastifyReply,
@@ -56,8 +61,18 @@ export async function requireSelfOrStaff(
   if (!payload) {
     return deny(reply, 401, 'Unauthorized');
   }
-  if (!STAFF_ROLES.includes(payload.role) && payload.userId !== request.params.userId) {
-    return deny(reply, 403, 'Forbidden');
+  if (STAFF_ROLES.includes(payload.role) || payload.userId === request.params.userId) {
+    request.gradeUser = payload;
+    return;
   }
-  request.gradeUser = payload;
+  if (payload.role === 'PARENT') {
+    const link = await db.parentStudent.findUnique({
+      where: { parentId_studentId: { parentId: payload.userId, studentId: request.params.userId } },
+    });
+    if (link) {
+      request.gradeUser = payload;
+      return;
+    }
+  }
+  return deny(reply, 403, 'Forbidden');
 }

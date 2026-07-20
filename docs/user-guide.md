@@ -6,7 +6,7 @@
 |-------|--------|
 | Périmètre | Interface Nuxt, 4 rôles applicatifs (Administrateur, Enseignant, Élève, Parent) |
 | Version | 1.0.0 |
-| Date | 2026-07-19 |
+| Date | 2026-07-20 |
 | Méthode | Revue des pages/routes réelles (`packages/frontend/app/pages`), des parcours couverts par les tests e2e (`docs/tests/cahier-de-recettes.md`) |
 
 ---
@@ -66,6 +66,29 @@ Depuis `/profile`, section "Mes données (RGPD)" :
 
 ---
 
+## Parcours pas-à-pas (2 flux clés, libellés d'écran réels)
+
+### Élève — consulter ses notes et télécharger son bulletin
+
+1. Connectez-vous avec votre compte élève → redirection automatique sur le tableau de bord.
+2. Dans la navigation, cliquez sur **Mes notes**.
+3. Le carnet de notes se charge (message "Chargement de vos notes…" pendant le chargement). Une fois chargé, la moyenne générale s'affiche en haut de page.
+4. Le bouton **Télécharger le bulletin PDF** apparaît dès qu'au moins une note existe — il reste masqué si aucune note n'est encore enregistrée ("Aucune note enregistrée pour le moment.") ou si vous n'êtes pas connecté avec un compte élève ("Cette page est réservée aux élèves.").
+5. Cliquez sur **Télécharger le bulletin PDF** : le fichier `bulletin.pdf` se télécharge directement dans votre navigateur (pas de nouvel onglet).
+6. En cas d'erreur serveur, un message "Impossible de générer le bulletin. Veuillez réessayer." s'affiche et le bouton redevient cliquable immédiatement (pas de blocage sur "Téléchargement…").
+
+### Tous rôles — exercer ses droits RGPD (export et suppression)
+
+1. Cliquez sur votre profil, puis **Mon profil**.
+2. Repérez la section **Mes données (RGPD)**.
+3. **Pour exporter vos données** : cliquez sur **Télécharger mes données**. Un fichier JSON se télécharge, contenant l'ensemble de vos données personnelles (profil, notes, absences, messages selon votre rôle) — votre mot de passe n'y figure jamais.
+4. **Pour supprimer votre compte** : cliquez sur **Supprimer mon compte**. Une boîte de dialogue de confirmation s'ouvre.
+5. Dans le champ "Pour confirmer, saisissez « SUPPRIMER »", tapez exactement **SUPPRIMER** (en majuscules).
+6. Cliquez sur **Supprimer définitivement**. Vous êtes immédiatement déconnecté·e.
+7. Votre compte est anonymisé : vos informations personnelles sont effacées, mais les données liées (notes, absences, messages) sont conservées de façon anonyme pour préserver la cohérence pédagogique de l'établissement. Une tentative de reconnexion avec vos anciens identifiants échoue (identifiants invalides).
+
+---
+
 ## Procédure de mise à jour (administrateur système / exploitant)
 
 ### Déployer une nouvelle version
@@ -110,3 +133,4 @@ cd packages/backend && bunx prisma migrate deploy
 
 - Fonctionnalités listées croisées avec les routes réelles de `packages/frontend/app/pages/` et les liens de navigation de `packages/frontend/app/layouts/default.vue`.
 - Parcours par rôle couverts par les scénarios F1-F10 de `docs/tests/cahier-de-recettes.md`.
+- Libellés d'écran des 2 parcours pas-à-pas vérifiés directement dans `packages/frontend/i18n/locales/fr.yaml` et par les specs e2e `bulletin-ui.spec.ts`/`rgpd.spec.ts`.

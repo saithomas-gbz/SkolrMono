@@ -2,6 +2,7 @@ import type { AuthUser } from '~/composables/useAuth';
 
 export const AUTH_TOKEN_COOKIE = 'auth_token';
 export const AUTH_USER_COOKIE = 'auth_user';
+const AUTH_REFRESH_TOKEN_COOKIE = 'auth_refresh_token';
 
 type JwtPayload = {
   userId?: string;
@@ -62,6 +63,10 @@ export function useAuthUserCookie() {
   return useCookie<AuthUser | null>(AUTH_USER_COOKIE, AUTH_COOKIE_OPTIONS);
 }
 
+export function useAuthRefreshTokenCookie() {
+  return useCookie<string | null>(AUTH_REFRESH_TOKEN_COOKIE, AUTH_COOKIE_OPTIONS);
+}
+
 export function useAuthTokenState() {
   const cookie = useAuthTokenCookie();
   return useState<string | null>(AUTH_TOKEN_COOKIE, () => cookie.value ?? null);
@@ -80,4 +85,61 @@ export function writeAuthToken(token: string | null) {
 export function writeAuthUser(user: AuthUser | null) {
   useAuthUserState().value = user;
   useAuthUserCookie().value = user;
+}
+
+export function writeAuthRefreshToken(refreshToken: string | null) {
+  useAuthRefreshTokenCookie().value = refreshToken;
+}
+
+type RefreshResponse = { token: string; refreshToken: string; user: AuthUser };
+
+// Un seul rafraîchissement en vol à la fois (partagé par useApi.ts et
+// useAuth.ts/middleware) : le jeton de rafraîchissement est à usage unique
+// (rotation côté serveur), donc deux appels concurrents avec le même jeton
+// feraient détecter un « vol » et déconnecteraient l'utilisateur — voir
+// packages/backend/src/modules/auth/lib/refreshTokenService.ts.
+let refreshPromise: Promise<boolean> | null = null;
+
+async function performRefresh(): Promise<boolean> {
+  const rawRefreshToken = useAuthRefreshTokenCookie().value;
+  if (!rawRefreshToken) {
+    return false;
+  }
+  // Capturés avant le premier `await` : en SSR, le contexte Nuxt implicite ne
+  // survit pas à une frontière async, donc tout composable appelé après le
+  // `$fetch` ci-dessous (via `writeAuthToken`/`writeAuthUser`, qui font
+  // `useCookie`/`useState`) doit être ré-enveloppé avec `runWithContext`.
+  const nuxtApp = useNuxtApp();
+  const config = useRuntimeConfig();
+  try {
+    const response = await $fetch<RefreshResponse>('/auth/refresh', {
+      baseURL: config.public.gatewayBaseUrl,
+      method: 'POST',
+      credentials: 'include',
+      body: { refreshToken: rawRefreshToken },
+    });
+    nuxtApp.runWithContext(() => {
+      writeAuthToken(response.token);
+      writeAuthRefreshToken(response.refreshToken);
+      writeAuthUser(response.user);
+    });
+    return true;
+  } catch {
+    nuxtApp.runWithContext(() => {
+      writeAuthToken(null);
+      writeAuthRefreshToken(null);
+      writeAuthUser(null);
+    });
+    return false;
+  }
+}
+
+/** Échange le jeton de rafraîchissement stocké contre un nouveau jeton d'accès. */
+export function refreshSession(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
 }

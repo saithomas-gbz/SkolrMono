@@ -2,30 +2,12 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 import * as presence from '../utils/presence';
 
-interface JwtPayload {
-  userId: string;
-  email: string;
-  role: string;
-}
-
-function getUserId(request: FastifyRequest): string | null {
-  try {
-    const payload = request.server.jwt.verify(
-      (request.headers.authorization ?? '').replace('Bearer ', ''),
-    ) as JwtPayload;
-    return payload.userId ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export default {
   createConversation: async (
     request: FastifyRequest<{ Body: { name?: string; participantIds: string[] } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const { name, participantIds } = request.body;
     const allParticipantIds = [...new Set([userId, ...participantIds])];
@@ -50,8 +32,8 @@ export default {
     request: FastifyRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
+    if (userId !== request.params.userId) return reply.status(403).send({ error: 'Forbidden' });
 
     const participations = await db.conversationParticipant.findMany({
       where: { userId: request.params.userId },
@@ -89,8 +71,7 @@ export default {
     request: FastifyRequest<{ Params: { conversationId: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const participant = await db.conversationParticipant.findUnique({
       where: {
@@ -140,8 +121,7 @@ export default {
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) => {
-    const userId = getUserId(request);
-    if (!userId) return reply.status(401).send({ error: 'Unauthorized' });
+    const userId = request.messageUser!.userId;
 
     const conversation = await db.conversation.findUnique({
       where: { id: request.params.id },
@@ -161,5 +141,3 @@ export default {
     return reply.status(200).send({ data: conversation });
   },
 };
-
-export { getUserId };

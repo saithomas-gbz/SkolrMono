@@ -28,7 +28,7 @@
 <script setup lang="ts">
 const { t } = useI18n();
 const { header } = usePageHeader();
-const { user, role, clearSession } = useAuth();
+const { user, role, logout } = useAuth();
 
 const roleLabel = computed(() => {
   const key = role.value?.toLowerCase();
@@ -58,7 +58,7 @@ const menuItems = [
     label: t('nav.logout'),
     icon: 'pi pi-sign-out',
     command: async () => {
-      clearSession();
+      await logout();
       await navigateTo('/auth/login');
     },
   },

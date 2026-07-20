@@ -31,10 +31,15 @@ const token = computed(() => {
   return typeof t === 'string' ? t : null;
 });
 
+const refreshToken = computed(() => {
+  const t = route.query.refreshToken;
+  return typeof t === 'string' ? t : undefined;
+});
+
 const { setSession } = useAuth();
 
 if (import.meta.client && slug.value === 'success' && token.value) {
-  setSession(token.value);
+  setSession(token.value, refreshToken.value);
   await navigateTo('/dashboard');
 }
 </script>

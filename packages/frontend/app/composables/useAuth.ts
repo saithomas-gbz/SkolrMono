@@ -1,9 +1,11 @@
 import {
   authUserFromToken,
   isTokenExpired,
+  useAuthRefreshTokenCookie,
   useAuthTokenState,
   useAuthUserState,
   writeAuthToken,
+  writeAuthRefreshToken,
   writeAuthUser,
 } from '~/composables/authSession';
 
@@ -19,6 +21,7 @@ export type AuthUser = {
 
 export type AuthSuccess = {
   token: string;
+  refreshToken: string;
   user: AuthUser;
 };
 
@@ -94,14 +97,39 @@ export function useAuth() {
   const userId = computed(() => authUser.value?.id ?? null);
   const role = computed(() => authUser.value?.role ?? null);
 
-  function setSession(token: string, sessionUser?: AuthUser) {
+  /**
+   * `refreshToken` est optionnel : un `undefined` explicite préserve celui déjà
+   * stocké (cas d'un endpoint qui rafraîchit le profil sans émettre de nouveaux
+   * jetons, ex. `profile.vue`) plutôt que d'effacer la session de rafraîchissement.
+   */
+  function setSession(token: string, refreshToken?: string, sessionUser?: AuthUser) {
     writeAuthToken(token);
+    if (refreshToken !== undefined) {
+      writeAuthRefreshToken(refreshToken);
+    }
     writeAuthUser(sessionUser ?? authUserFromToken(token));
   }
 
   function clearSession() {
     writeAuthToken(null);
+    writeAuthRefreshToken(null);
     writeAuthUser(null);
+  }
+
+  /**
+   * Révoque le jeton de rafraîchissement côté serveur (best-effort — la session locale est
+   * de toute façon effacée même en cas d'échec réseau) puis nettoie la session locale.
+   */
+  async function logout() {
+    const refreshToken = useAuthRefreshTokenCookie().value;
+    if (refreshToken) {
+      try {
+        await api('/auth/logout', { method: 'POST', body: { refreshToken } });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    clearSession();
   }
 
   function hasRole(...roles: AuthRole[]) {
@@ -120,7 +148,7 @@ export function useAuth() {
         },
       });
       if (response.token) {
-        setSession(response.token, response.user);
+        setSession(response.token, response.refreshToken, response.user);
       }
       return response;
     } catch (error) {
@@ -136,7 +164,7 @@ export function useAuth() {
         body: { email, password },
       });
       if (response.token) {
-        setSession(response.token, response.user);
+        setSession(response.token, response.refreshToken, response.user);
       }
       return response;
     } catch (error) {
@@ -161,6 +189,7 @@ export function useAuth() {
     googleLoginUrl,
     setSession,
     clearSession,
+    logout,
     isLoggedIn,
     user,
     userId,

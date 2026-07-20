@@ -8,18 +8,10 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 // remplacerait le module pour tous les fichiers de test du process.
 let getPresenceSpy: ReturnType<typeof spyOn>;
 
-function buildRequest(token: string | null, query: { userIds?: string | string[] } = {}) {
+function buildRequest(query: { userIds?: string | string[] } = {}) {
   return {
-    headers: { authorization: token ? `Bearer ${token}` : '' },
+    messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
     query,
-    server: {
-      jwt: {
-        verify: mock((t: string) => {
-          if (t !== 'valid-token') throw new Error('invalid');
-          return { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' };
-        }),
-      },
-    },
   } as unknown as FastifyRequest<{ Querystring: { userIds?: string | string[] } }>;
 }
 
@@ -39,18 +31,8 @@ describe('presenceController.getPresence', () => {
     getPresenceSpy.mockRestore();
   });
 
-  it('returns 401 when unauthenticated', async () => {
-    const request = buildRequest(null);
-    const reply = buildReply();
-
-    await presenceController.getPresence(request, reply);
-
-    expect(reply.status).toHaveBeenCalledWith(401);
-    expect(getPresenceSpy).not.toHaveBeenCalled();
-  });
-
   it('returns presence data for the requested userIds', async () => {
-    const request = buildRequest('valid-token', { userIds: ['peer-1', 'peer-2'] });
+    const request = buildRequest({ userIds: ['peer-1', 'peer-2'] });
     const reply = buildReply();
     getPresenceSpy.mockReturnValue([
       { userId: 'peer-1', online: true, lastSeen: 1 },
@@ -64,7 +46,7 @@ describe('presenceController.getPresence', () => {
   });
 
   it('wraps a single userId query value into an array', async () => {
-    const request = buildRequest('valid-token', { userIds: 'peer-1' });
+    const request = buildRequest({ userIds: 'peer-1' });
     const reply = buildReply();
     getPresenceSpy.mockReturnValue([{ userId: 'peer-1', online: false, lastSeen: null }]);
 
@@ -74,7 +56,7 @@ describe('presenceController.getPresence', () => {
   });
 
   it('defaults to an empty array when no userIds are provided', async () => {
-    const request = buildRequest('valid-token', {});
+    const request = buildRequest({});
     const reply = buildReply();
 
     await presenceController.getPresence(request, reply);

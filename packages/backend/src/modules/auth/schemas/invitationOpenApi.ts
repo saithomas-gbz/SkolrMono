@@ -89,9 +89,10 @@ export const acceptInvitationRouteSchema = {
       type: 'object',
       properties: {
         token: { type: 'string' },
+        refreshToken: { type: 'string' },
         user: userPublic,
       },
-      required: ['token', 'user'],
+      required: ['token', 'refreshToken', 'user'],
     },
     400: errorBody,
     500: errorBody,

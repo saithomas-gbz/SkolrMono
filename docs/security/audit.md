@@ -6,7 +6,7 @@
 |-------|--------|
 | Périmètre | Backend Fastify (monolithe modulaire), configuration applicative |
 | Version | 1.0.0 |
-| Date | 2026-07-18 |
+| Date | 2026-07-18, complété le 2026-07-20 (R9), le 2026-07-20 (R10, R11) |
 | Méthode | Revue de code ciblée (`/security-review` + inventaire manuel), vérification live (curl), tests automatisés |
 | Hors scope | Pentest externe complet (cité en perspective), sécurité infrastructure/réseau |
 
@@ -24,6 +24,9 @@
 | R6 | Énumération anonyme des comptes | Moyenne | ❌ `GET /auth/users*` sans garde | ✅ `requireAuth` |
 | R7 | Gestion des secrets | — | ✅ Déjà conforme | ✅ Vérifié (aucun secret commité) |
 | R8 | Validation des entrées | — | ✅ Schémas Fastify présents | ✅ Vérifié sur les écritures |
+| R9 | Absence de journalisation des événements de sécurité | Moyenne | ❌ Aucun log applicatif dédié (seulement le log HTTP générique Fastify) | ✅ Logs structurés sur connexion, inscription, effacement RGPD |
+| R10 | JWT non révocable, durée de vie longue (1 h) | Élevée | ❌ Un jeton volé restait valable jusqu'à expiration, sans moyen de le révoquer | ✅ Jeton d'accès court (15 min) + jeton de rafraîchissement tracé en base, à rotation et révocable |
+| R11 | `trustProxy` désactivable en production derrière un reverse proxy | Moyenne | ❌ Pas de configuration explicite (IP réelle non lisible derrière un proxy) | ✅ `TRUST_PROXY` (env, défaut `false`) — lit `X-Forwarded-For` uniquement si activé explicitement |
 
 ---
 
@@ -33,7 +36,7 @@
 **Constat** : aucune limite de débit ; les endpoints d'authentification (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) étaient exposés au brute-force et à l'abus.
 **Correctif** : `@fastify/rate-limit` enregistré globalement (défaut 300 req/min/IP) + limites resserrées par route via `config.rateLimit` : login 30/min, register 10/min, reset 5/min. Toutes surchargeables par env (`RATE_LIMIT_*`).
 **Vérifié** : au-delà du seuil → `429 Too Many Requests` (constaté en live et par test automatisé).
-**Note déploiement** : derrière un reverse proxy, activer `trustProxy` et transmettre l'IP client réelle, sinon toutes les requêtes partagent l'IP du proxy.
+**Note déploiement** : derrière un reverse proxy, activer `trustProxy` et transmettre l'IP client réelle, sinon toutes les requêtes partagent l'IP du proxy — voir R11.
 
 ### R2 — En-têtes de sécurité
 **Constat** : aucune en-tête de sécurité HTTP.
@@ -69,6 +72,39 @@
 **Constat / vérification** : les endpoints d'écriture (auth, class, grade, planning, message, billing, parent) déclarent des **schémas JSON Fastify** (mêmes objets que la doc OpenAPI) qui valident `body`/`params`/`querystring` en amont des contrôleurs.
 **Statut** : conforme.
 
+### R9 — Journalisation des événements de sécurité
+**Constat** : au-delà du log HTTP générique de Fastify (une ligne par requête, sans distinction des événements sensibles), aucun log applicatif dédié n'existait pour les actions de sécurité (connexion réussie/échouée, inscription, effacement RGPD) — impossible de reconstituer un historique de connexions ou de détecter un pattern de force brute sans parser le log HTTP brut.
+**Correctif** : logs structurés (Pino, via `request.log`) ajoutés aux points de contrôle sensibles du module `auth` : `auth.login.success` (info), `auth.login.failed` (warn, sans le mot de passe), `auth.register.success` (info), `auth.register.duplicate` (warn), `auth.rgpd.account_anonymized` (info).
+**Vérifié** : capturé en conditions réelles (stack Docker, `docker logs skolr_backend`) :
+```json
+{"level":30,"time":1784542300414,"userId":"11111111-...-104","email":"dev.user@skolr.local","msg":"auth.login.success"}
+{"level":40,"time":1784542326123,"email":"dev.user@skolr.local","msg":"auth.login.failed"}
+{"level":30,"time":1784542337599,"userId":"501dd392-...","email":"audit.test...@skolr.local","msg":"auth.register.success"}
+{"level":30,"time":1784542337677,"userId":"501dd392-...","msg":"auth.rgpd.account_anonymized"}
+```
+`level: 40` (warn) sur les échecs de connexion permet un filtrage direct pour la détection de force brute, en complément du rate-limiting (R1).
+
+### R10 — Rotation et révocation des jetons (refresh tokens)
+**Constat** : le JWT d'accès était le seul jeton émis, valable 1 h, **non révocable** avant expiration — un jeton volé (XSS, log exposé, device compromis) restait exploitable jusqu'à son terme sans qu'aucune action serveur ne puisse l'invalider.
+**Correctif** :
+- Jeton d'accès raccourci à **15 min** (`JWT_ACCESS_EXPIRES_IN`), stateless, inchangé sinon.
+- Nouveau jeton de rafraîchissement **opaque** (`randomBytes(40)`, 320 bits d'entropie), tracé côté serveur dans `auth.RefreshToken` — **seul le hash SHA-256** est persisté, jamais la valeur brute.
+- **Rotation à chaque usage** : `POST /auth/refresh` échange l'ancien jeton contre un nouveau (l'ancien est marqué `revokedAt` + `replacedByTokenHash`) et renvoie un nouveau jeton d'accès.
+- **Détection de réutilisation (vol de jeton)** : si un jeton déjà révoqué (donc déjà échangé) est présenté à nouveau, c'est le signe qu'une copie volée est utilisée en parallèle de la session légitime — **tous** les jetons actifs de l'utilisateur sont alors révoqués (déconnexion forcée de toutes les sessions), pas seulement la requête refusée.
+- `POST /auth/logout` révoque explicitement le jeton présenté (logout serveur, pas seulement client).
+- L'effacement RGPD (`anonymizeUser`) supprime désormais aussi les lignes `RefreshToken` de l'utilisateur, en plus des jetons de réinitialisation de mot de passe déjà couverts.
+**Vérifié** (backend `bun test src` : 409/409 ; vérification live `curl` sur la stack de dev) :
+- Login → jeton d'accès `exp - iat = 900 s` (15 min) confirmé par décodage du JWT.
+- `POST /auth/refresh` avec un jeton valide → nouveau couple (accès + rafraîchissement), ancien jeton marqué révoqué en base.
+- Réutilisation de l'ancien jeton (déjà échangé) → `401`, **et** le nouveau jeton issu de la rotation devient lui aussi invalide (chaîne entière révoquée) — confirmé par une 2ᵉ tentative avec le jeton pourtant valide juste avant.
+- `POST /auth/logout` → `200`, puis toute tentative de `refresh` avec ce même jeton → `401`.
+- État final en base (`auth."RefreshToken"`) : les 3 jetons émis durant le test sont tous `revokedAt IS NOT NULL`, cohérent avec rotation + détection de vol + logout.
+
+### R11 — Configuration `trustProxy`
+**Constat** : sans configuration explicite, Fastify lit l'IP client directement depuis la connexion TCP — correct en dev, mais **faux derrière un reverse proxy** (toutes les requêtes partagent l'IP du proxy, ce qui fausse le rate-limiting par IP de R1) ; et l'activer par défaut serait dangereux hors de ce contexte (un client pourrait usurper son IP apparente via `X-Forwarded-For`).
+**Correctif** : variable d'env `TRUST_PROXY` (défaut `false`) — `Fastify({ trustProxy: TRUST_PROXY })`. À positionner à `true` uniquement en production derrière un reverse proxy de confiance.
+**Vérifié** : test dédié confirmant `trustProxy` désactivé par défaut, et qu'une instance Fastify avec `trustProxy: true` lit bien `request.ip` depuis `X-Forwarded-For`.
+
 ---
 
 ## RBAC — spot-check (tous domaines)
@@ -80,21 +116,22 @@
 | `grade` | `requireAuth` / `requireStaff` / `requireSelfOrStaff` | Conforme |
 | `planning` | `requireAuth` / `requireStaff` | Conforme |
 | `billing` | `requireEstablishmentAdmin` / `requirePlatformAdmin` | Conforme |
-| `message` / `notification` | vérification JWT **dans le contrôleur** (401 si absent) | Fonctionnel ; harmonisation en préhandler recommandée (dette technique, non bloquant) |
+| `message` / `notification` | préhandler `requireAuth` partagé (`lib/authGuard.ts`) | Conforme — harmonisé avec les autres domaines (#169/#170, ex-dette technique) |
 
 ---
 
 ## Perspectives (hors scope de cette passe)
 
 - **Pentest externe** complet (OWASP ASVS / ZAP) avant mise en production.
-- **Refresh tokens** / rotation et révocation de JWT (actuellement JWT court, 1 h, sans révocation).
-- **`trustProxy`** + en-têtes `X-Forwarded-*` en production pour un rate-limiting par IP réelle.
-- Harmoniser l'auth de `message`/`notification` en préhandlers (cohérence, testabilité).
-- Journalisation de sécurité / détection d'anomalies (tentatives de connexion, 429).
+- Détection automatisée d'anomalies à partir des logs `auth.login.failed` (ex. alerte au-delà de N échecs/IP) — les logs existent (R9), la détection active reste à construire.
+- Détection automatisée sur `auth.refresh.failed` (`reuse_detected`) — le signal existe (R10), pas encore d'alerting dédié.
+- Étendre la journalisation de sécurité à d'autres domaines (`message`, `billing`) si des actions sensibles équivalentes y apparaissent.
 
 ---
 
 ## Vérification
 
-- Tests backend : `NODE_ENV=test bun test src` → **tout vert** (dont tests dédiés rate-limit 429, en-têtes helmet, garde `requireAdmin`).
+- Tests backend : `NODE_ENV=test bun test src` → **409 tests, 0 échec** (dont tests dédiés rate-limit 429, en-têtes helmet, garde `requireAdmin`, rotation/révocation de jetons R10, `trustProxy` R11).
 - Vérification live (`curl`) : en-têtes de sécurité présents, CORS restreint, `429` au-delà du seuil de login, matrice RBAC (401/403/200/201) conforme.
+- R9 : logs capturés en conditions réelles via `docker logs skolr_backend` (connexion succès/échec, inscription, effacement RGPD) — voir §R9.
+- R10 : cycle complet vérifié en live (dev, hors Docker) — login, rotation, réutilisation détectée + révocation en chaîne, logout, état final en base — voir §R10.

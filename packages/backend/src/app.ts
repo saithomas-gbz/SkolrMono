@@ -31,8 +31,17 @@ Sentry.init({
   tracesSampleRate: 1.0,
 });
 
+// Derrière un reverse proxy (nginx, load balancer…), le socket ne voit que
+// l'IP du proxy : sans trustProxy, tout le trafic partage cette même IP côté
+// rate-limiting (contourne totalement la limite par IP, cf. docs/security/audit.md
+// R1). `TRUST_PROXY=true` fait lire `request.ip` depuis `X-Forwarded-For` — à
+// n'activer que si un proxy de confiance est effectivement en amont (sinon un
+// client peut usurper son IP apparente via ce même en-tête). Faux par défaut :
+// sûr par défaut, à activer explicitement en production derrière un proxy.
+const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
+
 export async function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: true, trustProxy: TRUST_PROXY });
 
   // En-têtes de sécurité (helmet) : HSTS, X-Content-Type-Options, frameguard, CSP…
   // La CSP autorise l'inline nécessaire à Swagger UI (`/docs`) tout en verrouillant

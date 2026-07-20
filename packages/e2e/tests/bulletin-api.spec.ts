@@ -26,16 +26,25 @@ test.describe('GET /grade/users/:userId/bulletin — matrice auth', () => {
     expect(await res.json()).toEqual({ error: 'Forbidden' });
   });
 
-  // Régression du gap fonctionnel : un parent authentifié, demandant le
-  // bulletin de SON PROPRE enfant, se voit refuser l'accès (PARENT n'est pas
-  // dans STAFF_ROLES et payload.userId !== params.userId dans
-  // requireSelfOrStaff). À corriger côté backend si besoin métier ; ce test
-  // fige le comportement actuel pour qu'un changement soit délibéré.
-  test("403 (gap connu) : un parent ne peut pas récupérer le bulletin de son enfant", async ({
+  test("200 : un parent récupère le bulletin de son propre enfant (PDF valide)", async ({
     request,
   }) => {
     const { token } = await loginApi(request, 'parent');
     const res = await request.get(`/api/grade/users/${LEA_MARTIN_ID}/bulletin`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toBe('application/pdf');
+    const body = await res.body();
+    expect(body.subarray(0, 4).toString()).toBe('%PDF');
+  });
+
+  test("403 : un parent ne peut pas récupérer le bulletin d'un élève auquel il n'est pas lié", async ({
+    request,
+  }) => {
+    const { token } = await loginApi(request, 'parent');
+    const { userId: unrelatedStudentId } = await loginApi(request, 'student');
+    const res = await request.get(`/api/grade/users/${unrelatedStudentId}/bulletin`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status()).toBe(403);

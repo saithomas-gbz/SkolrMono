@@ -30,10 +30,7 @@ let sendToUserSpy: ReturnType<typeof spyOn>;
 
 function buildRequest(params: { conversationId?: string; userId?: string } = {}) {
   return {
-    headers: { authorization: 'Bearer valid-token' },
-    server: {
-      jwt: { verify: mock(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' })) },
-    },
+    messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
     params: { conversationId: 'conv-1', ...params },
   } as unknown as FastifyRequest<{ Params: { conversationId: string; userId: string } }>;
 }
@@ -55,26 +52,6 @@ describe('conversationController.markConversationAsRead', () => {
 
   afterEach(() => {
     sendToUserSpy.mockRestore();
-  });
-
-  it('returns 401 when unauthenticated', async () => {
-    const request = {
-      headers: { authorization: '' },
-      server: {
-        jwt: {
-          verify: mock(() => {
-            throw new Error('invalid token');
-          }),
-        },
-      },
-      params: { conversationId: 'conv-1' },
-    } as unknown as FastifyRequest<{ Params: { conversationId: string } }>;
-    const reply = buildReply();
-
-    await conversationController.markConversationAsRead(request, reply);
-
-    expect(reply.status).toHaveBeenCalledWith(401);
-    expect(prismaMock.message.findMany).not.toHaveBeenCalled();
   });
 
   it('returns 403 when the requester is not a participant', async () => {
@@ -166,23 +143,13 @@ describe('conversationController.getConversationsByUser', () => {
     prismaMock.message.count.mockReset();
   });
 
-  it('returns 401 when unauthenticated', async () => {
-    const request = {
-      headers: { authorization: '' },
-      server: {
-        jwt: {
-          verify: mock(() => {
-            throw new Error('invalid token');
-          }),
-        },
-      },
-      params: { userId: 'user-1' },
-    } as unknown as FastifyRequest<{ Params: { userId: string } }>;
+  it("returns 403 when requesting another user's conversations", async () => {
+    const request = buildRequest({ userId: 'user-2' });
     const reply = buildReply();
 
     await conversationController.getConversationsByUser(request, reply);
 
-    expect(reply.status).toHaveBeenCalledWith(401);
+    expect(reply.status).toHaveBeenCalledWith(403);
     expect(prismaMock.conversationParticipant.findMany).not.toHaveBeenCalled();
   });
 

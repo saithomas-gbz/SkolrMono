@@ -126,7 +126,7 @@ async function submit() {
   submitting.value = true;
   try {
     const result = await acceptInvitation(token.value, password.value, name.value);
-    setSession(result.token, result.user);
+    setSession(result.token, result.refreshToken, result.user);
     emit('success', result);
     await router.push('/dashboard');
   } catch (e) {

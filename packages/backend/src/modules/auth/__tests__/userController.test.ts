@@ -42,6 +42,7 @@ const dbMock: Record<string, ModelMock> & {
   establishmentMember: model(),
   establishment: model(),
   parentStudent: model(),
+  refreshToken: model(),
   $transaction: async (cb) => cb(dbMock),
 };
 
@@ -61,7 +62,7 @@ const makeRequest = (overrides: Partial<FastifyRequest> = {}) =>
     body: {},
     params: {},
     user: null,
-    log: { error: mock() },
+    log: { error: mock(), warn: mock(), info: mock() },
     ...overrides,
   }) as unknown as FastifyRequest;
 

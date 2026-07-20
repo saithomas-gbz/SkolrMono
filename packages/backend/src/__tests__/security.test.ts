@@ -28,6 +28,39 @@ describe('sécurité — en-têtes helmet', () => {
     expect(res.headers['content-security-policy']).toBeDefined();
     expect(res.headers['strict-transport-security']).toBeDefined();
   });
+
+  it("ne fait pas confiance à X-Forwarded-For par défaut (TRUST_PROXY non activé)", () => {
+    // trustProxy=false par défaut : sans ça, un client derrière un reverse proxy
+    // pourrait usurper son IP apparente via cet en-tête et contourner le
+    // rate-limiting par IP (R1). Vérifié sur la config résolue de l'app réelle.
+    expect(app.initialConfig.trustProxy).toBeFalsy();
+  });
+});
+
+describe('sécurité — TRUST_PROXY=true', () => {
+  it('fait lire request.ip depuis X-Forwarded-For quand activé', async () => {
+    process.env.JWT_SECRET ??= 'test-secret';
+    const previous = process.env.TRUST_PROXY;
+    process.env.TRUST_PROXY = 'true';
+
+    // La constante TRUST_PROXY de app.ts est figée au premier import du module ;
+    // on reproduit donc ici la même construction Fastify plutôt que de réimporter
+    // buildApp (qui donnerait la valeur lue au tout premier chargement du process).
+    const app = Fastify({ trustProxy: true });
+    app.get('/whoami', async (request) => ({ ip: request.ip }));
+    await app.ready();
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/whoami',
+      headers: { 'x-forwarded-for': '203.0.113.42' },
+    });
+
+    expect(JSON.parse(res.body).ip).toBe('203.0.113.42');
+
+    await app.close();
+    process.env.TRUST_PROXY = previous;
+  });
 });
 
 describe('sécurité — rate limiting', () => {

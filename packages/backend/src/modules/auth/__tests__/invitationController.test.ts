@@ -17,6 +17,7 @@ mock.module('../../../shared/db', () => ({
   default: {
     user: { findUnique: mock(), create: mock() },
     invitationToken: { create: mock(), findUnique: mock(), update: mock() },
+    refreshToken: { create: mock() },
   },
 }));
 
@@ -38,6 +39,9 @@ type MockedDb = {
     findUnique: ReturnType<typeof mock>;
     update: ReturnType<typeof mock>;
   };
+  refreshToken: {
+    create: ReturnType<typeof mock>;
+  };
 };
 
 const prismaMock = db as MockedDb;
@@ -58,6 +62,8 @@ describe('invitationController', () => {
     prismaMock.invitationToken.create.mockReset();
     prismaMock.invitationToken.findUnique.mockReset();
     prismaMock.invitationToken.update.mockReset();
+    prismaMock.refreshToken.create.mockReset();
+    prismaMock.refreshToken.create.mockResolvedValue({});
     sendMailMock.mockReset();
     sendMailMock.mockResolvedValue(undefined);
     publishMock.mockReset();
