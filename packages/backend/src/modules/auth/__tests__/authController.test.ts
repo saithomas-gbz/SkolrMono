@@ -52,7 +52,7 @@ describe('AuthController', () => {
         sign: mock(() => 'mocked-jwt-token')
       }
     },
-    log: { error: mock() }
+    log: { error: mock(), warn: mock(), info: mock() }
   } as unknown as FastifyRequest;
 
   const mockReply = {

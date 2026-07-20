@@ -6,7 +6,7 @@
 |-------|--------|
 | Périmètre | Backend Fastify (monolithe modulaire), configuration applicative |
 | Version | 1.0.0 |
-| Date | 2026-07-18 |
+| Date | 2026-07-18, complété le 2026-07-20 (R9) |
 | Méthode | Revue de code ciblée (`/security-review` + inventaire manuel), vérification live (curl), tests automatisés |
 | Hors scope | Pentest externe complet (cité en perspective), sécurité infrastructure/réseau |
 
@@ -24,6 +24,7 @@
 | R6 | Énumération anonyme des comptes | Moyenne | ❌ `GET /auth/users*` sans garde | ✅ `requireAuth` |
 | R7 | Gestion des secrets | — | ✅ Déjà conforme | ✅ Vérifié (aucun secret commité) |
 | R8 | Validation des entrées | — | ✅ Schémas Fastify présents | ✅ Vérifié sur les écritures |
+| R9 | Absence de journalisation des événements de sécurité | Moyenne | ❌ Aucun log applicatif dédié (seulement le log HTTP générique Fastify) | ✅ Logs structurés sur connexion, inscription, effacement RGPD |
 
 ---
 
@@ -69,6 +70,18 @@
 **Constat / vérification** : les endpoints d'écriture (auth, class, grade, planning, message, billing, parent) déclarent des **schémas JSON Fastify** (mêmes objets que la doc OpenAPI) qui valident `body`/`params`/`querystring` en amont des contrôleurs.
 **Statut** : conforme.
 
+### R9 — Journalisation des événements de sécurité
+**Constat** : au-delà du log HTTP générique de Fastify (une ligne par requête, sans distinction des événements sensibles), aucun log applicatif dédié n'existait pour les actions de sécurité (connexion réussie/échouée, inscription, effacement RGPD) — impossible de reconstituer un historique de connexions ou de détecter un pattern de force brute sans parser le log HTTP brut.
+**Correctif** : logs structurés (Pino, via `request.log`) ajoutés aux points de contrôle sensibles du module `auth` : `auth.login.success` (info), `auth.login.failed` (warn, sans le mot de passe), `auth.register.success` (info), `auth.register.duplicate` (warn), `auth.rgpd.account_anonymized` (info).
+**Vérifié** : capturé en conditions réelles (stack Docker, `docker logs skolr_backend`) :
+```json
+{"level":30,"time":1784542300414,"userId":"11111111-...-104","email":"dev.user@skolr.local","msg":"auth.login.success"}
+{"level":40,"time":1784542326123,"email":"dev.user@skolr.local","msg":"auth.login.failed"}
+{"level":30,"time":1784542337599,"userId":"501dd392-...","email":"audit.test...@skolr.local","msg":"auth.register.success"}
+{"level":30,"time":1784542337677,"userId":"501dd392-...","msg":"auth.rgpd.account_anonymized"}
+```
+`level: 40` (warn) sur les échecs de connexion permet un filtrage direct pour la détection de force brute, en complément du rate-limiting (R1).
+
 ---
 
 ## RBAC — spot-check (tous domaines)
@@ -80,7 +93,7 @@
 | `grade` | `requireAuth` / `requireStaff` / `requireSelfOrStaff` | Conforme |
 | `planning` | `requireAuth` / `requireStaff` | Conforme |
 | `billing` | `requireEstablishmentAdmin` / `requirePlatformAdmin` | Conforme |
-| `message` / `notification` | vérification JWT **dans le contrôleur** (401 si absent) | Fonctionnel ; harmonisation en préhandler recommandée (dette technique, non bloquant) |
+| `message` / `notification` | préhandler `requireAuth` partagé (`lib/authGuard.ts`) | Conforme — harmonisé avec les autres domaines (#169/#170, ex-dette technique) |
 
 ---
 
@@ -89,12 +102,13 @@
 - **Pentest externe** complet (OWASP ASVS / ZAP) avant mise en production.
 - **Refresh tokens** / rotation et révocation de JWT (actuellement JWT court, 1 h, sans révocation).
 - **`trustProxy`** + en-têtes `X-Forwarded-*` en production pour un rate-limiting par IP réelle.
-- Harmoniser l'auth de `message`/`notification` en préhandlers (cohérence, testabilité).
-- Journalisation de sécurité / détection d'anomalies (tentatives de connexion, 429).
+- Détection automatisée d'anomalies à partir des logs `auth.login.failed` (ex. alerte au-delà de N échecs/IP) — les logs existent (R9), la détection active reste à construire.
+- Étendre la journalisation de sécurité à d'autres domaines (`message`, `billing`) si des actions sensibles équivalentes y apparaissent.
 
 ---
 
 ## Vérification
 
-- Tests backend : `NODE_ENV=test bun test src` → **tout vert** (dont tests dédiés rate-limit 429, en-têtes helmet, garde `requireAdmin`).
+- Tests backend : `NODE_ENV=test bun test src` → **396 tests, 0 échec** (dont tests dédiés rate-limit 429, en-têtes helmet, garde `requireAdmin`).
 - Vérification live (`curl`) : en-têtes de sécurité présents, CORS restreint, `429` au-delà du seuil de login, matrice RBAC (401/403/200/201) conforme.
+- R9 : logs capturés en conditions réelles via `docker logs skolr_backend` (connexion succès/échec, inscription, effacement RGPD) — voir §R9.

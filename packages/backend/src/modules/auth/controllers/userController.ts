@@ -45,6 +45,8 @@ const userController = {
         return reply.status(404).send({ error: 'User not found' });
       }
 
+      request.log.info({ userId: auth.userId }, 'auth.rgpd.account_anonymized');
+
       return reply.send({ message: 'Account anonymized successfully' });
     } catch (error) {
       request.log.error(error);

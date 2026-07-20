@@ -6,7 +6,7 @@
 |-------|--------|
 | Périmètre | Parcours utilisateur par rôle, matrices d'accès, scénarios de sécurité — backend Fastify + frontend Nuxt |
 | Version | 1.0.0 |
-| Date | 2026-07-19 |
+| Date | 2026-07-20 |
 | Méthode | Exécution réelle de la suite Playwright (`packages/e2e`) et des tests unitaires backend (`bun:test`) ; chaque ligne correspond à un ou plusieurs tests automatisés existants, cités par fichier |
 | Hors scope | Tests de charge, pentest externe (voir `docs/security/audit.md`), tests unitaires frontend (aucun en CI actuellement) |
 
@@ -42,7 +42,7 @@
 | S2 | Garde "guest" | Utilisateur connecté → tentative de retour sur `/auth/login` | Reste hors de `/auth/login` | Conforme (`auth.spec.ts`) | ✅ |
 | S3 | Déconnexion | Clic avatar → "Déconnexion" → nouvelle tentative sur `/dashboard` | Retour au login, accès aux pages protégées perdu | Conforme (`auth.spec.ts`) | ✅ |
 | S4 | `/statistics` réservé ADMIN/TEACHER/STAFF | Accès `/statistics` en TEACHER, ADMIN, USER, PARENT | TEACHER/ADMIN accèdent ; USER/PARENT redirigés vers leur dashboard | Conforme, 4/4 cas (`statistics.spec.ts`) | ✅ |
-| S5 | Matrice d'accès au bulletin (`GET /grade/users/:id/bulletin`) | Sans token ; élève → bulletin d'un autre élève ; parent → bulletin de son enfant ; staff → utilisateur inexistant ; élève → son propre bulletin ; staff → bulletin d'un élève | 401 / 403 / 403 / 404 / 200 (PDF) / 200 (PDF) respectivement | Conforme — le cas "parent → bulletin de son enfant" retourne 403 : **limitation fonctionnelle connue et volontairement figée par un test** (`PARENT` hors `STAFF_ROLES`), à corriger si le besoin métier l'exige (`bulletin-api.spec.ts`) | ⚠️ Conforme au comportement actuel, gap documenté |
+| S5 | Matrice d'accès au bulletin (`GET /grade/users/:id/bulletin`) | Sans token ; élève → bulletin d'un autre élève ; parent → bulletin de son enfant ; parent → bulletin d'un élève non lié ; staff → utilisateur inexistant ; élève → son propre bulletin ; staff → bulletin d'un élève | 401 / 403 / 200 (PDF) / 403 / 404 / 200 (PDF) / 200 (PDF) respectivement | Conforme, 7/7 cas (`bulletin-api.spec.ts`) — le gap "parent → bulletin de son enfant" (ex-403) a été corrigé, voir §Protocole détaillé ci-dessous et `docs/tests/plan-correction-bogues.md` | ✅ |
 | S6 | Session expirée / token invalide | Token avec `exp` passé ; cookie de session retiré ; token non expiré mais signature invalide | Éjection proactive vers `/auth/login` (2 premiers cas) ; éjection réactive + toast "Session expirée" (3ᵉ cas, rejet backend) | Conforme (`session-expiry.spec.ts`) — flake connu en exécution parallèle, voir "Vérification" | ✅ |
 
 ---
@@ -64,12 +64,80 @@ Repris de `docs/security/audit.md` (passe de durcissement #144) et complétés p
 
 ---
 
+## Protocoles détaillés (scénarios clés, reproductibles à la main)
+
+Les tableaux ci-dessus résument des tests automatisés. Cette section détaille 4 scénarios représentatifs sous forme de protocole exécutable directement (commande, payload, réponse exacte) — pour un jury qui veut vérifier par lui-même sans relire le code. Commandes lancées contre `http://localhost:3001` (backend seul, `docker compose up -d postgres minio backend` puis `bun run db:seed`).
+
+### P1 — Connexion (succès et échec)
+
+**Requête** :
+```bash
+curl -s -X POST http://localhost:3001/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"dev.student@skolr.local","password":"dev-student-123"}'
+```
+**Réponse observée** (200) :
+```json
+{"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...","user":{"id":"11111111-1111-1111-1111-111111111104","email":"dev.student@skolr.local","role":"USER","establishmentId":null,"name":"..."}}
+```
+**Avec un mot de passe erroné** (même requête, `"password":"wrongpass"`) → `401 Unauthorized`, `{"error":"Invalid credentials"}`.
+
+### P2 — RGPD, droit d'accès (export)
+
+**Sans token** :
+```bash
+curl -s -i http://localhost:3001/auth/me/export
+```
+→ `401 Unauthorized`
+
+**Avec token** (`$TOKEN` = token obtenu en P1) :
+```bash
+curl -s -D - http://localhost:3001/auth/me/export -H "Authorization: Bearer $TOKEN" -o export.json
+```
+**En-têtes observés** :
+```
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Disposition: attachment; filename="skolr-export-11111111-1111-1111-1111-111111111104.json"
+```
+**Contenu observé** (`export.json`) — clés racine : `exportedAt, subject, auth, class, grade, planning, message, notification, billing, parent`. `auth.profile` contient `id, email, name, image, createdAt, updatedAt, oauthProvider, oauthId, role, establishmentId, deletedAt` — **pas de champ mot de passe**.
+
+### P3 — RGPD, droit à l'effacement
+
+**Protocole** : créer un compte jetable, l'effacer, vérifier qu'il ne peut plus se reconnecter.
+```bash
+curl -s -X POST http://localhost:3001/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"jury.test@skolr.local","password":"test123456"}'
+# → 201, { token, user }
+curl -s -X DELETE http://localhost:3001/auth/me -H "Authorization: Bearer $TOKEN"
+# → 200, {"message":"Account anonymized successfully"}
+curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"jury.test@skolr.local","password":"test123456"}'
+# → 401, {"error":"Invalid credentials"} — le compte anonymisé ne peut plus se connecter
+```
+
+### P4 — Accès au bulletin d'un enfant par son parent (correctif #169)
+
+```bash
+# Connexion parent.martin (parent seedé, lié à Léa Martin)
+PARENT_TOKEN=$(curl -s -X POST http://localhost:3001/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"parent.martin@skolr.local","password":"dev-parent-123"}' | ...)
+
+curl -s -D - http://localhost:3001/grade/users/44444444-4444-4444-4444-000000000001/bulletin \
+  -H "Authorization: Bearer $PARENT_TOKEN" -o bulletin.pdf
+```
+**Observé** : `HTTP/1.1 200 OK`, `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="bulletin-Léa-Martin.pdf"`, contenu commençant par `%PDF`.
+
+**Même parent, élève non lié** → `403 Forbidden`, `{"error":"Forbidden"}`.
+
+---
+
 ## Résultats globaux (exécution réelle)
 
 | Étage | Fichiers | Tests | Résultat |
 |-------|----------|-------|----------|
-| Unitaire backend (`bun:test`) | 49 | 394 | 0 échec — couverture 82,47 % fonctions / 86,91 % lignes |
-| e2e (Playwright, séquentiel) | 14 | 41 | 0 échec en exécution séquentielle |
+| Unitaire backend (`bun:test`) | 51 | 396 | 0 échec — couverture 82,72 % fonctions / 87,12 % lignes |
+| e2e (Playwright, séquentiel) | 14 | 42 | 0 échec en exécution séquentielle |
 
 Détail des chiffres et de la méthode : `docs/tests/strategy.md`. Détail des correctifs de sécurité : `docs/security/audit.md`.
 
@@ -77,10 +145,9 @@ Détail des chiffres et de la méthode : `docs/tests/strategy.md`. Détail des c
 
 ## Perspectives (hors scope de cette passe)
 
-- Formaliser une correction du gap S5 (accès parent au bulletin de son enfant) si le besoin métier est confirmé.
 - Étendre les scénarios de recette aux parcours mutants (invitation d'utilisateur, dépôt de justificatif d'absence — voir `docs/tests/strategy.md` § Perspectives).
 - Résoudre le flake connu du parallélisme e2e vs. rate-limiting (`rgpd.spec.ts`/`session-expiry.spec.ts` en exécution parallèle).
-- Ajouter des scénarios de recette côté frontend une fois un socle de tests unitaires frontend en place (issue #158).
+- Étendre les protocoles détaillés reproductibles (§ ci-dessus) à d'autres scénarios que les 4 actuels.
 
 ---
 

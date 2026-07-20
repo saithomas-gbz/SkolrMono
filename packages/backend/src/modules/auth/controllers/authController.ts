@@ -24,12 +24,14 @@ const authController = {
 
       // Un compte anonymisé (droit à l'effacement RGPD) ne peut plus se connecter.
       if (!user || !user.password || user.deletedAt) {
+        request.log.warn({ email }, 'auth.login.failed');
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
       const passwordMatch = await bcrypt.compare(password, user.password);
 
       if (!passwordMatch) {
+        request.log.warn({ email }, 'auth.login.failed');
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
@@ -37,6 +39,8 @@ const authController = {
         { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
         { expiresIn: '1h' }
       );
+
+      request.log.info({ userId: user.id, email: user.email }, 'auth.login.success');
 
         return reply.send({
         token,
@@ -55,6 +59,7 @@ const authController = {
       const existingUser = await db.user.findUnique({ where: { email } });
 
       if (existingUser) {
+        request.log.warn({ email }, 'auth.register.duplicate');
         return reply.status(400).send({ error: 'User already exists' });
       }
 
@@ -79,6 +84,8 @@ const authController = {
         name: user.name,
         role: user.role,
       }).catch((err) => request.log.warn({ err }, 'Failed to publish user.created'));
+
+      request.log.info({ userId: user.id, email: user.email }, 'auth.register.success');
 
       return reply.status(201).send({
         token,

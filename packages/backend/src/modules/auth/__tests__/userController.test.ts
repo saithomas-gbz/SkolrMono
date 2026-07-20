@@ -61,7 +61,7 @@ const makeRequest = (overrides: Partial<FastifyRequest> = {}) =>
     body: {},
     params: {},
     user: null,
-    log: { error: mock() },
+    log: { error: mock(), warn: mock(), info: mock() },
     ...overrides,
   }) as unknown as FastifyRequest;
 

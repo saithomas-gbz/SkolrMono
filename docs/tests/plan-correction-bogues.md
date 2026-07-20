@@ -6,7 +6,7 @@
 |-------|--------|
 | Périmètre | Backend Fastify, frontend Nuxt, infrastructure Docker |
 | Version | 1.0.0 |
-| Date | 2026-07-19 |
+| Date | 2026-07-20 |
 | Méthode | Sélection de 6 anomalies représentatives parmi les 41 commits `fix(...)` de l'historique git, couvrant sécurité applicative, cohérence de données, concurrence frontend, résilience UI et infrastructure |
 | Hors scope | Anomalies de sécurité réseau/en-têtes (voir `docs/security/audit.md`, R1-R8) |
 
@@ -40,8 +40,8 @@ Chaque anomalie suit le même circuit, outillé par le repo plutôt que document
 
 ### B1 — Fuite de données inter-classes (`getAssignmentStats`)
 **Constat** : `getAssignmentStats` ne vérifiait aucune propriété (ownership), contrairement à `getClassStats` du même module — n'importe quel `TEACHER` authentifié pouvait consulter les statistiques d'un devoir appartenant à une classe qu'il n'enseigne pas.
-**Analyse** : incohérence entre deux endpoints du même contrôleur (`getClassStats` avait la vérification, `getAssignmentStats` ne l'avait pas) — un oubli lors de l'ajout du second endpoint, non détecté car aucun test ne couvrait le cas d'un enseignant hors périmètre. Un 404 manquant sur devoir inexistant a été détecté et corrigé dans le même correctif.
-**Correctif** : ajout du contrôle d'ownership (l'enseignant doit être rattaché à la classe du devoir) et du `404` sur devoir inexistant.
+**Diagnostic** : mis en évidence par une revue de code comparative entre les deux endpoints voisins du même contrôleur — `getClassStats`, juste au-dessus dans le fichier, appelait déjà `teacherTeachesCourse(classId, userId, courseId)` avant de servir ses données ; `getAssignmentStats` ne l'appelait pas, alors que les deux endpoints répondent à la même famille de besoin (statistiques d'un enseignant). Cette asymétrie entre deux fonctions voisines traitant un cas similaire est le signal qui a déclenché l'investigation, confirmée en écrivant un test simulant un enseignant hors périmètre (requête avec un `assignmentId` appartenant à la classe d'un autre professeur) : la requête aboutissait en `200` avec les vraies données, sans aucune erreur.
+**Correctif** : ajout du contrôle d'ownership (l'enseignant doit être rattaché à la classe du devoir) et du `404` sur devoir inexistant, détecté au passage dans le même correctif.
 **Vérifié** : test unitaire dédié figeant le `403` pour un enseignant hors périmètre et le `404` pour un devoir inexistant.
 
 ### B2 — Incohérence `gradedCount` / moyenne (`getClassStats`)
@@ -52,8 +52,8 @@ Chaque anomalie suit le même circuit, outillé par le repo plutôt que document
 
 ### B3 — Race condition sur `assignments/[id]`
 **Constat** : `id.value` était relu après un `await` au lieu d'être capturé une fois au début de `load()` — une navigation vers un autre devoir pendant le chargement pouvait associer la grille de notes d'un devoir aux statistiques d'un autre.
-**Analyse** : pattern async classique en Vue (`ref` réactif relu après une opération asynchrone au lieu d'être snapshotté) — non détecté en usage normal (navigation lente rare en dev), mais reproductible en changeant rapidement de devoir sur une connexion lente.
-**Correctif** : capture de l'`id` en variable locale au début de `load()`, résultats obsolètes ignorés si l'`id` courant a changé entre-temps.
+**Diagnostic** : `load()` enchaînait `await fetchGradeGrid(id.value)` puis `await fetchAssignmentStats(id.value)`, relisant `id.value` (le paramètre de route réactif) après chaque attente au lieu de le capturer une fois — un anti-pattern classique de la Composition API Vue : une route réactive peut changer de valeur pendant qu'une promesse est en attente, sans que rien ne le signale à l'exécution. Le risque est corrélé à la latence réseau : plus l'aller-retour est long, plus la fenêtre pendant laquelle une navigation concurrente peut aboutir avant la réponse initiale est large — non détecté en usage normal (navigation rapide en dev, latence quasi nulle en local), mais garanti reproductible en environnement à latence dégradée.
+**Correctif** : capture de l'`id` en variable locale (`assignmentId`) au tout début de `load()` ; comparaison `id.value !== assignmentId` après chaque `await` pour ignorer les résultats devenus obsolètes.
 **Vérifié** : relecture manuelle + non-régression confirmée par la suite e2e existante sur cette page.
 
 ### B4 — Widget "Moyenne de classe" perdant les données partielles
@@ -64,9 +64,9 @@ Chaque anomalie suit le même circuit, outillé par le repo plutôt que document
 
 ### B5 — Image Docker backend cassée au seed
 **Constat** : `bunx prisma db seed` échouait avec `Cannot find module` dans un conteneur reconstruit — `prisma/seed.ts` importe les fixtures partagées depuis `../../../scripts/seed/dev-users`, mais le `Dockerfile` ne copiait que `packages/backend/`, sans le dossier racine `scripts/`.
-**Analyse** : dépendance inter-packages (`packages/backend` → `scripts/` racine) non reflétée dans le contexte de build Docker — fonctionnait en local (monorepo complet sur disque) mais pas dans l'image construite en CI/release.
-**Correctif** : ajout de `COPY scripts/seed/ ./scripts/seed/` dans le `Dockerfile` backend.
-**Vérifié** : seed exécuté avec succès dans l'image reconstruite (utilisé depuis par `e2e.yml`, qui seed la stack Docker à chaque run).
+**Diagnostic** : invisible en développement local, où le monorepo complet est présent sur disque et où la résolution du chemin relatif `../../../scripts/seed/dev-users` aboutit sans problème depuis n'importe quel outil (`bun run dev`, tests unitaires). Le bug n'apparaît que dans le contexte de build Docker isolé (`COPY packages/backend/ ./packages/backend/` sans le dossier `scripts/` racine), donc uniquement reproductible en construisant et exécutant réellement l'image telle qu'elle sera déployée — exactement ce que fait `e2e.yml` en CI (stack Docker complète, seed exécuté dans le conteneur), mais pas un test unitaire ni un développement local classique.
+**Correctif** : ajout d'une seule ligne, `COPY scripts/seed/ ./scripts/seed/`, dans le `Dockerfile` backend.
+**Vérifié** : seed exécuté avec succès dans l'image reconstruite. Impact avant correction : bloquait 100 % des runs `e2e.yml` (qui seed la stack Docker à chaque exécution) ainsi que toute vérification d'une image de release via `docker-compose.release.yml`.
 
 ### B6 — Sessions expirées non détectées côté client
 **Constat** : un token expiré ou invalidé côté backend n'était pas détecté proactivement par le frontend — l'utilisateur restait sur une page protégée avec des appels API échouant silencieusement en 401/403.
