@@ -270,7 +270,7 @@ async function saveInfo() {
     });
     const token = authTokenCookie.value;
     if (token) {
-      setSession(token, {
+      setSession(token, undefined, {
         id: updated.id,
         email: updated.email,
         name: updated.name ?? undefined,

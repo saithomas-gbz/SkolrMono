@@ -83,6 +83,26 @@ model PasswordResetToken {
   @@schema("auth")
 }
 
+// Rotation + révocation de JWT (#168 perspective sécurité) : le jeton d'accès
+// (JWT, courte durée) reste stateless ; seul le jeton de rafraîchissement est
+// tracé côté serveur pour permettre une révocation réelle (logout, compte
+// compromis) et la détection de réutilisation (vol de jeton). Seul le hash SHA-256
+// du jeton est stocké (jamais la valeur brute), sur le même principe que les mots
+// de passe — un hash rapide suffit ici car le jeton est un secret à haute entropie
+// généré aléatoirement (contrairement à un mot de passe choisi par l'utilisateur).
+model RefreshToken {
+  id                  String    @id @default(uuid())
+  userId              String
+  tokenHash           String    @unique
+  createdAt           DateTime  @default(now())
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  replacedByTokenHash String?
+
+  @@index([userId])
+  @@schema("auth")
+}
+
 // ============================================================================
 // class
 // ============================================================================

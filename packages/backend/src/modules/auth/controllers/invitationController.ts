@@ -5,6 +5,7 @@ import db from '../../../shared/db';
 import { publish } from '../../../shared/events';
 import { sendMail } from '../lib/mailer';
 import { invitationEmail, welcomeEmail } from '../lib/mailTemplates';
+import { ACCESS_TOKEN_EXPIRES_IN, issueRefreshToken } from '../lib/refreshTokenService';
 
 const INVITATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -111,8 +112,9 @@ const invitationController = {
 
       const jwtToken = request.server.jwt.sign(
         { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
-        { expiresIn: '1h' },
+        { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
       );
+      const { token: refreshToken } = await issueRefreshToken(user.id);
 
       publish('user.created', {
         userId: user.id,
@@ -128,6 +130,7 @@ const invitationController = {
 
       return reply.status(201).send({
         token: jwtToken,
+        refreshToken,
         user: {
           id: user.id,
           email: user.email,

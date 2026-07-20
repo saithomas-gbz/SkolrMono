@@ -42,6 +42,7 @@ const dbMock: Record<string, ModelMock> & {
   establishmentMember: model(),
   establishment: model(),
   parentStudent: model(),
+  refreshToken: model(),
   $transaction: async (cb) => cb(dbMock),
 };
 

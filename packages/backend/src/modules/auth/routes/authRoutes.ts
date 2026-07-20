@@ -5,7 +5,10 @@ import {
   googleCallbackRouteSchema,
   loginRouteSchema,
   registerRouteSchema,
+  refreshRouteSchema,
+  logoutRouteSchema,
 } from '../schemas/authOpenApi';
+import { ACCESS_TOKEN_EXPIRES_IN, issueRefreshToken } from '../lib/refreshTokenService';
 
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest, FastifyReply } from 'fastify';
@@ -22,9 +25,9 @@ interface GoogleUserInfo {
   name: string;
 }
 
-function buildGoogleSuccessUrl(token: string): string {
+function buildGoogleSuccessUrl(token: string, refreshToken: string): string {
   const base = process.env.GOOGLE_OAUTH_SUCCESS_URL ?? 'http://localhost:3003/auth/success';
-  return `${base}?token=${token}`;
+  return `${base}?token=${token}&refreshToken=${refreshToken}`;
 }
 
 function buildGoogleErrorUrl(): string {
@@ -47,6 +50,12 @@ const authRoutes = async (fastify: FastifyInstance) => {
     { schema: registerRouteSchema, config: registerRateLimit },
     authController.register,
   );
+  fastify.post(
+    '/refresh',
+    { schema: refreshRouteSchema, config: loginRateLimit },
+    authController.refresh,
+  );
+  fastify.post('/logout', { schema: logoutRouteSchema }, authController.logout);
 
   fastify.get(
     '/login/google/callback',
@@ -82,10 +91,11 @@ const authRoutes = async (fastify: FastifyInstance) => {
 
       const jwtToken = fastify.jwt.sign(
         { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
-        { expiresIn: '1h' },
+        { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
       );
+      const { token: refreshToken } = await issueRefreshToken(user.id);
 
-      reply.redirect(buildGoogleSuccessUrl(jwtToken));
+      reply.redirect(buildGoogleSuccessUrl(jwtToken, refreshToken));
     } catch (error) {
       fastify.log.error(error);
       reply.redirect(buildGoogleErrorUrl());

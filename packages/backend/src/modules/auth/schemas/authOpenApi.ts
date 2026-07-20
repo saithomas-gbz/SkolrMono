@@ -16,9 +16,10 @@ const authSuccess = {
   type: 'object',
   properties: {
     token: { type: 'string' },
+    refreshToken: { type: 'string' },
     user: userPublic,
   },
-  required: ['token', 'user'],
+  required: ['token', 'refreshToken', 'user'],
 } as const;
 
 const errorBody = {
@@ -76,5 +77,43 @@ export const googleCallbackRouteSchema = {
     500: {
       description: 'Error during OAuth flow',
     },
+  },
+} as const;
+
+export const refreshRouteSchema = {
+  description:
+    "Échange un jeton de rafraîchissement valide contre un nouveau jeton d'accès (rotation à chaque usage)",
+  tags: [authTag],
+  body: {
+    type: 'object',
+    properties: {
+      refreshToken: { type: 'string' },
+    },
+    required: ['refreshToken'],
+  },
+  response: {
+    200: authSuccess,
+    401: errorBody,
+    500: errorBody,
+  },
+} as const;
+
+export const logoutRouteSchema = {
+  description: 'Révoque le jeton de rafraîchissement fourni (déconnexion)',
+  tags: [authTag],
+  body: {
+    type: 'object',
+    properties: {
+      refreshToken: { type: 'string' },
+    },
+    required: ['refreshToken'],
+  },
+  response: {
+    200: {
+      type: 'object',
+      properties: { message: { type: 'string' } },
+      required: ['message'],
+    },
+    500: errorBody,
   },
 } as const;

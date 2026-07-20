@@ -76,6 +76,11 @@ export async function anonymizeUser(userId: string): Promise<boolean> {
   await db.$transaction(async (tx) => {
     await tx.account.deleteMany({ where: { userId } });
     await tx.passwordResetToken.deleteMany({ where: { userId } });
+    // Un jeton de rafraîchissement volé ne doit pas survivre à la suppression du
+    // compte (sinon il resterait utilisable pour émettre de nouveaux jetons
+    // d'accès malgré `deletedAt` — le contrôleur `refresh` vérifie aussi
+    // `deletedAt` par défense en profondeur, voir authController.refresh).
+    await tx.refreshToken.deleteMany({ where: { userId } });
     await tx.user.update({
       where: { id: userId },
       data: {
