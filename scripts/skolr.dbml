@@ -1,515 +1,283 @@
 // ============================================================
 // SKOLR — Schéma de base de données
-// Monolithe modulaire — une base PostgreSQL unique, un schéma logique
-// Postgres par domaine métier (multi-schema Prisma, un seul client généré).
-// Généré à partir de packages/backend/prisma/schema.prisma (source de vérité).
+// Architecture microservices — une BDD par service
 // ============================================================
-//
-// Notes de lecture :
-// - Tous les identifiants primaires sont des uuid v4 générés côté application
-//   par Prisma (`@default(uuid())`), PAS par une fonction PostgreSQL — aucun
-//   défaut de valeur n'est donc déclaré au niveau colonne ici.
-// - "copie molle" = colonne portant l'id d'une entité d'un AUTRE schéma
-//   (ex. userId d'un autre domaine), sans contrainte de clé étrangère Prisma :
-//   c'est un choix délibéré du monolithe modulaire pour garder les domaines
-//   découplés à la modélisation même si tout vit dans la même base physique
-//   (voir docs/architecture/architecture.md, ADR-002).
-// - Les relations `>` ci-dessous ne représentent QUE les relations réellement
-//   déclarées via `@relation(...)` côté Prisma — pas les copies molles.
 
 
 // ============================================================
-// auth
+// AUTH SERVICE — PostgreSQL Users
 // ============================================================
 
-Enum auth.role {
+Enum role {
   USER
   TEACHER
   STAFF
   ADMIN
-  PLATFORM_ADMIN
-  PARENT
+  PARENT [note: 'Rôle géré via RBAC, pas de service dédié']
 }
 
-Table auth.User {
-  id              uuid      [pk]
-  email           varchar   [unique, not null]
-  password        varchar   [note: 'null si compte OAuth']
-  name            varchar
-  image           varchar
-  created_at      timestamp [not null]
-  updated_at      timestamp [not null]
-  oauth_provider  varchar
-  oauth_id        varchar
-  role            auth.role [not null, default: 'USER']
-  establishment_id varchar  [note: 'copie molle → billing.Establishment.id']
-  deleted_at      timestamp [note: 'RGPD : compte anonymisé (droit à l\'effacement), ligne conservée pour l\'intégrité référentielle']
+Table users_auth {
+  id             uuid        [pk, default: `uuid_generate_v4()`]
+  email          varchar     [unique, not null]
+  password       varchar     [note: 'null si OAuth']
+  name           varchar
+  image          varchar
+  role           role        [default: 'USER']
+  oauth_provider varchar
+  oauth_id       varchar
+  created_at     timestamp   [default: `now()`]
+  updated_at     timestamp
 }
 
-Table auth.Account {
-  id          uuid      [pk]
-  user_id     uuid      [not null, ref: > auth.User.id]
+Table accounts {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  user_id     uuid      [not null, ref: > users_auth.id]
   provider    varchar   [not null, note: 'google | local']
   provider_id varchar   [not null]
-  created_at  timestamp [not null]
-}
-
-Table auth.InvitationToken {
-  id               uuid      [pk]
-  token            varchar   [unique, not null]
-  email            varchar   [not null]
-  role             auth.role [not null, default: 'USER']
-  establishment_id varchar
-  expires_at       timestamp [not null]
-  used_at          timestamp
-  created_at       timestamp [not null]
-}
-
-Table auth.PasswordResetToken {
-  id         uuid      [pk]
-  token      varchar   [unique, not null]
-  user_id    varchar   [not null, note: 'copie molle → auth.User.id']
-  expires_at timestamp [not null]
-  used_at    timestamp
-  created_at timestamp [not null]
-}
-
-Table auth.RefreshToken {
-  id                     uuid      [pk]
-  user_id                varchar   [not null, note: 'copie molle → auth.User.id']
-  token_hash             varchar   [unique, not null, note: 'SHA-256 du jeton — jamais la valeur brute']
-  created_at             timestamp [not null]
-  expires_at             timestamp [not null]
-  revoked_at             timestamp [note: 'rotation à l\'usage ou révocation (logout, vol détecté)']
-  replaced_by_token_hash varchar   [note: 'hash du jeton émis lors de la rotation']
-
-  indexes {
-    user_id
-  }
+  created_at  timestamp [default: `now()`]
 }
 
 
 // ============================================================
-// class
+// CLASS SERVICE — PostgreSQL Class
 // ============================================================
 
-Table class.Class {
-  id               uuid      [pk, unique]
-  name             varchar   [not null]
-  description      varchar   [not null]
-  establishment_id varchar   [note: 'copie molle → billing.Establishment.id — colonne seule, pas de filtrage forcé (V1)']
-  created_at       timestamp [not null]
-  updated_at       timestamp [not null]
-
-  indexes {
-    name
-  }
-}
-
-Table class.ClassTeacher {
-  id           uuid    [pk, unique]
-  class_id     uuid    [not null, ref: > class.Class.id]
-  teacher_id   varchar [not null, note: 'copie molle → auth.User.id']
-  is_principal boolean [not null, default: false]
-
-  indexes {
-    (class_id, teacher_id) [unique]
-    teacher_id
-  }
-}
-
-Table class.Course {
-  id          uuid    [pk, unique]
-  name        varchar [not null]
-  description varchar [not null]
-}
-
-// Relation many-to-many implicite entre ClassTeacher et Course (Prisma génère
-// une table de jointure cachée, ex. `_ClassTeacherToCourse`) : pas de modèle
-// explicite dans schema.prisma, donc pas de table dédiée ci-dessus.
-Ref: class.ClassTeacher.id <> class.Course.id
-
-Table class.ClassStudent {
-  id         uuid      [pk, unique]
-  class_id   uuid      [not null, ref: > class.Class.id]
-  student_id varchar   [not null, note: 'copie molle → auth.User.id']
-  joined_at  timestamp [not null]
-
-  indexes {
-    (class_id, student_id) [unique]
-    student_id
-  }
-}
-
-
-// ============================================================
-// grade
-// (conserve une copie locale renommée de User/Class/Course — GradeUser,
-//  GradeClass, GradeCourse — pour éviter toute collision de nom avec les
-//  modèles auth/class dans le client Prisma unique)
-// ============================================================
-
-Enum grade.assignment_status {
-  DRAFT
-  PUBLISHED
-  CLOSED
-}
-
-Enum grade.grade_status {
-  PENDING
-  GRADED
-  ABSENT
-  EXEMPT
-}
-
-Table grade.GradeUser {
-  id       uuid    [pk, unique]
-  name     varchar [not null]
-  email    varchar [unique, not null, note: 'copie molle depuis auth.User']
-  class_id uuid    [not null, ref: > grade.GradeClass.id]
-}
-
-Table grade.GradeClass {
-  id          uuid      [pk, unique]
+Table classes {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
   name        varchar   [not null]
-  description varchar   [not null]
-  created_at  timestamp [not null]
-  updated_at  timestamp [not null]
-}
-
-Table grade.Subject {
-  id          uuid      [pk, unique]
-  name        varchar   [not null]
-  description varchar   [not null]
-  created_at  timestamp [not null]
-  updated_at  timestamp [not null]
-}
-
-Table grade.GradeCourse {
-  id          uuid    [pk, unique]
-  name        varchar [not null]
-  description varchar [not null]
-  subject_id  uuid    [ref: > grade.Subject.id]
-}
-
-// Auto-relation many-to-many implicite "CourseRelations" (cours apparentés,
-// GradeCourse.relatedCourses / relatedCoursesOf côté Prisma) : DBML ne peut
-// pas exprimer un Ref auto-référencé (les deux extrémités seraient
-// identiques) — table de jointure cachée générée par Prisma, pas de modèle
-// explicite à représenter ici.
-
-Table grade.Topic {
-  id          uuid      [pk, unique]
-  name        varchar   [not null]
-  description varchar   [not null]
-  course_id   uuid      [not null, ref: > grade.GradeCourse.id]
-  created_at  timestamp [not null]
-  updated_at  timestamp [not null]
-}
-
-Table grade.Assignment {
-  id          uuid                    [pk]
-  title       varchar                 [not null]
   description varchar
-  class_id    uuid                    [not null, ref: > grade.GradeClass.id]
-  course_id   uuid                    [not null, ref: > grade.GradeCourse.id]
-  teacher_id  varchar                 [not null, note: 'copie molle → auth.User.id']
-  assigned_at timestamp               [not null]
-  due_at      timestamp
-  max_score   float                   [not null, default: 20]
-  coefficient float                   [not null, default: 1]
-  status      grade.assignment_status [not null, default: 'DRAFT']
-  created_at  timestamp               [not null]
-  updated_at  timestamp               [not null]
-
-  indexes {
-    (class_id, course_id)
-    assigned_at
-  }
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
 }
 
-Table grade.Grade {
-  id            uuid               [pk, unique]
-  assignment_id uuid               [not null, ref: > grade.Assignment.id, note: 'onDelete: Cascade']
-  user_id       uuid               [not null, ref: > grade.GradeUser.id]
-  class_id      uuid               [not null, ref: > grade.GradeClass.id]
-  course_id     uuid               [not null, ref: > grade.GradeCourse.id]
-  status        grade.grade_status [not null, default: 'PENDING']
-  value         float
-  comment       varchar
-  created_at    timestamp          [not null]
-  updated_at    timestamp          [not null]
+Table class_teachers {
+  id           uuid    [pk, default: `uuid_generate_v4()`]
+  class_id     uuid    [not null, ref: > classes.id]
+  teacher_id   uuid    [not null, note: 'copie locale → users_auth.id']
+  is_principal boolean [default: false]
+}
 
-  indexes {
-    (assignment_id, user_id) [unique]
-  }
+Table courses {
+  id          uuid    [pk, default: `uuid_generate_v4()`]
+  name        varchar [not null]
+  description varchar
+}
+
+Table class_teacher_courses {
+  class_teacher_id uuid [ref: > class_teachers.id]
+  course_id        uuid [ref: > courses.id]
+}
+
+Table class_students {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  class_id   uuid      [not null, ref: > classes.id]
+  student_id uuid      [not null, note: 'copie locale → users_auth.id']
+  joined_at  timestamp [default: `now()`]
 }
 
 
 // ============================================================
-// planning
+// GRADE SERVICE — PostgreSQL Grades
 // ============================================================
 
-Enum planning.absence_role {
+Table users_grade {
+  id       uuid    [pk, default: `uuid_generate_v4()`]
+  name     varchar [not null]
+  email    varchar [unique, not null, note: 'copie locale depuis auth-service']
+  class_id uuid    [not null, ref: > classes_grade.id]
+}
+
+Table classes_grade {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table subjects {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table courses_grade {
+  id          uuid    [pk, default: `uuid_generate_v4()`]
+  name        varchar [not null]
+  description varchar
+  subject_id  uuid    [ref: > subjects.id, note: 'nullable']
+}
+
+Table course_relations {
+  course_id         uuid [ref: > courses_grade.id]
+  related_course_id uuid [ref: > courses_grade.id, note: 'auto-relation many-to-many']
+}
+
+Table topics {
+  id          uuid      [pk, default: `uuid_generate_v4()`]
+  name        varchar   [not null]
+  description varchar
+  course_id   uuid      [not null, ref: > courses_grade.id]
+  created_at  timestamp [default: `now()`]
+  updated_at  timestamp
+}
+
+Table grades {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  user_id    uuid      [not null, ref: > users_grade.id]
+  class_id   uuid      [not null, ref: > classes_grade.id]
+  course_id  uuid      [not null, ref: > courses_grade.id]
+  value      float     [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+
+// ============================================================
+// PLANNING SERVICE — PostgreSQL Planning
+// ============================================================
+
+Enum absence_role {
   STUDENT
   TEACHER
 }
 
-Enum planning.justification_status {
-  DRAFT
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-Table planning.Session {
-  id              uuid      [pk, unique]
-  class_id        varchar   [not null, note: 'copie molle → class.Class.id']
-  course_id       varchar   [not null, note: 'copie molle → grade.GradeCourse.id']
-  teacher_id      varchar   [not null, note: 'copie molle → auth.User.id']
+Table sessions {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  class_id        uuid      [not null, note: 'copie locale → classes.id']
+  course_id       uuid      [not null, note: 'copie locale → courses.id']
+  teacher_id      uuid      [not null, note: 'copie locale → users_auth.id']
   room            varchar
   start_at        timestamp [not null]
   end_at          timestamp [not null]
-  recurrence_rule varchar   [note: 'format iCal RRULE']
-  created_at      timestamp [not null]
-  updated_at      timestamp [not null]
+  recurrence_rule varchar   [note: 'iCal RRULE format']
+  created_at      timestamp [default: `now()`]
+  updated_at      timestamp
 }
 
-Table planning.Absence {
-  id         uuid                  [pk, unique]
-  session_id uuid                  [not null, ref: > planning.Session.id, note: 'onDelete: Cascade']
-  user_id    varchar               [not null, note: 'copie molle → auth.User.id']
-  role       planning.absence_role [not null]
-  justified  boolean               [not null, default: false]
+Table absences {
+  id         uuid        [pk, default: `uuid_generate_v4()`]
+  session_id uuid        [not null, ref: > sessions.id]
+  user_id    uuid        [not null, note: 'copie locale → users_auth.id']
+  role       absence_role [not null]
+  justified  boolean     [default: false]
   reason     varchar
-  created_at timestamp             [not null]
-  updated_at timestamp             [not null]
-
-  indexes {
-    (session_id, user_id) [unique]
-  }
-}
-
-Table planning.AbsenceJustification {
-  id             uuid                         [pk]
-  student_id     varchar                      [not null, note: 'copie molle → auth.User.id']
-  status         planning.justification_status [not null, default: 'DRAFT']
-  reason         varchar                      [not null]
-  reviewer_id    varchar                      [note: 'copie molle → auth.User.id (staff)']
-  review_comment varchar
-  reviewed_at    timestamp
-  created_at     timestamp                    [not null]
-  updated_at     timestamp                    [not null]
-
-  indexes {
-    student_id
-    status
-  }
-}
-
-// Table de jointure pure (pas de clé primaire propre côté Prisma, seulement
-// une contrainte d'unicité composite).
-Table planning.AbsenceJustificationLink {
-  justification_id uuid [not null, ref: > planning.AbsenceJustification.id, note: 'onDelete: Cascade']
-  absence_id       uuid [not null, ref: > planning.Absence.id, note: 'onDelete: Cascade']
-
-  indexes {
-    (justification_id, absence_id) [unique]
-    absence_id
-  }
-}
-
-Table planning.JustificationDocument {
-  id              uuid      [pk]
-  justification_id uuid     [not null, ref: > planning.AbsenceJustification.id, note: 'onDelete: Cascade']
-  file_name       varchar   [not null]
-  mime_type       varchar   [not null]
-  size_bytes      integer   [not null]
-  storage_key     varchar   [not null]
-  uploaded_at     timestamp [not null]
-
-  indexes {
-    justification_id
-  }
+  created_at timestamp   [default: `now()`]
+  updated_at timestamp
 }
 
 
 // ============================================================
-// message
+// MESSAGE SERVICE — PostgreSQL Messages
 // ============================================================
 
-// Déclaré côté Prisma mais non porté par une colonne stockée dans ce schéma
-// (utilisé comme type applicatif partagé, pas persisté tel quel ici).
-Enum message.message_role {
-  USER
-  TEACHER
-  STAFF
-  ADMIN
+Table conversations {
+  id         uuid      [pk, default: `uuid_generate_v4()`]
+  title      varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
 }
 
-Table message.Conversation {
-  id         uuid      [pk]
-  name       varchar
-  created_at timestamp [not null]
-  updated_at timestamp [not null]
+Table conversation_participants {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  conversation_id uuid      [not null, ref: > conversations.id]
+  user_id         uuid      [not null, note: 'copie locale → users_auth.id']
+  joined_at       timestamp [default: `now()`]
 }
 
-Table message.ConversationParticipant {
-  id              uuid      [pk]
-  conversation_id uuid      [not null, ref: > message.Conversation.id]
-  user_id         varchar   [not null, note: 'copie molle → auth.User.id']
-  joined_at       timestamp [not null]
-
-  indexes {
-    (conversation_id, user_id) [unique]
-    user_id
-  }
-}
-
-Table message.Message {
-  id              uuid      [pk]
-  conversation_id uuid      [not null, ref: > message.Conversation.id]
-  sender_id       varchar   [not null, note: 'copie molle → auth.User.id']
+Table messages {
+  id              uuid      [pk, default: `uuid_generate_v4()`]
+  conversation_id uuid      [not null, ref: > conversations.id]
+  sender_id       uuid      [not null, note: 'copie locale → users_auth.id']
   content         text      [not null]
-  sent_at         timestamp [not null]
-
-  indexes {
-    (conversation_id, sent_at)
-  }
+  read            boolean   [default: false]
+  created_at      timestamp [default: `now()`]
 }
 
-Table message.MessageRead {
-  id         uuid      [pk]
-  message_id uuid      [not null, ref: > message.Message.id]
-  user_id    varchar   [not null, note: 'copie molle → auth.User.id']
-  read_at    timestamp [not null]
-
-  indexes {
-    (message_id, user_id) [unique]
-    user_id
-  }
-}
-
-Table message.MessageAttachment {
-  id          uuid      [pk]
-  message_id  uuid      [not null, ref: > message.Message.id]
-  file_name   varchar   [not null]
-  mime_type   varchar   [not null]
-  size_bytes  integer   [not null]
-  storage_key varchar   [not null]
-  uploaded_at timestamp [not null]
-
-  indexes {
-    message_id
-  }
+Table users_message {
+  id    uuid    [pk, default: `uuid_generate_v4()`]
+  name  varchar [not null]
+  email varchar [unique, not null, note: 'copie locale depuis auth-service']
 }
 
 
 // ============================================================
-// notification
+// NOTIFICATION SERVICE
 // ============================================================
 
-Table notification.Notification {
-  id         uuid      [pk]
-  user_id    varchar   [not null, note: 'copie molle → auth.User.id']
-  type       varchar   [not null, note: 'valeur applicative libre (ex. absence, message, grade, enrollment) — pas un enum en base']
-  title      varchar   [not null]
-  body       text      [not null]
-  read       boolean   [not null, default: false]
-  metadata   json
-  created_at timestamp [not null]
-
-  indexes {
-    (user_id, read)
-    (user_id, created_at)
-  }
+Enum notification_type {
+  EMAIL
+  SMS
+  PUSH
 }
 
-
-// ============================================================
-// billing
-// ============================================================
-
-Enum billing.subscription_status {
-  TRIALING
-  ACTIVE
-  PAST_DUE
-  CANCELED
-  UNPAID
-  INCOMPLETE
+Enum notification_channel {
+  ABSENCE    [note: 'absence.detected → planning-service']
+  MESSAGE    [note: 'message.received → message-service']
+  GRADE      [note: 'grade.added → grade-service']
+  ENROLLMENT [note: 'student.enrolled → class-service']
 }
 
-Enum billing.plan_tier {
-  STARTER
-  STANDARD
-  PREMIUM
+Table notifications {
+  id         uuid                  [pk, default: `uuid_generate_v4()`]
+  user_id    uuid                  [not null, note: 'copie locale → users_auth.id']
+  type       notification_type     [not null]
+  channel    notification_channel  [not null]
+  title      varchar               [not null]
+  body       text                  [not null]
+  read       boolean               [default: false]
+  created_at timestamp             [default: `now()`]
 }
 
-Table billing.Establishment {
-  id                 uuid      [pk]
-  name               varchar   [not null]
-  slug               varchar   [unique, not null]
-  stripe_customer_id varchar   [unique]
-  billing_email      varchar
-  created_at         timestamp [not null]
-  updated_at         timestamp [not null]
-}
-
-Table billing.EstablishmentMember {
-  id                  uuid      [pk]
-  establishment_id    uuid      [not null, ref: > billing.Establishment.id]
-  user_id             varchar   [not null, note: 'copie molle → auth.User.id']
-  is_billing_contact  boolean   [not null, default: false]
-  created_at          timestamp [not null]
-
-  indexes {
-    (establishment_id, user_id) [unique]
-  }
-}
-
-Table billing.Subscription {
-  id                      uuid                       [pk]
-  establishment_id        uuid                       [unique, not null, ref: - billing.Establishment.id, note: 'relation one-to-one']
-  stripe_subscription_id  varchar                    [unique]
-  stripe_price_id         varchar
-  plan_tier               billing.plan_tier          [not null, default: 'STARTER']
-  status                  billing.subscription_status [not null, default: 'INCOMPLETE']
-  current_period_start    timestamp
-  current_period_end      timestamp
-  cancel_at_period_end    boolean                    [not null, default: false]
-  created_at              timestamp                  [not null]
-  updated_at              timestamp                  [not null]
-}
-
-Table billing.StripeWebhookEvent {
-  id           varchar   [pk, note: 'id d\'évènement Stripe (evt_...), pas un uuid généré']
-  type         varchar   [not null]
-  processed_at timestamp [not null]
+Table users_notification {
+  id    uuid    [pk, default: `uuid_generate_v4()`]
+  name  varchar [not null]
+  email varchar [unique, not null, note: 'copie locale depuis auth-service']
 }
 
 
 // ============================================================
-// parent
+// TABLE GROUPS (par service / BDD)
 // ============================================================
 
-Enum parent.parent_link_type {
-  LEGAL_GUARDIAN
-  EMERGENCY_CONTACT
-  OTHER
+TableGroup "Auth Service — PostgreSQL Users" {
+  users_auth
+  accounts
 }
 
-Table parent.ParentStudent {
-  id         uuid                   [pk]
-  parent_id  varchar                [not null, note: 'copie molle → auth.User.id (role PARENT)']
-  student_id varchar                [not null, note: 'copie molle → auth.User.id']
-  link_type  parent.parent_link_type [not null, default: 'LEGAL_GUARDIAN']
-  is_primary boolean                [not null, default: false]
-  created_at timestamp              [not null]
-  updated_at timestamp              [not null]
+TableGroup "Class Service — PostgreSQL Class" {
+  classes
+  class_teachers
+  courses
+  class_teacher_courses
+  class_students
+}
 
-  indexes {
-    (parent_id, student_id) [unique]
-    parent_id
-    student_id
-  }
+TableGroup "Grade Service — PostgreSQL Grades" {
+  users_grade
+  classes_grade
+  subjects
+  courses_grade
+  course_relations
+  topics
+  grades
+}
+
+TableGroup "Planning Service — PostgreSQL Planning" {
+  sessions
+  absences
+}
+
+TableGroup "Message Service — PostgreSQL Messages" {
+  conversations
+  conversation_participants
+  messages
+  users_message
+}
+
+TableGroup "Notification Service" {
+  notifications
+  users_notification
 }
