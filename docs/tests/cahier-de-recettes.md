@@ -136,8 +136,8 @@ curl -s -D - http://localhost:3001/grade/users/44444444-4444-4444-4444-000000000
 
 | Étage | Fichiers | Tests | Résultat |
 |-------|----------|-------|----------|
-| Unitaire backend (`bun:test`) | 51 | 396 | 0 échec — couverture 82,72 % fonctions / 87,12 % lignes |
-| e2e (Playwright, séquentiel) | 14 | 42 | 0 échec en exécution séquentielle |
+| Unitaire backend (`bun:test`) | 53 | 409 | 0 échec — couverture 82,92 % fonctions / 87,33 % lignes |
+| e2e (Playwright, séquentiel) | 14 | 43 | 0 échec en exécution séquentielle |
 
 Détail des chiffres et de la méthode : `docs/tests/strategy.md`. Détail des correctifs de sécurité : `docs/security/audit.md`.
 
@@ -153,6 +153,6 @@ Détail des chiffres et de la méthode : `docs/tests/strategy.md`. Détail des c
 
 ## Vérification
 
-- `cd packages/backend && NODE_ENV=test bun run test:coverage` → 394 tests, 0 échec.
+- `cd packages/backend && NODE_ENV=test bun run test:coverage` → 409 tests, 0 échec.
 - `cd packages/e2e && bunx playwright test --workers=1` → suite complète verte en exécution séquentielle.
 - Limitation connue : en exécution parallèle (4 workers, défaut CI), `rgpd.spec.ts` et `session-expiry.spec.ts` peuvent échouer de façon intermittente (rate-limiting + comptes de démo partagés entre workers) — non reproductible en séquentiel, non lié à la logique testée elle-même (voir `docs/tests/strategy.md`).

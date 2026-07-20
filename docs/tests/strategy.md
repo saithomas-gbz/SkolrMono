@@ -15,9 +15,9 @@
 ## Pyramide de tests
 
 ```
-        e2e (Playwright)         13 specs, ~41 tests — 1 parcours "happy path" par rôle
+        e2e (Playwright)         14 specs, ~43 tests — 1 parcours "happy path" par rôle
       ─────────────────────
-   tests unitaires (bun:test)     49 fichiers, 394 tests — logique métier par module
+   tests unitaires (bun:test)     53 fichiers, 409 tests — logique métier par module
 ```
 
 Deux étages, volontairement : pas de couche d'intégration séparée (ex. tests de contrat entre modules avec une vraie base éphémère mais sans navigateur). Le monolithe modulaire partage un seul process et une seule base Postgres multi-schema ; les tests unitaires couvrent la logique de chaque module en isolation (Prisma mocké), et les tests e2e couvrent les parcours utilisateur de bout en bout contre une vraie stack (Postgres + backend + frontend). Ce choix est documenté ici comme délibéré, pas comme un angle mort.
@@ -30,10 +30,10 @@ Deux étages, volontairement : pas de couche d'intégration séparée (ex. tests
 
 | Indicateur | Valeur |
 |---|---|
-| Fichiers de test | 49 |
-| Tests | 394 (0 échec) |
-| Couverture fonctions | 82.47 % |
-| Couverture lignes | 86.91 % |
+| Fichiers de test | 53 |
+| Tests | 409 (0 échec) |
+| Couverture fonctions | 82.92 % |
+| Couverture lignes | 87.33 % |
 | Seuil CI | Non bloquant pour l'instant (voir ci-dessous) |
 
 ### Ce qui est mocké, et pourquoi
@@ -79,7 +79,7 @@ Ces 4 specs sont volontairement en lecture seule (aucune mutation) pour rester r
 
 `auth.spec.ts`, `bulletin-api.spec.ts`, `bulletin-ui.spec.ts`, `dashboard.spec.ts`, `messaging.spec.ts`, `notifications.spec.ts`, `planning-walkthrough.spec.ts`, `rgpd.spec.ts`, `session-expiry.spec.ts`, `statistics.spec.ts` — matrices de contrôle d'accès, cas d'erreur, et fonctionnalités transverses (RGPD, expiration de session, messagerie).
 
-**Chiffres réels** (suite complète, `bunx playwright test`) : 13 fichiers de specs, 41 tests, tous verts en exécution séquentielle (`--workers=1`).
+**Chiffres réels** (suite complète, `bunx playwright test`) : 14 fichiers de specs, 43 tests, tous verts en exécution séquentielle (`--workers=1`).
 
 ### Limitation connue : parallélisme vs. rate-limiting
 
@@ -112,6 +112,6 @@ Pas de seuil bloquant (`coverageThreshold`) pour cette itération : une partie s
 
 ## Vérification
 
-- `cd packages/backend && NODE_ENV=test bun run test:coverage` → **394 tests, 0 échec**, couverture globale **82.47 % fonctions / 86.91 % lignes** (49 fichiers de test).
-- `cd packages/e2e && bunx playwright test --workers=1` → **41 tests, 0 échec** sur 13 fichiers de specs, dont les 4 parcours par rôle exigés par #146.
+- `cd packages/backend && NODE_ENV=test bun run test:coverage` → **409 tests, 0 échec**, couverture globale **82.92 % fonctions / 87.33 % lignes** (53 fichiers de test).
+- `cd packages/e2e && bunx playwright test --workers=1` → **43 tests, 0 échec** sur 14 fichiers de specs, dont les 4 parcours par rôle exigés par #146.
 - `cd packages/e2e && bunx playwright test admin-walkthrough parent-walkthrough student-walkthrough statistics-walkthrough` (parallèle, 4 workers) → **4 tests, 0 échec**.

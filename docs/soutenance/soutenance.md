@@ -14,7 +14,7 @@
 | 3 | Architecture (vue d'ensemble) | Monolithe modulaire Fastify + Nuxt + Postgres multi-schema ; C4 Contexte + Conteneurs | 3 min |
 | 4 | Histoire d'architecture | Refacto microservices + RabbitMQ → monolithe modulaire (ADR-001/002) : *pourquoi*, conséquences | 3 min |
 | 5 | Sécurité & RGPD | JWT + RBAC + bcrypt + TLS ; droits RGPD opérationnels (export / effacement), registre, DPO | 3 min |
-| 6 | Tests & qualité | 394 tests backend + 41 e2e (Playwright), cahier de recettes, ESLint/Knip/Prettier/Husky, i18n:check | 2 min |
+| 6 | Tests & qualité | 409 tests backend + 43 e2e (Playwright), cahier de recettes, ESLint/Knip/Prettier/Husky, i18n:check | 2 min |
 | 7 | CI/CD & déploiement | GitHub Actions (backend/frontend/e2e), Docker, migrations Prisma, hébergement UE éco-responsable | 2 min |
 | 8 | Démo live | Parcours par rôle + focus RGPD (voir §3) | 6 min |
 | 9 | Perspectives | Serveur MCP / IA, i18n (EN), extraction éventuelle d'un module, scalabilité | 2 min |
@@ -31,7 +31,7 @@
 | Thème de compétence | Slides | Preuves dans le projet | Compétences RNCP |
 |---------------------|--------|------------------------|-------------------|
 | Analyse du besoin & conception / architecture | 2, 3, 4 | `docs/architecture/architecture.md` (C4, ADR-001/002), `CONTEXT.md` | Bloc 1 : C1.1.1, C1.1.2, C1.2.2, C1.3.2, C1.5, C1.6 · Bloc 2 : C2.2.1 |
-| Développement & qualité logicielle | 6, 8 | Code TypeScript, 394 tests backend + 41 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 |
+| Développement & qualité logicielle | 6, 8 | Code TypeScript, 409 tests backend + 43 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 |
 | Sécurité, accessibilité & conformité (RGPD) | 5 | JWT/RBAC, anonymisation RGPD (#145), registre, correctif authGuard, `docs/security/audit.md`, `docs/security/accessibility.md` | Bloc 2 : C2.2.3 |
 | Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker, migrations, monitoring Prometheus/Grafana/Sentry, `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2 |
 | Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées, jalons | Bloc 3 : C3.1, C3.2.1, C3.4.1, C3.4.2 |
@@ -43,7 +43,7 @@ Les 4 compétences éliminatoires de "Concevoir et développer des applications 
 | Compétence | Preuve principale | Statut |
 |---|---|---|
 | C2.2.1 — Prototype logiciel | `docs/architecture/architecture.md`, code `packages/backend`/`packages/frontend` | ✅ Couvert |
-| C2.2.2 — Harnais de tests unitaires | `docs/tests/strategy.md` (394 tests backend, 82,5 %/86,9 % couverture) | ✅ Couvert (frontend : voir #158) |
+| C2.2.2 — Harnais de tests unitaires | `docs/tests/strategy.md` (409 tests backend, 82,9 %/87,3 % couverture) | ✅ Couvert (frontend : voir #158) |
 | C2.2.3 — Sécurité & accessibilité | `docs/security/audit.md` + `docs/security/accessibility.md` | ✅ Couvert (#156) |
 | C2.3.1 — Cahier de recettes | `docs/tests/cahier-de-recettes.md` | ✅ Couvert (#157) |
 
@@ -139,10 +139,13 @@ Voir **ADR-001** : sur un projet solo, les microservices ajoutaient un coût d'e
 Réplication **horizontale** du monolithe derrière un load balancer (stateless, JWT), **réplicas de lecture** PostgreSQL, cache, et en dernier recours **extraction** d'un module chaud en service dédié (les frontières et le `service.ts` le permettent). Le bus d'événements pourrait redevenir un vrai broker (RabbitMQ/Kafka) si nécessaire.
 
 **« Sécurité ? »**
-Authentification **JWT** (expiration courte), mots de passe **bcrypt**, **RBAC** par rôle via préhandlers, **TLS** en transit, secrets en variables d'environnement. Exemple de rigueur : un **correctif de garde d'authentification** (les préhandlers async ne bloquaient pas réellement le handler sans `await` sur `reply.send()`) livré avec la feature RGPD.
+Authentification **JWT** (accès 15 min) + **jeton de rafraîchissement** tracé côté serveur, à rotation à chaque usage et révocable (détection de réutilisation → révocation de toute la chaîne en cas de vol), mots de passe **bcrypt**, **RBAC** par rôle via préhandlers, **TLS** en transit, secrets en variables d'environnement. Exemple de rigueur : un **correctif de garde d'authentification** (les préhandlers async ne bloquaient pas réellement le handler sans `await` sur `reply.send()`) livré avec la feature RGPD.
+
+**« Et si un jeton est volé ? »**
+Le jeton d'accès expire en 15 min (fenêtre d'exploitation réduite). Le jeton de rafraîchissement est à usage unique : le réutiliser (signe qu'une copie volée circule en parallèle de la session légitime) révoque immédiatement toute la chaîne de jetons actifs de l'utilisateur, forçant une reconnexion sur tous les appareils. Voir `docs/security/audit.md` R10.
 
 **« Qualité / tests ? »**
-**394 tests** backend (bun:test, mocks Prisma, 82,5 %/86,9 % de couverture) + **41 tests e2e Playwright** (parcours par rôle, RGPD), consolidés dans un **cahier de recettes** (`docs/tests/cahier-de-recettes.md`), **ESLint/Knip/Prettier/Husky** (dont un plugin d'accessibilité), vérification des clés **i18n**, CI GitHub Actions par package.
+**409 tests** backend (bun:test, mocks Prisma, 82,9 %/87,3 % de couverture) + **43 tests e2e Playwright** (parcours par rôle, RGPD), consolidés dans un **cahier de recettes** (`docs/tests/cahier-de-recettes.md`), **ESLint/Knip/Prettier/Husky** (dont un plugin d'accessibilité), vérification des clés **i18n**, CI GitHub Actions par package.
 
 **« IA / MCP ? »**
 Un **serveur MCP** est prévu pour exposer des capacités à des assistants IA (perspective) — cohérent avec l'écosystème et un axe de différenciation.
