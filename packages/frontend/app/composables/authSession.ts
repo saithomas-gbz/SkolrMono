@@ -105,22 +105,31 @@ async function performRefresh(): Promise<boolean> {
   if (!rawRefreshToken) {
     return false;
   }
+  // Capturés avant le premier `await` : en SSR, le contexte Nuxt implicite ne
+  // survit pas à une frontière async, donc tout composable appelé après le
+  // `$fetch` ci-dessous (via `writeAuthToken`/`writeAuthUser`, qui font
+  // `useCookie`/`useState`) doit être ré-enveloppé avec `runWithContext`.
+  const nuxtApp = useNuxtApp();
+  const config = useRuntimeConfig();
   try {
-    const config = useRuntimeConfig();
     const response = await $fetch<RefreshResponse>('/auth/refresh', {
       baseURL: config.public.gatewayBaseUrl,
       method: 'POST',
       credentials: 'include',
       body: { refreshToken: rawRefreshToken },
     });
-    writeAuthToken(response.token);
-    writeAuthRefreshToken(response.refreshToken);
-    writeAuthUser(response.user);
+    nuxtApp.runWithContext(() => {
+      writeAuthToken(response.token);
+      writeAuthRefreshToken(response.refreshToken);
+      writeAuthUser(response.user);
+    });
     return true;
   } catch {
-    writeAuthToken(null);
-    writeAuthRefreshToken(null);
-    writeAuthUser(null);
+    nuxtApp.runWithContext(() => {
+      writeAuthToken(null);
+      writeAuthRefreshToken(null);
+      writeAuthUser(null);
+    });
     return false;
   }
 }
