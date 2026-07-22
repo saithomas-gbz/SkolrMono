@@ -54,17 +54,6 @@ export type CourseListApiResponse = {
   message: string;
 };
 
-export type CreateGradeBody = {
-  assignmentId: string;
-  userId: string;
-  classId: string;
-  courseId: string;
-  value?: number;
-  status?: 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
-  comment?: string;
-  teacherId: string;
-};
-
 export type UpdateGradeBody = {
   value?: number;
   status?: 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
@@ -215,14 +204,6 @@ export function useGrade() {
     return response.data;
   }
 
-  async function createGrade(body: CreateGradeBody) {
-    const response = await api<GradeApiResponse>('/grade/grades', {
-      method: 'POST',
-      body,
-    });
-    return response.data;
-  }
-
   async function updateGrade(id: string, body: UpdateGradeBody) {
     const response = await api<GradeApiResponse>(`/grade/grades/${id}`, {
       method: 'PATCH',
@@ -247,7 +228,6 @@ export function useGrade() {
     fetchClassStats,
     fetchUserStats,
     fetchAssignmentStats,
-    createGrade,
     updateGrade,
     deleteGrade,
     averageGradeValues,

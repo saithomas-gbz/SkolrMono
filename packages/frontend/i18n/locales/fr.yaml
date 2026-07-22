@@ -523,9 +523,6 @@ student:
     existing_grades: Notes existantes
     loading_grades: "Chargement des notes…"
     no_grades: Aucune note pour cet élève dans cette classe.
-    add_grade: Ajouter une note
-    choose_course: Choisir un programme
-    grade_label: Note /20
     confirm_delete: "Supprimer ?"
     edit_grade: Modifier la note
     delete_grade: Supprimer la note
