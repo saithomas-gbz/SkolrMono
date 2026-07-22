@@ -57,8 +57,6 @@ auth:
     no_account: Pas encore de compte ?
     create_account: Créer un compte
     forgot_password: Mot de passe oublié ?
-    or_separator: ou
-    continue_with_google: Continuer avec Google
   register:
     title: Inscription
     submit: "S'inscrire"

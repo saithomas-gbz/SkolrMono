@@ -36,19 +36,6 @@
         </div>
 
         <Message v-if="error" severity="error">{{ error }}</Message>
-
-        <Divider align="center" class="divider">
-          <span class="divider-text">{{ $t('auth.login.or_separator') }}</span>
-        </Divider>
-
-        <Button
-          :label="$t('auth.login.continue_with_google')"
-          icon="pi pi-google"
-          severity="secondary"
-          outlined
-          class="full-width"
-          @click="continueWithGoogle"
-        />
       </div>
     </template>
     <template #footer>
@@ -74,12 +61,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { login, googleLoginUrl } = useAuth();
+const { login } = useAuth();
 const router = useRouter();
-
-function continueWithGoogle() {
-  navigateTo(googleLoginUrl(), { external: true });
-}
 
 const email = ref('');
 const password = ref('');
@@ -173,15 +156,6 @@ async function submit() {
 
 .full-width {
   width: 100%;
-}
-
-.divider {
-  margin: 0.25rem 0;
-}
-
-.divider-text {
-  font-size: 0.85rem;
-  color: var(--p-text-muted-color, var(--skolr-color-text-muted));
 }
 
 .auth-form-fields :deep(.p-password) {
