@@ -188,6 +188,26 @@ Les tags de pré-release (`v1.0.0-rc.1`) produisent une pré-release et **ne** m
 SKOLR_VERSION=1.0.0 docker compose -f docker-compose.release.yml up -d
 ```
 
+### Amorçage d'un déploiement neuf
+
+Au démarrage, le backend applique uniquement les migrations Prisma (`prisma migrate deploy`).
+Sur une base neuve, **aucun compte n'existe** : la connexion est donc impossible tant que la base
+n'a pas été amorcée.
+
+Pour une **démo / soutenance uniquement**, on peut lancer le seed de développement dans le
+conteneur backend une fois la stack démarrée :
+
+```bash
+docker exec skolr_backend bunx prisma db seed
+```
+
+> ⚠️ **Ne jamais activer ce seed en production.** Il crée des comptes de démonstration avec des
+> mots de passe **en clair** (`@skolr.local`) et n'a de sens qu'en local/démo.
+>
+> Pour un vrai déploiement de production, l'amorçage d'un premier compte administrateur devra
+> passer par un mécanisme dédié (mot de passe fourni via secret/variable d'environnement) —
+> hors de ce seed de dev.
+
 Historique des changements : voir [CHANGELOG.md](CHANGELOG.md).
 
 ## Contribution
