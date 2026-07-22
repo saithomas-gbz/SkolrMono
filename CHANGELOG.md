@@ -7,6 +7,28 @@ et ce projet suit le [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-22
+
+### Fixed
+- Déploiement release : la connexion renvoyait 502 (`Bad Gateway`). La variable
+  de gateway interne du frontend n'était pas prise en compte au runtime — Nuxt
+  n'applique une clé privée de `runtimeConfig` que via le préfixe `NUXT_`. Ajout
+  de `NUXT_GATEWAY_INTERNAL_URL` au service `frontend` de
+  `docker-compose.release.yml` (#176).
+
+### Changed
+- Connexion : le bouton « Continuer avec Google » est masqué côté interface.
+  L'OAuth2 Google reste implémenté côté backend (dormant, réactivable) (#181).
+
+### Removed
+- Carnet enseignant : retrait du formulaire « Ajouter une note » obsolète, rendu
+  inopérant par la refonte des devoirs (une note est désormais rattachée à un
+  devoir, `POST /grade/grades` exige `assignmentId`) (#182).
+
+### Docs
+- README : procédure d'amorçage des données sur un déploiement neuf (commande de
+  seed démo, avertissement « jamais en production ») (#180).
+
 ## [1.0.0] - 2026-07-20
 
 Première version publiée de l'application Skolr (backend Fastify + frontend Nuxt),
@@ -58,5 +80,6 @@ distribuée sous forme d'images Docker sur GHCR.
 - Isolation des tests `grade` (fuite globale d'un mock d'événements partagé).
 - Variable d'environnement manquante pour le WebSocket dans `.env.example`.
 
-[Unreleased]: https://github.com/saithomas-gbz/SkolrMono/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/saithomas-gbz/SkolrMono/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/saithomas-gbz/SkolrMono/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/saithomas-gbz/SkolrMono/releases/tag/v1.0.0
