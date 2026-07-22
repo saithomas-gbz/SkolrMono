@@ -81,39 +81,6 @@
           </li>
         </ul>
       </section>
-
-      <!-- Ajouter une note -->
-      <section class="dialog-section">
-        <h4 class="section-title">{{ $t('student.grade_dialog.add_grade') }}</h4>
-
-        <Message v-if="createError" severity="error" :closable="false">{{ createError }}</Message>
-
-        <div class="create-form">
-          <Select
-            v-model="newCourseId"
-            :options="courseOptions"
-            option-label="label"
-            option-value="value"
-            :placeholder="$t('student.grade_dialog.choose_course')"
-            class="create-course"
-          />
-          <InputNumber
-            v-model="newValue"
-            :min="0"
-            :max="20"
-            :placeholder="$t('student.grade_dialog.grade_label')"
-            show-buttons
-            class="grade-input"
-          />
-          <Button
-            :label="$t('common.add')"
-            icon="pi pi-plus"
-            :loading="creating"
-            :disabled="!canCreate"
-            @click="submitCreate"
-          />
-        </div>
-      </section>
     </div>
   </Dialog>
 </template>
@@ -141,7 +108,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { fetchGradesByUserId, createGrade, updateGrade, deleteGrade } = useGrade();
+const { fetchGradesByUserId, updateGrade, deleteGrade } = useGrade();
 const { fetchTeacherCourses } = useClass();
 const { user } = useAuth();
 
@@ -171,10 +138,6 @@ const dialogHeader = computed(() =>
   activeStudent.value
     ? t('student.grade_dialog.header', { name: activeStudent.value.name })
     : t('student.grade_dialog.header_fallback'),
-);
-
-const courseOptions = computed(() =>
-  courses.value.map((course) => ({ label: course.name, value: course.id })),
 );
 
 function courseName(courseId: string) {
@@ -243,55 +206,6 @@ watch(
   },
 );
 
-// --- Création ---
-const newCourseId = ref<string | null>(null);
-const newValue = ref<number | null>(null);
-const creating = ref(false);
-const createError = ref<string | null>(null);
-
-const canCreate = computed(
-  () =>
-    Boolean(newCourseId.value) &&
-    newValue.value !== null &&
-    newValue.value >= 0 &&
-    newValue.value <= 20 &&
-    Boolean(activeStudent.value) &&
-    Boolean(props.classId) &&
-    Boolean(user.value?.id),
-);
-
-async function submitCreate() {
-  createError.value = null;
-  if (
-    !canCreate.value ||
-    !activeStudent.value ||
-    !props.classId ||
-    !user.value?.id ||
-    newCourseId.value === null ||
-    newValue.value === null
-  ) {
-    return;
-  }
-  creating.value = true;
-  try {
-    await createGrade({
-      userId: activeStudent.value.studentId,
-      classId: props.classId,
-      courseId: newCourseId.value,
-      value: newValue.value,
-      teacherId: user.value.id,
-    });
-    newCourseId.value = null;
-    newValue.value = null;
-    await loadGrades();
-    emit('saved');
-  } catch (error) {
-    createError.value = normalizeApiError(error);
-  } finally {
-    creating.value = false;
-  }
-}
-
 // --- Édition ---
 const editingId = ref<string | null>(null);
 const editValue = ref<number | null>(null);
@@ -344,9 +258,6 @@ async function submitDelete(id: string) {
 }
 
 function resetForms() {
-  newCourseId.value = null;
-  newValue.value = null;
-  createError.value = null;
   editingId.value = null;
   editValue.value = null;
   confirmingId.value = null;
@@ -423,17 +334,6 @@ function resetForms() {
 .confirm-text {
   font-size: 0.85rem;
   color: var(--p-text-muted-color, var(--skolr-color-text-muted));
-}
-
-.create-form {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.create-course {
-  flex: 1 1 14rem;
 }
 
 .grade-input {
