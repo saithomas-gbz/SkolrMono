@@ -30,6 +30,27 @@
 
 ---
 
+## Couverture OWASP Top 10 (2021)
+
+> Relecture des correctifs ci-dessus au prisme du référentiel **OWASP Top 10 (2021)** (compétence C2.2.3, critère « couvrir les 10 failles de sécurité principales décrites par l'OWASP »). Chaque catégorie renvoie aux risques `R#` traités plus haut ou au mécanisme du code qui la couvre par conception. Les catégories non applicables au périmètre (SPA + API, sans fetch serveur d'URL utilisateur) sont déclarées explicitement plutôt qu'ignorées.
+
+| # | Catégorie OWASP 2021 | Statut | Couverture dans Skolr |
+|---|----------------------|--------|-----------------------|
+| **A01** | Broken Access Control | ✅ | Gardes interrompant réellement la requête (**R4**), `requireAdmin` sur la gestion de comptes (**R5**), fin de l'énumération anonyme (**R6**), matrice RBAC vérifiée sur tous les domaines (§RBAC) ; la fuite inter-classes sur les stats (bug B1, cf. `plan-correction-bogues.md`) relève aussi de cette catégorie et est corrigée |
+| **A02** | Cryptographic Failures | ✅ | Mots de passe hachés **bcrypt** (cost 10) au register/reset/login (`bcrypt.compare`) ; jeton de rafraîchissement stocké en **SHA-256** uniquement, jamais en clair (**R10**) ; **HSTS** via helmet (**R2**) ; aucun secret dans le dépôt (**R7**) |
+| **A03** | Injection | ✅ | **Prisma ORM** = requêtes paramétrées, **aucun SQL brut applicatif** (`$queryRaw`/`Unsafe` absents hors client généré) ; validation par **schémas Fastify** en amont des contrôleurs (**R8**) ; **CSP** helmet contre le XSS (**R2**) |
+| **A04** | Insecure Design | ✅ | Rate-limiting anti-abus par conception (**R1**), **rotation + détection de réutilisation** des jetons avec révocation en chaîne (**R10**), moindre privilège par rôle |
+| **A05** | Security Misconfiguration | ✅ | En-têtes de sécurité **helmet** (**R2**), **CORS** en allowlist par env (**R3**), `trustProxy` explicite et sûr par défaut (**R11**) |
+| **A06** | Vulnerable and Outdated Components | ⚠️ Partiel | Dépendances **figées** par lockfile (`bun.lock`) ; **pas encore** d'analyse automatisée de vulnérabilités (`bun audit` / Dependabot). Le processus de mise à jour outillé relève du Bloc 4 (C4.1.1) — cité en perspective |
+| **A07** | Identification and Authentication Failures | ✅ | Anti-brute-force sur `/auth/*` (**R1**), jetons d'accès **courts (15 min) + révocables** (**R10**), `logout` serveur, reset de mot de passe via jeton à usage unique |
+| **A08** | Software and Data Integrity Failures | ✅ Partiel | Intégrité du jeton par hash (**R10**), build reproductible (lockfile) et images taguées **semver** en CI/CD ; la **signature d'images** (cosign) reste une perspective |
+| **A09** | Security Logging and Monitoring Failures | ✅ | Logs de sécurité **structurés** sur les points sensibles (**R9**) + supervision Prometheus/Grafana. Alerting automatique sur `login.failed`/`reuse_detected` cité en perspective |
+| **A10** | Server-Side Request Forgery (SSRF) | N/A | Aucune requête sortante déclenchée par une URL fournie par l'utilisateur — surface inexistante sur ce périmètre |
+
+**Bilan** : 8 catégories couvertes activement, 1 partielle (**A06**, complétée au Bloc 4), 1 non applicable justifiée (**A10**). Les 10 catégories sont donc adressées ou explicitement écartées.
+
+---
+
 ## Détail des correctifs
 
 ### R1 — Rate-limiting
