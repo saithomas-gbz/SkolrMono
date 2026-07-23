@@ -42,8 +42,8 @@ export type ClassCoursesApiResponse = {
 type FetchErrorLike = { data?: { error?: string }; statusMessage?: string };
 
 export function normalizeApiError(e: unknown): string {
-  const err = e as FetchErrorLike | null;
-  if (err?.data?.error && typeof err.data.error === 'string') {
+  const err = e as FetchErrorLike;
+  if (err.data?.error && typeof err.data.error === 'string') {
     return err.data.error;
   }
   if (e instanceof Error) {
