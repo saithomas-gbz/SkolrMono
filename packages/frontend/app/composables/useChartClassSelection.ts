@@ -12,6 +12,30 @@ type UseChartClassSelectionOptions = {
 };
 
 /**
+ * Résolution pure de la classe sélectionnée à partir de la liste courante.
+ * Priorité : classe préférée (prop / `?classId=`) si présente → sélection
+ * courante si encore valide → 1ʳᵉ classe. Liste vide → aucune sélection.
+ * Extraite pour être testable sans monter le composable (cf. bug widget #B4).
+ */
+export function resolveSelectedClassId(
+  classes: Pick<SkolrClassSummary, 'id'>[],
+  current: string | null,
+  preferred: string | null,
+): string | null {
+  if (classes.length === 0) {
+    return null;
+  }
+  if (preferred && classes.some((c) => c.id === preferred)) {
+    return preferred;
+  }
+  const stillValid = classes.some((c) => c.id === current);
+  if (!current || !stillValid) {
+    return classes[0].id;
+  }
+  return current;
+}
+
+/**
  * Sélection de classe partagée pour les graphiques du dashboard :
  * résolution prop / `?classId=`, fallback sur la 1ère classe, sync URL.
  */
@@ -51,19 +75,11 @@ export async function useChartClassSelection(options: UseChartClassSelectionOpti
   );
 
   function syncSelectedFromSummary(list: SkolrClassSummary[]) {
-    if (list.length === 0) {
-      selectedClassId.value = null;
-      return;
-    }
-    const preferred = resolveInitialClassId();
-    const stillValid = list.some((c) => c.id === selectedClassId.value);
-    if (preferred && list.some((c) => c.id === preferred)) {
-      selectedClassId.value = preferred;
-      return;
-    }
-    if (!selectedClassId.value || !stillValid) {
-      selectedClassId.value = list[0].id;
-    }
+    selectedClassId.value = resolveSelectedClassId(
+      list,
+      selectedClassId.value,
+      resolveInitialClassId(),
+    );
   }
 
   syncSelectedFromSummary(classSummaries.value);
