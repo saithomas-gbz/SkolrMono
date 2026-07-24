@@ -1,26 +1,28 @@
-# Stratégie de tests — backend + e2e (#146)
+# Stratégie de tests — backend + frontend + e2e (#146)
 
-> État des lieux et stratégie de test du monolithe Skolr, produit pour la soutenance RNCP 39583 : couverture backend chiffrée, un parcours e2e « happy path » par rôle, et ce qui est volontairement mocké (ou non) à chaque étage.
+> État des lieux et stratégie de test du monolithe Skolr, produit pour la soutenance RNCP 39583 : couverture backend chiffrée, tests unitaires frontend sur la logique métier des composables, un parcours e2e « happy path » par rôle, et ce qui est volontairement mocké (ou non) à chaque étage.
 
 | Champ | Valeur |
 |-------|--------|
-| Périmètre | Backend Fastify (tests unitaires `bun:test`), parcours e2e Playwright (`packages/e2e`) |
-| Version | 1.0.0 |
-| Date | 2026-07-19 |
+| Périmètre | Backend Fastify (tests unitaires `bun:test`), frontend Nuxt (tests unitaires `bun:test` sur les composables), parcours e2e Playwright (`packages/e2e`) |
+| Version | 1.1.0 |
+| Date | 2026-07-19, mise à jour le 2026-07-23 (couverture frontend) |
 | Méthode | Exécution réelle de `bun run test:coverage` et de la suite Playwright complète, revue des specs existantes, ajout ciblé sur les trous de couverture évidents |
-| Hors scope | Tests unitaires frontend (aucun en CI actuellement — voir Perspectives), tests de charge, pentest (voir `docs/security/audit.md`) |
+| Hors scope | Tests de charge, pentest (voir `docs/security/audit.md`) |
 
 ---
 
 ## Pyramide de tests
 
 ```
-        e2e (Playwright)         14 specs, ~43 tests — 1 parcours "happy path" par rôle
+        e2e (Playwright)          14 specs, ~43 tests — 1 parcours "happy path" par rôle
       ─────────────────────
-   tests unitaires (bun:test)     53 fichiers, 409 tests — logique métier par module
+   unitaires front (bun:test)      6 fichiers, 39 tests — logique métier des composables
+      ─────────────────────
+   unitaires back (bun:test)      53 fichiers, 409 tests — logique métier par module
 ```
 
-Deux étages, volontairement : pas de couche d'intégration séparée (ex. tests de contrat entre modules avec une vraie base éphémère mais sans navigateur). Le monolithe modulaire partage un seul process et une seule base Postgres multi-schema ; les tests unitaires couvrent la logique de chaque module en isolation (Prisma mocké), et les tests e2e couvrent les parcours utilisateur de bout en bout contre une vraie stack (Postgres + backend + frontend). Ce choix est documenté ici comme délibéré, pas comme un angle mort.
+Trois étages, volontairement : pas de couche d'intégration séparée (ex. tests de contrat entre modules avec une vraie base éphémère mais sans navigateur). Le monolithe modulaire partage un seul process et une seule base Postgres multi-schema ; les tests unitaires backend couvrent la logique de chaque module en isolation (Prisma mocké), les tests unitaires frontend couvrent la logique métier **pure** extraite des composables (calculs, résolutions, transformations — sans monter Nuxt), et les tests e2e couvrent les parcours utilisateur de bout en bout contre une vraie stack (Postgres + backend + frontend). Ce choix est documenté ici comme délibéré, pas comme un angle mort.
 
 ---
 
@@ -57,6 +59,32 @@ Priorité donnée aux fichiers réellement non couverts (vérifié par une exéc
 ### Décision différée : tests de routes
 
 La couverture au niveau routes (enregistrement Fastify) est déjà incohérente avant #146 (1/4 fichiers de routes testés côté auth, 1/7 côté grade) — ce n'est pas une convention établie. Décision explicite pour cette itération : ne pas l'étendre (« trous évidents », pas couverture exhaustive). À trancher en équipe si la convention doit devenir obligatoire.
+
+---
+
+## Portée unitaire (frontend)
+
+L'état applicatif du frontend est géré par des **composables** (`app/composables/use*.ts`), pas par des stores Pinia. C'est là que vit la logique testable : les composants sont majoritairement de la composition PrimeVue, sans logique propre à couvrir (tester un `<DataTable>` reviendrait à tester PrimeVue).
+
+**Chiffres réels** (`bun test app`, `packages/frontend`) : **6 fichiers, 39 tests, 0 échec**.
+
+### Ce qui est testé, et pourquoi
+
+La cible est la logique **pure exportée** à côté du composable — calculs, résolutions, transformations — pas les wrappers `$fetch` :
+
+| Fichier | Ce qui est couvert |
+|---|---|
+| `composables/useGrade.test.ts` | Moyenne (exclusion des non-GRADED / `value=null`), histogramme, arrondi |
+| `composables/useAssignment.test.ts` | Logique de devoirs |
+| `composables/useAuth.test.ts` / `useUser.test.ts` | Logique d'authentification / utilisateur |
+| `composables/authSession.test.ts` | Décodage JWT, expiration de jeton |
+| `utils/homeworkBuckets.test.ts` | Regroupement des devoirs par échéance |
+
+**Choix délibéré — on ne teste pas les wrappers `$fetch`** (`fetchX`/`createX`/`updateX`/`deleteX`) : leur test se réduirait à vérifier qu'un mock a été appelé avec une URL (faible signal, fragile). La valeur est dans la logique pure, extraite exprès pour être testable sans monter Nuxt — même pattern que la logique pure du backend.
+
+### CI
+
+`frontend.yaml` exécute ces tests à chaque PR touchant `packages/frontend/**` (étape « Unit tests » → `bun run test`), en plus du lint (dont `eslint-plugin-vuejs-accessibility`), de la vérification i18n et du build Docker.
 
 ---
 
@@ -102,7 +130,7 @@ Pas de seuil bloquant (`coverageThreshold`) pour cette itération : une partie s
 
 ## Perspectives (hors scope de #146)
 
-- **Tests unitaires frontend** : aucun en CI actuellement (`frontend.yaml` ne fait que build + vérification i18n + build Docker).
+- **Élargir la couverture frontend** : les composables à logique pure sont testés (voir « Portée unitaire (frontend) ») ; l'extension aux résolutions restantes (ex. sélection de classe des graphiques) est en cours (#186). Les wrappers `$fetch` restent volontairement hors couverture (faible valeur).
 - **Seuil de couverture bloquant** : à fixer après quelques runs CI réels (voir ci-dessus).
 - **Tests de routes systématiques** : convention à trancher en équipe (actuellement incohérente, voir plus haut).
 - **Parcours e2e mutants pour admin/parent** : « inviter un utilisateur » (admin, `/admin/users`) et « déposer une justification d'absence » (parent, `/parent/justifications`) sont des extensions naturelles des 2 nouveaux parcours, non retenues ici pour rester non-mutantes et rapides.
@@ -113,5 +141,6 @@ Pas de seuil bloquant (`coverageThreshold`) pour cette itération : une partie s
 ## Vérification
 
 - `cd packages/backend && NODE_ENV=test bun run test:coverage` → **409 tests, 0 échec**, couverture globale **82.92 % fonctions / 87.33 % lignes** (53 fichiers de test).
+- `cd packages/frontend && bun test app` → **39 tests, 0 échec** (6 fichiers), logique métier des composables.
 - `cd packages/e2e && bunx playwright test --workers=1` → **43 tests, 0 échec** sur 14 fichiers de specs, dont les 4 parcours par rôle exigés par #146.
 - `cd packages/e2e && bunx playwright test admin-walkthrough parent-walkthrough student-walkthrough statistics-walkthrough` (parallèle, 4 workers) → **4 tests, 0 échec**.
