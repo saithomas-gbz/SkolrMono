@@ -34,7 +34,7 @@
 | Développement & qualité logicielle | 6, 8 | Code TypeScript, 409 tests backend + 43 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 |
 | Sécurité, accessibilité & conformité (RGPD) | 5 | JWT/RBAC, anonymisation RGPD (#145), registre, correctif authGuard, `docs/security/audit.md`, `docs/security/accessibility.md` | Bloc 2 : C2.2.3 |
 | Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker, migrations, monitoring Prometheus/Grafana/Sentry, `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2 |
-| Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées, jalons | Bloc 3 : C3.1, C3.2.1, C3.4.1, C3.4.2 |
+| Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées, jalons, ADR ; détail : `docs/soutenance/bloc3-pilotage.md` | Bloc 3 : C3.2.1, C3.2.2, C3.3.1, C3.3.2, C3.4.1, C3.4.2 |
 
 ### Compétences éliminatoires du Bloc 2 — état des preuves
 
