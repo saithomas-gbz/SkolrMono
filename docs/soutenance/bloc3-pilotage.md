@@ -69,7 +69,11 @@ Cadre projet : itérations de **2 semaines**, **jalons** trimestriels alignés s
   un board *SKOLR Roadmap 2026* pour la vue calendaire.
 - **Jalons (milestones)** en 4 paliers — `Fondations (v0.x)`, `v1.0.0 — MVP`,
   `v1.0.1 — Conformité RNCP / sécurité` (adossés aux **tags réels**), `v1.1 — Post-RNCP` — offrant un
-  **burn-up par jalon** (15 / 63 / 7 issues livrées, 4 planifiées).
+  **burn-up par jalon** (15 / 63 / 7 issues livrées, 8 planifiées).
+- **Décomposition en epics (sous-issues natives)** : les gros chantiers du backlog sont structurés en
+  issue parente + sous-issues, avec barre de progression `Sub-issues progress` sur le board — p. ex.
+  `#168 Dette technique & DX` (8 sous-tâches : Docker, CodeQL, Dependabot, backup PostgreSQL, template
+  de PR…) et `#139 i18n` (→ `#78`). Hiérarchie besoin → chantier → tâche.
 
 **Indicateurs de pilotage (triangle délais / qualité / coûts) :**
 
