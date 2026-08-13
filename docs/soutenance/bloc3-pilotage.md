@@ -49,7 +49,7 @@ Cadre projet : itérations de **2 semaines**, **jalons** trimestriels alignés s
 
 **Outils de suivi (réels, en place sur le dépôt) :**
 
-- **GitHub Issues** comme unique backlog (95 issues à ce jour), avec une **taxonomie de labels**
+- **GitHub Issues** comme unique backlog (96 issues à ce jour), avec une **taxonomie de labels**
   structurée et déjà utilisée :
   - `type:` feature / bug / doc / tech
   - `service:` auth / class / grade / planning / message / notification / frontend / gateway
@@ -61,22 +61,32 @@ Cadre projet : itérations de **2 semaines**, **jalons** trimestriels alignés s
   issue et ne documente pas une section de test — un contrôle d'avancement automatisé.
 - **Releases versionnées** (`v1.0.0`, `v1.0.1`) suivant le **Semantic Versioning**, jalonnant les
   livraisons stables.
+- **Board GitHub Projects** *SKOLR Project* (98 items, lié au dépôt) : pipeline de statut en 5 étapes
+  (`Backlog → In progress → In review → Ready → Done`, **87 terminés**) et champs de pilotage
+  **Priority** (P0/P1/P2), **Size**, **Estimate**, **Start date**, **Target date**. Plusieurs **Vues**
+  filtrées du *même* board (avancement par statut, roadmap, dette technique, features,
+  quality-of-life/DX, grooming) donnent chacune un angle de suivi sans fragmenter les données — plus
+  un board *SKOLR Roadmap 2026* pour la vue calendaire.
+- **Jalons (milestones)** en 4 paliers — `Fondations (v0.x)`, `v1.0.0 — MVP`,
+  `v1.0.1 — Conformité RNCP / sécurité` (adossés aux **tags réels**), `v1.1 — Post-RNCP` — offrant un
+  **burn-up par jalon** (15 / 63 / 7 issues livrées, 4 planifiées).
 
 **Indicateurs de pilotage (triangle délais / qualité / coûts) :**
 
 | Dimension | Indicateur | Source |
 |---|---|---|
-| Délais | Issues clôturées par itération / par release | GitHub Issues + milestones |
+| Délais | Issues clôturées par jalon (burn-up) | Milestones + champ *Target date* du board |
 | Qualité | Taux de PR vertes en CI, **couverture de tests** (82,9 % back) | GitHub Actions, `strategy.md` |
-| Qualité | Nombre d'anomalies rouvertes après livraison | Labels `bug` + historique |
-| Coûts | Charge (points/estimations) consommée vs planifiée par sprint | Estimations d'issues |
+| Qualité | Nombre d'anomalies rouvertes après livraison | Labels `type: bug` + historique |
+| Coûts | Charge consommée vs planifiée par palier | Champs *Estimate* / *Size* du board |
 
 **Communication sur les indicateurs :** revue de sprint bi-hebdomadaire, tableau de bord d'avancement
 (issues ouvertes/fermées, burndown), et point de synthèse à chaque jalon trimestriel.
 
-> Piste d'amélioration honnête : le suivi gagnerait à formaliser des **jalons GitHub (milestones)** et
-> un **board Projects** — la taxonomie de labels est là, l'agrégation en indicateurs visuels reste à
-> outiller.
+> Note d'honnêteté : le board Projects et les 4 jalons **existent et sont renseignés**, mais leur
+> **consolidation est en partie rétrospective** (regroupement des issues livrées par palier a
+> posteriori, pas un rituel de mise à jour au jour le jour). La marge de progrès restante tient à la
+> **discipline de remplissage** des champs de charge (*Estimate*, *Target date*), pas à l'outillage.
 
 ---
 
