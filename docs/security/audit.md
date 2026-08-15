@@ -41,13 +41,13 @@
 | **A03** | Injection | ✅ | **Prisma ORM** = requêtes paramétrées, **aucun SQL brut applicatif** (`$queryRaw`/`Unsafe` absents hors client généré) ; validation par **schémas Fastify** en amont des contrôleurs (**R8**) ; **CSP** helmet contre le XSS (**R2**) |
 | **A04** | Insecure Design | ✅ | Rate-limiting anti-abus par conception (**R1**), **rotation + détection de réutilisation** des jetons avec révocation en chaîne (**R10**), moindre privilège par rôle |
 | **A05** | Security Misconfiguration | ✅ | En-têtes de sécurité **helmet** (**R2**), **CORS** en allowlist par env (**R3**), `trustProxy` explicite et sûr par défaut (**R11**) |
-| **A06** | Vulnerable and Outdated Components | ⚠️ Partiel | Dépendances **figées** par lockfile (`bun.lock`) ; **pas encore** d'analyse automatisée de vulnérabilités (`bun audit` / Dependabot). Le processus de mise à jour outillé relève du Bloc 4 (C4.1.1) — cité en perspective |
+| **A06** | Vulnerable and Outdated Components | ✅ | Dépendances **figées** par lockfile (`bun.lock`) et images **épinglées** sur une version exacte ; **Dependabot** hebdomadaire sur 4 écosystèmes (`bun`, `github-actions`, `docker`, `docker-compose`) + alertes de sécurité, **CodeQL** sur chaque PR et sur `main` (#196). Le processus de mise à jour outillé est la preuve du Bloc 4 (C4.1.1) — voir `readme.md` § Dépendances et versions |
 | **A07** | Identification and Authentication Failures | ✅ | Anti-brute-force sur `/auth/*` (**R1**), jetons d'accès **courts (15 min) + révocables** (**R10**), `logout` serveur, reset de mot de passe via jeton à usage unique |
 | **A08** | Software and Data Integrity Failures | ✅ Partiel | Intégrité du jeton par hash (**R10**), build reproductible (lockfile) et images taguées **semver** en CI/CD ; la **signature d'images** (cosign) reste une perspective |
-| **A09** | Security Logging and Monitoring Failures | ✅ | Logs de sécurité **structurés** sur les points sensibles (**R9**) + supervision Prometheus/Grafana. Alerting automatique sur `login.failed`/`reuse_detected` cité en perspective |
+| **A09** | Security Logging and Monitoring Failures | ✅ Partiel | Logs de sécurité **structurés** sur les points sensibles (**R9**) ; **Sentry** (backend + frontend) est le seul outil de supervision présent dans la stack de production. Prometheus/Grafana ne figurent que dans la stack locale (`docker-compose.yml`) et ne scrapent que l'hôte et la base — **aucune métrique applicative**. Alerting automatique sur `login.failed`/`reuse_detected` et supervision applicative en production : perspectives (#168) |
 | **A10** | Server-Side Request Forgery (SSRF) | N/A | Aucune requête sortante déclenchée par une URL fournie par l'utilisateur — surface inexistante sur ce périmètre |
 
-**Bilan** : 8 catégories couvertes activement, 1 partielle (**A06**, complétée au Bloc 4), 1 non applicable justifiée (**A10**). Les 10 catégories sont donc adressées ou explicitement écartées.
+**Bilan** : 7 catégories pleinement couvertes, 2 partielles (**A08**, signature d'images ; **A09**, supervision applicative en production), 1 non applicable justifiée (**A10**). Les 10 catégories sont donc adressées ou explicitement écartées. **A06** est passée de partielle à couverte avec la livraison de Dependabot et CodeQL (#196).
 
 ---
 
