@@ -1,4 +1,4 @@
-FROM oven/bun:latest AS build
+FROM oven/bun:1.3.14 AS build
 WORKDIR /app
 
 COPY package.json bun.lock* ./
@@ -10,7 +10,7 @@ COPY . .
 RUN bun run build 
 
 # Dev stage: source + deps, runs the Nuxt dev server (used by docker-compose).
-FROM oven/bun:latest AS dev
+FROM oven/bun:1.3.14 AS dev
 WORKDIR /app
 
 COPY package.json bun.lock* ./
@@ -22,7 +22,7 @@ COPY . .
 EXPOSE 3003
 CMD ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "3003"]
 
-FROM oven/bun:latest AS production
+FROM oven/bun:1.3.14 AS production
 WORKDIR /app
 
 COPY --from=build /app/.output /app/
