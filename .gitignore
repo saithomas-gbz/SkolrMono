@@ -178,3 +178,9 @@ dist-newstyle/
 .env
 .env.*
 !.env.example
+
+# Outillage d'assistance IA — utile en local, hors livrable (#183).
+# .claude/skills/ reste suivi : ce sont des conventions de code partagées.
+.claude/memory/
+/AGENTS.md
+packages/frontend/CLAUDE.md
