@@ -32,7 +32,7 @@ Documentation OpenAPI unifiée : `http://localhost:3001/docs` (tous les endpoint
 
 ### Prérequis
 
-- Bun (version 1.0 ou supérieure)
+- Bun 1.3.14 (version épinglée dans `package.json > packageManager`)
 - Docker (pour l'environnement de développement)
 - Docker Compose
 
@@ -209,6 +209,25 @@ docker exec skolr_backend bunx prisma db seed
 > hors de ce seed de dev.
 
 Historique des changements : voir [CHANGELOG.md](CHANGELOG.md).
+
+## Dépendances et versions
+
+Les montées de version passent par **Dependabot** (`.github/dependabot.yml`), qui ouvre une PR
+hebdomadaire par écosystème : dépendances Bun du monorepo, actions GitHub, images de base des
+Dockerfiles et services des fichiers compose. Les mineures et correctifs sont regroupés ; les
+majeures arrivent en PR isolées pour relecture.
+
+Toutes les images sont épinglées sur une **version exacte** (pas de `latest`) afin que les builds
+soient reproductibles et que chaque montée soit tracée par une PR.
+
+> **Point de vigilance — version de Bun.** Elle est déclarée à deux endroits :
+> `package.json > packageManager` (lu par `oven-sh/setup-bun` dans les 4 workflows CI) et le
+> `FROM oven/bun:X.Y.Z` des deux Dockerfiles. Dependabot ne met à jour que le second. Sur une PR
+> qui monte `oven/bun`, aligner `packageManager` dans la même PR, sinon la CI et les images
+> repartent en versions divergentes.
+
+Les images `ghcr.io/saithomas-gbz/skolr-*` ne sont pas gérées par Dependabot : elles suivent
+`${SKOLR_VERSION}` et le workflow de release décrit plus haut.
 
 ## Contribution
 

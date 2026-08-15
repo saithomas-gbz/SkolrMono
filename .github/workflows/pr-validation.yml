@@ -6,6 +6,9 @@ on:
 
 jobs:
   validate-pr:
+    # Les PR de Dependabot n'ont pas de corps normalise (ni issue liee) :
+    # sans cette garde, chacune echouerait sur les trois controles ci-dessous.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Check for linked issue
