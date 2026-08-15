@@ -14,14 +14,6 @@ jobs:
     name: Analyse ${{ matrix.language }}
     runs-on: ubuntu-latest
 
-    # Le code scanning sur un depot PRIVE exige GitHub Advanced Security : sans
-    # licence, l'upload SARIF renvoie 403 et le job echoue a chaque PR. Cette
-    # garde le neutralise tant que le depot est prive (cf. #183, passage en
-    # public prevu) et l'active automatiquement le jour ou il devient public.
-    # A RETIRER une fois le depot public ou GHAS active, sinon les runs
-    # planifies restent skippes.
-    if: github.event.repository.visibility == 'public'
-
     permissions:
       security-events: write
       actions: read
