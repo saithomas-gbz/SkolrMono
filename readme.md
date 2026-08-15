@@ -188,6 +188,11 @@ Les tags de pré-release (`v1.0.0-rc.1`) produisent une pré-release et **ne** m
 SKOLR_VERSION=1.0.0 docker compose -f docker-compose.release.yml up -d
 ```
 
+Cette stack exige un `.env` renseigné : `POSTGRES_PASSWORD`, `JWT_SECRET`,
+`MINIO_ROOT_PASSWORD` et `S3_SECRET_ACCESS_KEY` n'ont **pas** de valeur par défaut.
+Docker Compose interrompt le démarrage avec un message explicite si l'une manque, plutôt
+que de laisser tourner une production avec un secret lisible dans le dépôt.
+
 ### Amorçage d'un déploiement neuf
 
 Au démarrage, le backend applique uniquement les migrations Prisma (`prisma migrate deploy`).
