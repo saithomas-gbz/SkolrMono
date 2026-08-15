@@ -1,0 +1,49 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Analyse complete hebdomadaire, meme sans commit (les regles CodeQL evoluent).
+    - cron: '17 4 * * 1'
+
+jobs:
+  analyze:
+    name: Analyse ${{ matrix.language }}
+    runs-on: ubuntu-latest
+
+    # Le code scanning sur un depot PRIVE exige GitHub Advanced Security : sans
+    # licence, l'upload SARIF renvoie 403 et le job echoue a chaque PR. Cette
+    # garde le neutralise tant que le depot est prive (cf. #183, passage en
+    # public prevu) et l'active automatiquement le jour ou il devient public.
+    # A RETIRER une fois le depot public ou GHAS active, sinon les runs
+    # planifies restent skippes.
+    if: github.event.repository.visibility == 'public'
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ "javascript-typescript" ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # JS/TS n'a pas besoin d'etape de compilation : CodeQL lit les sources.
+          build-mode: none
+          queries: security-and-quality
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
