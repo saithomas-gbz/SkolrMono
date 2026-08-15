@@ -29,7 +29,7 @@
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
-    "@primeuix/themes": "^2.0.3",
+    "@primeuix/themes": "^3.0.0",
     "@types/js-yaml": "^4.0.9",
     "h3": "^1.15.11",
     "js-yaml": "^4.1.1"
