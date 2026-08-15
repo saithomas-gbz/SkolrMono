@@ -1,0 +1,85 @@
+version: 2
+
+updates:
+  # Dependances JS/TS du monorepo.
+  # Bun workspaces : un seul bun.lock a la racine couvre packages/backend,
+  # packages/frontend et packages/e2e, donc une seule entree a la racine suffit.
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      # Regroupe les montees de version sans rupture pour limiter le bruit.
+      # Les majeures restent en PR individuelles, pour relecture cas par cas.
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Actions utilisees par les 6 workflows CI/CD.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Images de base des deux Dockerfiles (oven/bun, epinglee sur une version exacte).
+  #
+  # ATTENTION : la version de Bun vit a deux endroits.
+  #   - les Dockerfiles, mis a jour automatiquement par ce bloc ;
+  #   - package.json > packageManager, lu par oven-sh/setup-bun en CI, que
+  #     Dependabot ne touche pas.
+  # Sur une PR qui monte oven/bun, aligner packageManager dans la meme PR, sinon
+  # la CI et les images repartent en versions divergentes.
+  - package-ecosystem: "docker"
+    directories:
+      - "/packages/backend"
+      - "/packages/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Services des 3 fichiers compose (postgres, grafana, prometheus, minio...).
+  # Le fetcher docker_compose matche aussi les variantes .dev.yml et .release.yml.
+  # Les images ghcr.io/.../skolr-* sont pilotees par ${SKOLR_VERSION} et le
+  # workflow release.yml : Dependabot ne les touche pas.
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore"
+      include: "scope"
