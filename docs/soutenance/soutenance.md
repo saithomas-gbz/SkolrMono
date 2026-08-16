@@ -31,10 +31,10 @@
 | Thème de compétence | Slides | Preuves dans le projet | Compétences RNCP |
 |---------------------|--------|------------------------|-------------------|
 | Analyse du besoin & conception / architecture | 2, 3, 4 | `docs/architecture/architecture.md` (C4, ADR-001/002), `CONTEXT.md` | Bloc 1 : C1.1.1, C1.1.2, C1.2.2, C1.3.2, C1.5, C1.6 · Bloc 2 : C2.2.1 |
-| Développement & qualité logicielle | 6, 8 | Code TypeScript, 409 tests backend + 43 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 |
+| Développement & qualité logicielle | 6, 8 | Code TypeScript, 409 tests backend + 43 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md`, `docs/tests/plan-correction-bogues.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 · Bloc 4 : C4.2.1 |
 | Sécurité, accessibilité & conformité (RGPD) | 5 | JWT/RBAC, anonymisation RGPD (#145), registre, correctif authGuard, `docs/security/audit.md`, `docs/security/accessibility.md` | Bloc 2 : C2.2.3 |
-| Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker/GHCR, migrations Prisma, Dependabot + CodeQL (#196), Sentry + Prometheus/Grafana en production, `docs/ops/supervision.md` (métriques, seuils, conduite à tenir par alerte), `docs/ops/backup-restore.md` (RPO/RTO, runbook, journal des tests de restauration), `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2 |
-| Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées (92 % des PR mergées portent un `closes #`), boards GitHub, jalons, releases taguées, protection de `main` | Bloc 3 : C3.2.1, C3.4.1, C3.4.2 — couverture complète des 6 compétences (dont **C3.3**) à produire dans `docs/soutenance/bloc3-pilotage.md` (#190) |
+| Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker/GHCR, migrations Prisma, Dependabot + CodeQL (#196), Sentry + Prometheus/Grafana en production, `docs/ops/supervision.md` (métriques, seuils, conduite à tenir par alerte), `docs/ops/backup-restore.md` (RPO/RTO, runbook, journal des tests de restauration), `docs/user-guide.md` (mise à jour, rollback), `CHANGELOG.md`, releases GHCR v1.0.0/v1.0.1, `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2, C4.2.2, C4.3.2 |
+| Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées (92 % des PR mergées portent un `closes #`), boards GitHub, jalons, releases taguées, protection de `main`, epic de dette technique #168 | Bloc 3 : C3.2.1, C3.4.1, C3.4.2 — couverture complète des 6 compétences (dont **C3.3**) à produire dans le support Bloc 3 (#190) · Bloc 4 : C4.3.1 |
 
 ### Compétences éliminatoires du Bloc 2 — état des preuves
 
@@ -46,6 +46,22 @@ Les 4 compétences éliminatoires de "Concevoir et développer des applications 
 | C2.2.2 — Harnais de tests unitaires | `docs/tests/strategy.md` (409 tests backend, 82,9 %/87,3 % couverture) | ✅ Couvert (frontend : voir #158) |
 | C2.2.3 — Sécurité & accessibilité | `docs/security/audit.md` + `docs/security/accessibility.md` | ✅ Couvert (#156) |
 | C2.3.1 — Cahier de recettes | `docs/tests/cahier-de-recettes.md` | ✅ Couvert (#157) |
+
+### Bloc 4 — les 7 compétences et leurs preuves
+
+"Maintenir l'application logicielle en condition opérationnelle" couvre **7 compétences**, réparties dans le tableau ci-dessus sur trois thèmes (qualité, déploiement/exploitation, pilotage). Le livrable du bloc est un document de synthèse séparé ; le tableau ci-dessous est son index côté dépôt, pour retrouver rapidement l'artefact qui porte chaque preuve.
+
+| Compétence | Preuve principale | Statut |
+|---|---|---|
+| C4.1.1 — Mises à jour des dépendances | `.github/dependabot.yml` (4 écosystèmes : `bun`, `github-actions`, `docker`, `docker-compose`), `.github/workflows/codeql.yml`, `clean.yml` (Knip), `readme.md` § Dépendances et versions | ✅ Couvert (#192, #193) |
+| C4.1.2 — Supervision et alerte | `docs/ops/supervision.md`, métriques applicatives (`packages/backend/src/shared/metrics.ts`), `prometheus/alerts.yml` (7 règles), tableaux de bord Grafana provisionnés, Sentry | ✅ Couvert (#218) — l'**acheminement** des alertes (Alertmanager) reste à faire, cf. `docs/security/audit.md` A09 |
+| C4.2.1 — Consigner les anomalies | `.github/ISSUE_TEMPLATE/bug.md`, labels `type:`/`service:`/`priority:`, `docs/tests/plan-correction-bogues.md` (6 anomalies tracées), boards GitHub | ✅ Couvert (#159) |
+| C4.2.2 — Créer et déployer un correctif | v1.0.1 (erreur 502 en environnement release, #176) : chaîne issue → PR → tag → release GHCR ; `docs/user-guide.md` § rollback, avec la mise en garde sur les migrations Prisma | ✅ Couvert |
+| C4.3.1 — Axes d'amélioration | Epic #168 (9 sous-issues), jalon v1.1 Post-RNCP, priorisation P0/P1/P2 + Size sur les boards. Deux axes identifiés puis **livrés** : CodeQL (#193) et sauvegardes PostgreSQL (#194) | ✅ Couvert |
+| C4.3.2 — Journal des versions | `CHANGELOG.md` (Keep a Changelog + SemVer), releases GitHub v1.0.0/v1.0.1, `.github/workflows/release.yml` (pré-releases séparées de `latest`) | ✅ Couvert |
+| C4.3.3 — Collaboration avec le support | Aucun artefact réel : le projet est développé en solo, il n'y a pas d'équipe de support. Traité comme mise en situation explicite dans le document de synthèse | ⚠️ Mise en situation assumée |
+
+La continuité de service n'est pas une compétence du bloc mais conditionne C4.1.2 et C4.2.2 : `docs/ops/backup-restore.md` porte les objectifs RPO 24 h / RTO 1 h, le runbook de restauration et le journal des tests (#194). L'alerte `SauvegardeEnRetard` de `prometheus/alerts.yml` surveille que ces sauvegardes tournent réellement.
 
 ---
 
