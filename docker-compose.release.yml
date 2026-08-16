@@ -1,11 +1,12 @@
 # Tire les images publiées depuis GHCR (tag piloté par SKOLR_VERSION, défaut: latest) :
 #   SKOLR_VERSION=1.0.0 docker compose -f docker-compose.release.yml up -d
 #
-# Cette stack est celle qui tourne en production : les quatre secrets
-# (POSTGRES_PASSWORD, JWT_SECRET, MINIO_ROOT_PASSWORD, S3_SECRET_ACCESS_KEY)
-# n'ont volontairement pas de valeur par défaut. La substitution `${VAR:?...}`
-# interrompt le démarrage avec un message explicite si l'un d'eux manque,
-# plutôt que de laisser démarrer une prod avec un secret connu du dépôt.
+# Cette stack est celle qui tourne en production : les cinq secrets
+# (POSTGRES_PASSWORD, JWT_SECRET, MINIO_ROOT_PASSWORD, S3_SECRET_ACCESS_KEY,
+# BACKUP_ENCRYPTION_KEY) n'ont volontairement pas de valeur par défaut. La
+# substitution `${VAR:?...}` interrompt le démarrage avec un message explicite
+# si l'un d'eux manque, plutôt que de laisser démarrer une prod avec un secret
+# connu du dépôt.
 services:
   postgres:
     image: postgres:15-alpine
@@ -22,6 +23,34 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - skolr_network
+
+  # Sauvegardes chiffrées de la base (#194). Image Debian et non -alpine :
+  # les scripts chiffrent avec `openssl enc`, absent de postgres:15-alpine.
+  # Les archives sont écrites dans le volume `backup_data`, qui vit sur le même
+  # hôte que `postgres_data` : la copie hors site est une étape à part entière
+  # du runbook, voir docs/ops/backup-restore.md.
+  db-backup:
+    image: postgres:15
+    container_name: skolr_db_backup
+    restart: unless-stopped
+    entrypoint: ["/opt/backup/backup-loop.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est requis (voir .env.example)}
+      PGDATABASE: ${POSTGRES_DB:-skolr}
+      BACKUP_DIR: /backups
+      BACKUP_ENCRYPTION_KEY: ${BACKUP_ENCRYPTION_KEY:?BACKUP_ENCRYPTION_KEY est requis (voir .env.example)}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./scripts/backup:/opt/backup:ro
+      - backup_data:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - skolr_network
 
@@ -107,6 +136,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  backup_data:
 
 networks:
   skolr_network:
