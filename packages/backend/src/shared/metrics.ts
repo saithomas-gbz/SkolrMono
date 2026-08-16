@@ -34,7 +34,7 @@ export const registry = new client.Registry();
  * donne le trafic, la ventilation par `status_code` donne le taux d'erreur, les
  * buckets donnent les quantiles de latence. Un compteur séparé ferait doublon.
  */
-export const httpRequestDuration = new client.Histogram({
+const httpRequestDuration = new client.Histogram({
   name: 'skolr_http_request_duration_seconds',
   help: "Durée des requêtes HTTP traitées par le backend, par route et code de statut",
   labelNames: ['method', 'route', 'status_code'] as const,
