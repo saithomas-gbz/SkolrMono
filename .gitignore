@@ -120,6 +120,8 @@ generated/
 
 # Database
 data/
+# Archives produites par scripts/backup/ en usage local (#194)
+/backups/
 *.sqlite
 *.sqlite-journal
 *.db

@@ -10,7 +10,8 @@ SkolrMono/
 │   ├── backend/           # Monolithe modulaire (Fastify + Prisma, tous les domaines)
 │   │   └── src/modules/   #   auth, class, grade, planning, message, notification, parent, billing
 │   └── frontend/          # Interface Nuxt + PrimeVue
-├── scripts/               # Orchestration DB (migrate/seed) + fixtures de dev partagées
+├── scripts/               # Orchestration DB (migrate/seed), fixtures de dev, sauvegardes
+│   └── backup/            #   sauvegarde chiffrée + restauration PostgreSQL
 ├── docker-compose.yml     # Stack complète (backend, postgres, minio, monitoring, frontend)
 ├── docker-compose.dev.yml # Variante dev minimale (backend + postgres)
 └── readme.md              # Documentation principale
@@ -189,9 +190,14 @@ SKOLR_VERSION=1.0.0 docker compose -f docker-compose.release.yml up -d
 ```
 
 Cette stack exige un `.env` renseigné : `POSTGRES_PASSWORD`, `JWT_SECRET`,
-`MINIO_ROOT_PASSWORD` et `S3_SECRET_ACCESS_KEY` n'ont **pas** de valeur par défaut.
-Docker Compose interrompt le démarrage avec un message explicite si l'une manque, plutôt
-que de laisser tourner une production avec un secret lisible dans le dépôt.
+`MINIO_ROOT_PASSWORD`, `S3_SECRET_ACCESS_KEY` et `BACKUP_ENCRYPTION_KEY` n'ont **pas** de
+valeur par défaut. Docker Compose interrompt le démarrage avec un message explicite si
+l'une manque, plutôt que de laisser tourner une production avec un secret lisible dans le
+dépôt.
+
+Elle embarque aussi un service `db-backup` qui sauvegarde PostgreSQL de façon chiffrée et
+purge les archives périmées. Objectifs de reprise, runbook de restauration et procédure de
+test : [docs/ops/backup-restore.md](docs/ops/backup-restore.md).
 
 ### Amorçage d'un déploiement neuf
 

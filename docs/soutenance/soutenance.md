@@ -15,7 +15,7 @@
 | 4 | Histoire d'architecture | Refacto microservices + RabbitMQ → monolithe modulaire (ADR-001/002) : *pourquoi*, conséquences | 3 min |
 | 5 | Sécurité & RGPD | JWT + RBAC + bcrypt + TLS ; droits RGPD opérationnels (export / effacement), registre, DPO | 3 min |
 | 6 | Tests & qualité | 409 tests backend + 43 e2e (Playwright), cahier de recettes, ESLint/Knip/Prettier/Husky, i18n:check | 2 min |
-| 7 | CI/CD & déploiement | GitHub Actions (backend/frontend/e2e/CodeQL), Docker + GHCR, migrations Prisma, Dependabot ; supervision **Sentry** en production, Prometheus/Grafana en local sur l'infra et la base | 2 min |
+| 7 | CI/CD & déploiement | GitHub Actions (backend/frontend/e2e/CodeQL), Docker + GHCR, migrations Prisma, Dependabot ; supervision **Sentry** en production, Prometheus/Grafana en local sur l'infra et la base ; sauvegardes PostgreSQL chiffrées avec **RPO 24 h / RTO 1 h** et restauration testée (#194) | 2 min |
 | 8 | Démo live | Parcours par rôle + focus RGPD (voir §3) | 6 min |
 | 9 | Perspectives | Serveur MCP / IA, i18n (EN), extraction éventuelle d'un module, scalabilité | 2 min |
 | 10 | Conclusion & questions | Bilan compétences, ouverture | 1 min |
@@ -33,7 +33,7 @@
 | Analyse du besoin & conception / architecture | 2, 3, 4 | `docs/architecture/architecture.md` (C4, ADR-001/002), `CONTEXT.md` | Bloc 1 : C1.1.1, C1.1.2, C1.2.2, C1.3.2, C1.5, C1.6 · Bloc 2 : C2.2.1 |
 | Développement & qualité logicielle | 6, 8 | Code TypeScript, 409 tests backend + 43 e2e, ESLint/Knip/Prettier, `docs/tests/strategy.md`, `docs/tests/cahier-de-recettes.md` | Bloc 2 : C2.1.2, C2.2.2, C2.3.1, C2.3.2 |
 | Sécurité, accessibilité & conformité (RGPD) | 5 | JWT/RBAC, anonymisation RGPD (#145), registre, correctif authGuard, `docs/security/audit.md`, `docs/security/accessibility.md` | Bloc 2 : C2.2.3 |
-| Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker/GHCR, migrations Prisma, Dependabot + CodeQL (#196), Sentry en production, `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2 |
+| Déploiement, CI/CD & exploitation | 7 | GitHub Actions, Docker/GHCR, migrations Prisma, Dependabot + CodeQL (#196), Sentry en production, `docs/ops/backup-restore.md` (RPO/RTO, runbook, journal des tests de restauration), `readme.md` | Bloc 2 : C2.1.1, C2.2.4, C2.4.1 · Bloc 4 : C4.1.1, C4.1.2 |
 | Pilotage / méthode | 1, 9, 10 | Agile/Scrum, issues & PR liées (92 % des PR mergées portent un `closes #`), boards GitHub, jalons, releases taguées, protection de `main` | Bloc 3 : C3.2.1, C3.4.1, C3.4.2 — couverture complète des 6 compétences (dont **C3.3**) à produire dans `docs/soutenance/bloc3-pilotage.md` (#190) |
 
 ### Compétences éliminatoires du Bloc 2 — état des preuves

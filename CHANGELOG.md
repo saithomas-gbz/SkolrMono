@@ -7,6 +7,14 @@ et ce projet suit le [Semantic Versioning](https://semver.org/lang/fr/).
 
 ## [Unreleased]
 
+### Added
+- Exploitation : stratégie de sauvegarde et de restauration PostgreSQL. Service
+  `db-backup` dans `docker-compose.release.yml` (dump `pg_dump -Fc` chiffré
+  AES-256, empreinte SHA-256, rétention configurable), scripts
+  `scripts/backup/` incluant un mode `--check` qui valide une archive dans une
+  base jetable, et `docs/ops/backup-restore.md` (RPO 24 h / RTO 1 h, runbook
+  d'incident, journal des tests de restauration) (#194).
+
 ## [1.0.1] - 2026-07-22
 
 ### Fixed
