@@ -1,0 +1,203 @@
+{
+  "title": "Skolr - Backend applicatif",
+  "uid": "skolr-backend",
+  "version": 1,
+  "schemaVersion": 36,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Backend UP",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "up{job=\"backend\"}", "legendFormat": "UP" }],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "red", "value": 0 },
+            { "color": "green", "value": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Taux d'erreur serveur (5m)",
+      "description": "Part des requêtes répondues en 5xx. Seuil d'alerte : 5 % pendant 5 min.",
+      "gridPos": { "x": 4, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(skolr_http_request_duration_seconds_count{status_code=~\"5..\"}[5m])) / sum(rate(skolr_http_request_duration_seconds_count[5m]))",
+          "legendFormat": "5xx"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.01 },
+              { "color": "red", "value": 0.05 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Latence p95 (5m)",
+      "description": "Seuil d'alerte : 1 s pendant 10 min.",
+      "gridPos": { "x": 9, "y": 0, "w": 5, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(skolr_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Trafic (req/s)",
+      "gridPos": { "x": 14, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(skolr_http_request_duration_seconds_count[5m]))",
+          "legendFormat": "req/s"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 }, "overrides": [] }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Âge de la dernière sauvegarde",
+      "description": "Alerte au-delà de 26 h. Voir docs/ops/backup-restore.md.",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "time() - skolr_backup_last_success_timestamp_seconds",
+          "legendFormat": "Âge"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 86400 },
+              { "color": "red", "value": 93600 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Latence par quantile",
+      "description": "p50, p95 et p99 agrégés sur toutes les routes.",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(skolr_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(skolr_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(skolr_http_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Trafic par code de statut",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (status_code) (rate(skolr_http_request_duration_seconds_count[5m]))",
+          "legendFormat": "{{status_code}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Routes les plus lentes (p95)",
+      "description": "Identifie la route à instruire dans Sentry quand la latence globale se dégrade.",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "topk(5, histogram_quantile(0.95, sum by (le, route) (rate(skolr_http_request_duration_seconds_bucket[5m]))))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Santé du processus",
+      "description": "Mémoire résidente et retard de la boucle d'événements : distingue une application lente d'une machine saturée.",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"backend\"}",
+          "legendFormat": "Mémoire résidente"
+        },
+        {
+          "expr": "nodejs_eventloop_lag_p99_seconds{job=\"backend\"}",
+          "legendFormat": "Lag boucle d'événements p99"
+        }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    }
+  ]
+}

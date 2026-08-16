@@ -1,0 +1,114 @@
+# Règles d'alerte SkolrMono (#218).
+#
+# Chaque alerte porte un `runbook` : la conduite à tenir, pas seulement le
+# constat. Une alerte sans conduite à tenir finit ignorée.
+# Détail et seuils justifiés : docs/ops/supervision.md
+groups:
+  - name: disponibilite
+    rules:
+      - alert: BackendIndisponible
+        expr: up{job="backend"} == 0
+        for: 2m
+        labels:
+          severity: critique
+        annotations:
+          summary: "Le backend ne répond plus au scrape depuis 2 min"
+          runbook: >-
+            `docker compose -f docker-compose.release.yml ps` puis
+            `logs backend`. Si le conteneur redémarre en boucle, vérifier
+            DATABASE_URL et l'accès à Postgres. C'est l'alerte qui conditionne
+            le RTO d'1 h annoncé dans docs/ops/backup-restore.md.
+
+      - alert: PostgresIndisponible
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critique
+        annotations:
+          summary: "PostgreSQL est injoignable depuis l'exporter"
+          runbook: >-
+            Vérifier le conteneur postgres et l'espace disque. Ne pas restaurer
+            une sauvegarde avant d'avoir écarté une simple panne de service :
+            une restauration écrase des données peut-être intactes.
+
+  - name: qualite_de_service
+    rules:
+      - alert: TauxErreurServeurEleve
+        expr: >-
+          sum(rate(skolr_http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+          /
+          sum(rate(skolr_http_request_duration_seconds_count[5m]))
+          > 0.05
+        for: 5m
+        labels:
+          severity: majeure
+        annotations:
+          summary: "Plus de 5 % des requêtes renvoient une erreur serveur"
+          runbook: >-
+            Identifier la route fautive en ventilant par `route`, puis croiser
+            avec Sentry qui porte la trace et la pile. Prometheus dit *combien*,
+            Sentry dit *pourquoi*.
+
+      - alert: LatenceDegradee
+        expr: >-
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(skolr_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: mineure
+        annotations:
+          summary: "Latence au 95e centile au-dessus d'une seconde"
+          runbook: >-
+            Comparer avec `nodejs_eventloop_lag_p99_seconds` (saturation du
+            processus) et les métriques postgres-exporter (requêtes lentes).
+            Une latence haute sans lag de boucle d'événements pointe la base.
+
+  - name: sauvegardes
+    rules:
+      # Une sauvegarde qui a cessé de tourner est silencieuse par nature : rien
+      # ne casse, jusqu'au jour où il faut restaurer. C'est précisément ce que
+      # cette alerte rend bruyant (#194).
+      - alert: SauvegardeEnRetard
+        expr: time() - skolr_backup_last_success_timestamp_seconds > 93600
+        for: 15m
+        labels:
+          severity: majeure
+        annotations:
+          summary: "Aucune sauvegarde réussie depuis plus de 26 h"
+          runbook: >-
+            `docker logs skolr_db_backup`. Le service journalise chaque échec et
+            réessaie à l'intervalle suivant sans s'arrêter : une alerte ici
+            signifie que l'échec dure. Tant qu'elle est active, le RPO de 24 h
+            n'est plus tenu.
+
+      - alert: MetriquesSauvegardeAbsentes
+        expr: absent(skolr_backup_last_success_timestamp_seconds)
+        for: 1h
+        labels:
+          severity: majeure
+        annotations:
+          summary: "Le service de sauvegarde n'a jamais publié de métrique"
+          runbook: >-
+            Vérifier que le service db-backup tourne et que node-exporter lit
+            bien `/backups/metrics`. Sans cette métrique, l'alerte
+            SauvegardeEnRetard ne peut pas se déclencher — l'absence de signal
+            ne doit jamais passer pour un signal bon.
+
+  - name: ressources
+    rules:
+      - alert: EspaceDisqueFaible
+        expr: >-
+          node_filesystem_avail_bytes{mountpoint="/"}
+          / node_filesystem_size_bytes{mountpoint="/"}
+          < 0.10
+        for: 10m
+        labels:
+          severity: majeure
+        annotations:
+          summary: "Moins de 10 % d'espace disque disponible sur la racine"
+          runbook: >-
+            Le disque plein arrête Postgres *et* les sauvegardes en même temps.
+            Purger les images Docker inutilisées, puis vérifier la rétention des
+            archives (`BACKUP_RETENTION_DAYS`).

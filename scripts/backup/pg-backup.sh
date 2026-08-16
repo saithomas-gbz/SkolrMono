@@ -51,3 +51,27 @@ find "$BACKUP_DIR" -maxdepth 1 -type f \
 
 retained="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name "${ARCHIVE_PREFIX}*${ARCHIVE_SUFFIX}" | wc -l)"
 log "$retained archive(s) conservée(s) dans $BACKUP_DIR"
+
+# Métriques pour le collecteur textfile de node-exporter (#218). Écrites en
+# toute fin de script, donc seulement en cas de succès complet : c'est
+# l'horodatage de la dernière sauvegarde *réussie* que l'alerte surveille, pas
+# celui de la dernière tentative.
+metrics_dir="$BACKUP_DIR/metrics"
+mkdir -p "$metrics_dir"
+cat >"$metrics_dir/skolr_backup.prom.tmp" <<EOF
+# HELP skolr_backup_last_success_timestamp_seconds Horodatage Unix de la dernière sauvegarde réussie.
+# TYPE skolr_backup_last_success_timestamp_seconds gauge
+skolr_backup_last_success_timestamp_seconds $(date +%s)
+# HELP skolr_backup_last_duration_seconds Durée de la dernière sauvegarde réussie.
+# TYPE skolr_backup_last_duration_seconds gauge
+skolr_backup_last_duration_seconds $(( $(date +%s) - started_at ))
+# HELP skolr_backup_last_size_bytes Taille de la dernière archive produite.
+# TYPE skolr_backup_last_size_bytes gauge
+skolr_backup_last_size_bytes $(stat -c %s "$archive")
+# HELP skolr_backup_archives_total Nombre d'archives conservées après purge.
+# TYPE skolr_backup_archives_total gauge
+skolr_backup_archives_total $retained
+EOF
+# Renommage atomique : node-exporter peut lire le répertoire à tout instant, il
+# ne doit jamais tomber sur un fichier à moitié écrit (et il ignore le .tmp).
+mv "$metrics_dir/skolr_backup.prom.tmp" "$metrics_dir/skolr_backup.prom"

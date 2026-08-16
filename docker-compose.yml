@@ -63,6 +63,13 @@ services:
       # --- Observabilité ---
       - SENTRY_DSN=${SENTRY_DSN:-}
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
+      # Métriques Prometheus sur un port dédié, volontairement absent de `ports:`
+      # ci-dessous : joignable depuis le réseau Docker (Prometheus), jamais
+      # depuis l'hôte. `0.0.0.0` est nécessaire pour traverser le namespace
+      # réseau du conteneur ; le défaut du code reste `127.0.0.1` (#218).
+      - METRICS_ENABLED=${METRICS_ENABLED:-true}
+      - METRICS_HOST=0.0.0.0
+      - METRICS_PORT=${METRICS_PORT:-9464}
     ports:
       - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
     volumes:
@@ -83,6 +90,9 @@ services:
       start_period: 20s
     networks:
       - skolr_network
+      # Prometheus vit sur `monitoring` : sans ce second rattachement, il ne
+      # peut pas résoudre `backend` pour scruter ses métriques (#218).
+      - monitoring
   frontend:
     build:
       context: ./packages/frontend
@@ -133,6 +143,9 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      # `rule_files` de prometheus.yml pointe dessus : sans ce montage,
+      # Prometheus refuse de démarrer (#218).
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

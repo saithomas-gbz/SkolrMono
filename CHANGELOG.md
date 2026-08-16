@@ -14,6 +14,13 @@ et ce projet suit le [Semantic Versioning](https://semver.org/lang/fr/).
   `scripts/backup/` incluant un mode `--check` qui valide une archive dans une
   base jetable, et `docs/ops/backup-restore.md` (RPO 24 h / RTO 1 h, runbook
   d'incident, journal des tests de restauration) (#194).
+- Exploitation : supervision applicative en production. Le backend expose ses
+  métriques Prometheus (latence, trafic et taux d'erreur par route, santé du
+  processus) sur un port dédié non publié ; `docker-compose.release.yml`
+  embarque Prometheus, Grafana et les exporters ; 7 règles d'alerte couvrent
+  l'indisponibilité, le taux de 5xx, la latence, l'espace disque et le retard
+  des sauvegardes ; tableau de bord applicatif provisionné et
+  `docs/ops/supervision.md` (métriques, seuils, conduite à tenir) (#218).
 
 ## [1.0.1] - 2026-07-22
 

@@ -199,6 +199,11 @@ Elle embarque aussi un service `db-backup` qui sauvegarde PostgreSQL de façon c
 purge les archives périmées. Objectifs de reprise, runbook de restauration et procédure de
 test : [docs/ops/backup-restore.md](docs/ops/backup-restore.md).
 
+Enfin, elle embarque la supervision (Prometheus, Grafana, exporters). Grafana est publié sur
+`${GRAFANA_PORT}` ; Prometheus n'est lié qu'à `127.0.0.1` — il n'a pas d'authentification et
+s'atteint par tunnel SSH. Métriques collectées, seuils d'alerte et conduite à tenir :
+[docs/ops/supervision.md](docs/ops/supervision.md).
+
 ### Amorçage d'un déploiement neuf
 
 Au démarrage, le backend applique uniquement les migrations Prisma (`prisma migrate deploy`).

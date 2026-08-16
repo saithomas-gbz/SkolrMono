@@ -8,6 +8,7 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import dotenv from 'dotenv';
 import { testDatabaseConnection } from './shared/db';
+import { collectHttpMetrics, startMetricsServer } from './shared/metrics';
 import { modules } from './modules';
 
 dotenv.config();
@@ -42,6 +43,10 @@ const TRUST_PROXY = process.env.TRUST_PROXY === 'true';
 
 export async function buildApp() {
   const app = Fastify({ logger: true, trustProxy: TRUST_PROXY });
+
+  // Posé sur l'instance racine avant l'enregistrement des modules : le hook
+  // couvre ainsi toutes les routes montées ensuite (#218).
+  collectHttpMetrics(app);
 
   // En-têtes de sécurité (helmet) : HSTS, X-Content-Type-Options, frameguard, CSP…
   // La CSP autorise l'inline nécessaire à Swagger UI (`/docs`) tout en verrouillant
@@ -122,6 +127,11 @@ const start = async () => {
     });
 
     await testDatabaseConnection();
+
+    const metricsAddress = await startMetricsServer();
+    if (metricsAddress) {
+      app.log.info(`Metrics exposed on ${metricsAddress}/metrics`);
+    }
 
     app.log.info(`Backend running on ${address}`);
   } catch (err) {
