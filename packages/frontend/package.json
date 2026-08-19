@@ -19,17 +19,17 @@
     "@fullcalendar/timegrid": "^6.1.20",
     "@fullcalendar/vue3": "^6.1.20",
     "@nuxtjs/i18n": "^10.4.0",
-    "@primevue/nuxt-module": "^4.5.5",
+    "@primevue/nuxt-module": "^5.0.1",
     "@sentry/nuxt": "^10.56.0",
     "chart.js": "^4.5.1",
     "nuxt": "^4.4.2",
     "primeicons": "^7.0.0",
-    "primevue": "^4.5.5",
+    "primevue": "^5.0.0",
     "vue": "^3.5.33",
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
-    "@primeuix/themes": "^2.0.3",
+    "@primeuix/themes": "^3.0.0",
     "@types/js-yaml": "^4.0.9",
     "h3": "^1.15.11",
     "js-yaml": "^4.1.1"
