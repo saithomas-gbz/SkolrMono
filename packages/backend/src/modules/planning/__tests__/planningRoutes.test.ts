@@ -9,7 +9,7 @@ import fastifyJwt from '@fastify/jwt';
 
 mock.module('../../../shared/db', () => ({
   default: {
-    session: { findUnique: mock(), create: mock(), update: mock(), delete: mock() },
+    session: { findUnique: mock(), findFirst: mock(), create: mock(), update: mock(), delete: mock() },
     absence: { findUnique: mock(), create: mock(), update: mock(), delete: mock() },
   },
 }));
@@ -30,7 +30,7 @@ mock.module('../lib/parentServiceClient', () => ({
 const sessionRoutes = (await import('../routes/sessionRoutes')).default;
 const absenceRoutes = (await import('../routes/absenceRoutes')).default;
 const db = (await import('../../../shared/db')).default as unknown as {
-  session: Record<'findUnique' | 'create' | 'update' | 'delete', ReturnType<typeof mock>>;
+  session: Record<'findUnique' | 'findFirst' | 'create' | 'update' | 'delete', ReturnType<typeof mock>>;
   absence: Record<'findUnique' | 'create' | 'update' | 'delete', ReturnType<typeof mock>>;
 };
 const { getClassIdsForTeacher } = (await import('../lib/classServiceClient')) as unknown as {
@@ -104,6 +104,42 @@ const sampleAbsence = {
 };
 
 const createAbsenceBody = { sessionId: '11111111-1111-4111-8111-111111111111', userId: '77777777-7777-4777-8777-777777777777', role: 'STUDENT' };
+
+type SessionFixture = { id: string; classId: string; teacherId: string; startAt: string; endAt: string };
+
+/**
+ * `db.session.findFirst` est mocké : sans ça, un `mockResolvedValue` unique ne
+ * pourrait pas distinguer la requête "conflit enseignant" de la requête
+ * "conflit classe" (#245 fait deux requêtes séparées, cf. sessionController).
+ * On simule ici le filtrage Prisma sur les mêmes opérateurs que le contrôleur
+ * construit (`lt`/`gt` stricts, `id.not` pour l'exclusion en modification), ce
+ * qui permet de vérifier que l'adjacence (borne à borne égale) n'est pas
+ * confondue avec un chevauchement.
+ */
+function stubScheduleConflicts(fixtures: SessionFixture[]) {
+  db.session.findFirst.mockImplementation(
+    (args: {
+      where: {
+        teacherId?: string;
+        classId?: string;
+        id?: { not: string };
+        startAt?: { lt: string };
+        endAt?: { gt: string };
+      };
+    }) => {
+      const { where } = args;
+      const match = fixtures.find((s) => {
+        if (where.teacherId !== undefined && s.teacherId !== where.teacherId) return false;
+        if (where.classId !== undefined && s.classId !== where.classId) return false;
+        if (where.id?.not && s.id === where.id.not) return false;
+        if (where.startAt?.lt && !(new Date(s.startAt) < new Date(where.startAt.lt))) return false;
+        if (where.endAt?.gt && !(new Date(s.endAt) > new Date(where.endAt.gt))) return false;
+        return true;
+      });
+      return Promise.resolve(match ?? null);
+    },
+  );
+}
 
 beforeEach(() => {
   for (const model of [db.session, db.absence]) {
@@ -214,6 +250,170 @@ describe('Écritures de séances', () => {
     });
     expect(res.statusCode).toBe(200);
     expect(getClassIdsForTeacher).not.toHaveBeenCalled();
+    await app.close();
+  });
+});
+
+describe('Conflits d\'horaire et validation des bornes — /sessions (#245)', () => {
+  const otherTeacherId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const anotherTeacherId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+
+  const overlappingBody = {
+    ...createSessionBody,
+    startAt: '2026-01-05T08:30:00.000Z',
+    endAt: '2026-01-05T09:30:00.000Z',
+  };
+  const adjacentBody = {
+    ...createSessionBody,
+    startAt: '2026-01-05T09:00:00.000Z',
+    endAt: '2026-01-05T10:00:00.000Z',
+  };
+  const invertedBody = {
+    ...createSessionBody,
+    startAt: '2026-01-05T11:00:00.000Z',
+    endAt: '2026-01-05T10:00:00.000Z',
+  };
+
+  it('POST /sessions refuse endAt <= startAt (400) sans interroger la base', async () => {
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/sessions',
+      payload: invertedBody,
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(db.session.findFirst).not.toHaveBeenCalled();
+    expect(db.session.create).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('POST /sessions refuse un chevauchement pour le même enseignant (409)', async () => {
+    stubScheduleConflicts([sampleSession]);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/sessions',
+      payload: overlappingBody,
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(db.session.create).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('POST /sessions refuse un chevauchement pour la même classe avec un autre enseignant (409)', async () => {
+    // sampleSession est déjà sur la classe visée, mais avec un autre enseignant que
+    // celui de la requête : seule la branche « conflit classe » doit matcher.
+    stubScheduleConflicts([{ ...sampleSession, teacherId: otherTeacherId }]);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/sessions',
+      payload: { ...overlappingBody, teacherId: anotherTeacherId },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(db.session.create).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('POST /sessions refuse un doublon strict (409)', async () => {
+    stubScheduleConflicts([sampleSession]);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/sessions',
+      payload: createSessionBody,
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(db.session.create).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('POST /sessions accepte deux créneaux adjacents (201) — le chevauchement est strict', async () => {
+    stubScheduleConflicts([sampleSession]);
+    db.session.create.mockResolvedValue({ ...sampleSession, ...adjacentBody });
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/sessions',
+      payload: adjacentBody,
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(201);
+    expect(db.session.create).toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('PATCH /sessions/:id refuse endAt <= startAt (400)', async () => {
+    db.session.findUnique.mockResolvedValue(sampleSession);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { startAt: '2026-01-05T11:00:00.000Z', endAt: '2026-01-05T10:00:00.000Z' },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(db.session.update).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('PATCH /sessions/:id refuse de déplacer une séance sur un créneau déjà pris (409)', async () => {
+    const takenSlot: SessionFixture = {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      classId: sampleSession.classId,
+      teacherId: sampleSession.teacherId,
+      startAt: '2026-01-05T14:00:00.000Z',
+      endAt: '2026-01-05T15:00:00.000Z',
+    };
+    db.session.findUnique.mockResolvedValue(sampleSession);
+    stubScheduleConflicts([takenSlot]);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { startAt: '2026-01-05T14:30:00.000Z', endAt: '2026-01-05T15:30:00.000Z' },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(409);
+    expect(db.session.update).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('PATCH /sessions/:id sans changement d\'horaire ne consulte pas les conflits', async () => {
+    db.session.findUnique.mockResolvedValue(sampleSession);
+    db.session.update.mockResolvedValue({ ...sampleSession, room: 'A01' });
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { room: 'A01' },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(db.session.findFirst).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('PATCH /sessions/:id ne se détecte pas lui-même comme conflit (exclusion par excludeId)', async () => {
+    // On renvoie explicitement les mêmes startAt/endAt : sans l'exclusion par id,
+    // le créneau existant matcherait sa propre recherche de conflit et renverrait
+    // à tort un 409 — c'est le scénario précis de l'acceptance criteria #245.
+    db.session.findUnique.mockResolvedValue(sampleSession);
+    stubScheduleConflicts([sampleSession]);
+    db.session.update.mockResolvedValue(sampleSession);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { startAt: sampleSession.startAt, endAt: sampleSession.endAt },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(db.session.update).toHaveBeenCalled();
     await app.close();
   });
 });

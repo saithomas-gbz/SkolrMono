@@ -134,6 +134,51 @@ async function denyIfOutsideTeacherScope(
   return true;
 }
 
+/**
+ * Un même créneau ne doit être occupé ni par le même enseignant ni par la même
+ * classe (#245) : deux requêtes séparées plutôt qu'un OR unique, pour distinguer
+ * le message d'erreur et parce que Prisma ne permet pas de savoir laquelle des
+ * deux branches d'un OR a matché sans requêter à nouveau.
+ * Chevauchement strict : deux créneaux adjacents (10:00-11:00 / 11:00-12:00) ne
+ * sont PAS en conflit, d'où les comparaisons `<` / `>` (et non `<=` / `>=`).
+ */
+async function findScheduleConflict(params: {
+  classId: string;
+  teacherId: string;
+  startAt: Date;
+  endAt: Date;
+  excludeId?: string;
+}): Promise<'teacher' | 'class' | null> {
+  const { classId, teacherId, startAt, endAt, excludeId } = params;
+  const overlapsWindow = { startAt: { lt: endAt }, endAt: { gt: startAt } };
+
+  const [teacherConflict, classConflict] = await Promise.all([
+    db.session.findFirst({
+      where: {
+        teacherId,
+        ...(excludeId && { id: { not: excludeId } }),
+        ...overlapsWindow,
+      },
+    }),
+    db.session.findFirst({
+      where: {
+        classId,
+        ...(excludeId && { id: { not: excludeId } }),
+        ...overlapsWindow,
+      },
+    }),
+  ]);
+
+  if (teacherConflict) return 'teacher';
+  if (classConflict) return 'class';
+  return null;
+}
+
+const conflictMessage: Record<'teacher' | 'class', string> = {
+  teacher: 'This teacher already has a session overlapping this time slot',
+  class: 'This class already has a session overlapping this time slot',
+};
+
 export async function createSession(
   req: FastifyRequest<{ Body: CreateSessionBody }>,
   reply: FastifyReply,
@@ -142,14 +187,28 @@ export async function createSession(
 
   if (await denyIfOutsideTeacherScope(req, reply, classId)) return;
 
+  const startDate = new Date(startAt);
+  const endDate = new Date(endAt);
+  if (endDate <= startDate) {
+    return reply.status(400).send({ error: 'endAt must be strictly after startAt' });
+  }
+
+  const conflict = await findScheduleConflict({
+    classId,
+    teacherId,
+    startAt: startDate,
+    endAt: endDate,
+  });
+  if (conflict) return reply.status(409).send({ error: conflictMessage[conflict] });
+
   const session = await db.session.create({
     data: {
       classId,
       courseId,
       teacherId,
       room,
-      startAt: new Date(startAt),
-      endAt: new Date(endAt),
+      startAt: startDate,
+      endAt: endDate,
       recurrenceRule,
     },
   });
@@ -166,13 +225,36 @@ export async function updateSession(
   if (await denyIfOutsideTeacherScope(req, reply, existing.classId)) return;
 
   const { room, startAt, endAt, recurrenceRule, teacherId } = req.body;
+
+  // La détection de conflit doit porter sur les horaires/enseignant EFFECTIFS
+  // après modification, pas seulement sur les champs fournis dans le body —
+  // sinon déplacer uniquement `startAt` ne serait jamais comparé au bon `endAt`.
+  const effectiveStart = startAt ? new Date(startAt) : existing.startAt;
+  const effectiveEnd = endAt ? new Date(endAt) : existing.endAt;
+  const effectiveTeacherId = teacherId ?? existing.teacherId;
+
+  if (effectiveEnd <= effectiveStart) {
+    return reply.status(400).send({ error: 'endAt must be strictly after startAt' });
+  }
+
+  if (startAt || endAt || teacherId) {
+    const conflict = await findScheduleConflict({
+      classId: existing.classId,
+      teacherId: effectiveTeacherId,
+      startAt: effectiveStart,
+      endAt: effectiveEnd,
+      excludeId: existing.id,
+    });
+    if (conflict) return reply.status(409).send({ error: conflictMessage[conflict] });
+  }
+
   const session = await db.session.update({
     where: { id: req.params.id },
     data: {
       ...(room !== undefined && { room }),
       ...(teacherId && { teacherId }),
-      ...(startAt && { startAt: new Date(startAt) }),
-      ...(endAt && { endAt: new Date(endAt) }),
+      ...(startAt && { startAt: effectiveStart }),
+      ...(endAt && { endAt: effectiveEnd }),
       ...(recurrenceRule !== undefined && { recurrenceRule }),
     },
   });
