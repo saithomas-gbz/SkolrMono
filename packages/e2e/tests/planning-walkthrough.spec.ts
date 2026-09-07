@@ -13,18 +13,60 @@ const CLASS_ID_SCIENCES6 = '22222222-2222-2222-2222-222222222202';
 const TEACHER_ID = '11111111-1111-1111-1111-111111111103';
 
 /**
- * Recule le calendrier FullCalendar jusqu'à une semaine contenant des séances.
- * Les données seed s'arrêtent fin juin 2026 alors que le test tourne « aujourd'hui »
- * (juillet), donc la semaine courante est vide.
+ * Dernier jour couvert par les séances seedées — `SCHOOL_END` dans
+ * `packages/backend/prisma/seed.ts`. L'année scolaire du seed est figée
+ * (2025-09-01 → 2026-06-30) alors que la suite tourne « aujourd'hui » : l'écart
+ * entre les deux grandit d'une semaine par semaine.
+ */
+const SEED_SCHOOL_END = new Date('2026-06-30T00:00:00Z');
+
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Nombre de reculs d'une semaine nécessaires pour ramener le calendrier dans la
+ * fenêtre du seed. Ce nombre était codé en dur à 8, ce qui a tenu tant que la
+ * date d'exécution restait proche de fin juin 2026, puis a fait échouer la spec
+ * dès que l'écart a dépassé 8 semaines. Le dériver de l'écart réel évite que le
+ * test se remette à casser tout seul au fil du temps.
+ *
+ * Correctif de circonstance : la vraie solution est un seed dont la fenêtre suit
+ * la date du jour, ou une navigation par date dans l'URL de `/planning`. Les
+ * deux dépassent le périmètre de cette PR.
+ */
+function weeksBackToSeededData(): number {
+  const drift = Date.now() - SEED_SCHOOL_END.getTime();
+  if (drift <= 0) return 8;
+  // +2 semaines de marge : la dernière semaine du seed peut être partielle
+  // (jours fériés, week-end), et `Date.now()` tombe rarement un lundi.
+  return Math.ceil(drift / ONE_WEEK_MS) + 2;
+}
+
+/**
+ * Recule le calendrier FullCalendar jusqu'à une semaine contenant des séances,
+ * et échoue explicitement si la fenêtre du seed reste introuvable — sans quoi
+ * l'échec se manifeste plus loin par un « element(s) not found » sur `.fc-event`
+ * qui ne dit rien de la cause.
  */
 async function gotoPopulatedWeek(page: import('@playwright/test').Page): Promise<void> {
   const prev = page.locator('.fc-prev-button');
-  for (let i = 0; i < 8; i++) {
-    if ((await page.locator('.fc-event').count()) > 0) return;
+  const maxSteps = weeksBackToSeededData();
+
+  for (let i = 0; i <= maxSteps; i++) {
+    if ((await page.locator('.fc-event').count()) > 0) {
+      await page.waitForLoadState('networkidle');
+      return;
+    }
     await prev.click();
     await page.waitForTimeout(400);
   }
+
   await page.waitForLoadState('networkidle');
+  expect(
+    await page.locator('.fc-event').count(),
+    `Aucune séance trouvée après ${maxSteps} semaines en arrière. Les données seed ` +
+      `s'arrêtent au ${SEED_SCHOOL_END.toISOString().slice(0, 10)} : vérifier que le seed ` +
+      'a bien tourné, ou faire suivre sa fenêtre à la date du jour.',
+  ).toBeGreaterThan(0);
 }
 
 test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', () => {
