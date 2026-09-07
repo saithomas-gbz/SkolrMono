@@ -1,5 +1,5 @@
 import { normalizeApiError } from '~/composables/useClass';
-import { useAuthTokenCookie } from '~/composables/authSession';
+import { AUTH_TOKEN_COOKIE, useAuthTokenCookie } from '~/composables/authSession';
 
 export type MessageRead = {
   id: string;
@@ -45,12 +45,24 @@ export type Conversation = {
 
 type RealtimeEvent =
   | { type: 'message'; data: Message }
+  | { type: 'conversation'; data: Conversation }
   | { type: 'presence'; userId: string; online: boolean }
-  | { type: 'read'; conversationId: string; messageIds: string[]; readerId: string; readAt: string };
+  | { type: 'read'; conversationId: string; messageIds: string[]; readerId: string; readAt: string }
+  | { type: 'ping' }
+  | { type: 'pong' };
 
 const FALLBACK_CONVERSATIONS_INTERVAL_MS = 20_000;
 const FALLBACK_MESSAGES_INTERVAL_MS = 5_000;
 const RECONNECT_DELAY_MS = 5_000;
+/**
+ * Le serveur émet un `ping` toutes les 25 s (`MESSAGE_WS_HEARTBEAT_MS`). Passé
+ * deux intervalles sans la moindre trame, on considère le lien mort : une
+ * WebSocket coupée par un proxy, une mise en veille ou une perte de réseau
+ * n'émet pas toujours `close`, et la connexion resterait « connectée » sans
+ * rien recevoir, polling de secours désactivé.
+ */
+const REALTIME_SILENCE_TIMEOUT_MS = 60_000;
+const LOOPBACK_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
 export function useMessages() {
   const api = useApi();
@@ -68,6 +80,7 @@ export function useMessages() {
 
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let silenceTimer: ReturnType<typeof setTimeout> | null = null;
   let conversationsPoll: ReturnType<typeof setInterval> | null = null;
   let messagesPoll: ReturnType<typeof setInterval> | null = null;
   let activeUserId: string | null = null;
@@ -124,7 +137,12 @@ export function useMessages() {
           body: { content },
         });
       }
-      currentMessages.value.push({ reads: [], attachments: [], ...response.data });
+      // La diffusion WebSocket inclut l'expéditeur et arrive souvent avant la
+      // réponse HTTP : sans ce contrôle, le message s'afficherait en double
+      // dans l'onglet émetteur.
+      if (!currentMessages.value.some((m) => m.id === response.data.id)) {
+        currentMessages.value.push({ reads: [], attachments: [], ...response.data });
+      }
     } catch (e) {
       error.value = normalizeApiError(e);
     } finally {
@@ -161,8 +179,13 @@ export function useMessages() {
       method: 'POST',
       body: { name, participantIds },
     });
-    conversations.value.unshift(response.data);
-    return response.data;
+    // `unreadCount` est absent de la réponse de création : sans ce défaut, le
+    // badge partirait d'`undefined` et deviendrait `NaN` au premier message.
+    const created = { unreadCount: 0, ...response.data };
+    if (!conversations.value.some((c) => c.id === created.id)) {
+      conversations.value.unshift(created);
+    }
+    return created;
   }
 
   async function fetchPresence(userIds: string[]) {
@@ -198,7 +221,18 @@ export function useMessages() {
     messagesPoll = null;
   }
 
+  function sendRealtime(payload: unknown) {
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload));
+  }
+
   function handleRealtimeEvent(event: RealtimeEvent) {
+    if (event.type === 'ping') {
+      sendRealtime({ type: 'pong' });
+      return;
+    }
+
+    if (event.type === 'pong') return;
+
     if (event.type === 'presence') {
       presence.value.set(event.userId, event.online);
       return;
@@ -214,22 +248,117 @@ export function useMessages() {
       return;
     }
 
-    if (event.data.conversationId === getActiveConversationId?.()) {
+    if (event.type === 'conversation') {
+      if (!conversations.value.some((c) => c.id === event.data.id)) {
+        conversations.value.unshift({ participants: [], messages: [], unreadCount: 0, ...event.data });
+      }
+      return;
+    }
+
+    const isActiveConversation = event.data.conversationId === getActiveConversationId?.();
+    // Déduplication : l'expéditeur reçoit aussi ses propres messages (pour
+    // synchroniser ses autres sessions) et a déjà inséré celui-ci localement.
+    if (isActiveConversation && !currentMessages.value.some((m) => m.id === event.data.id)) {
       currentMessages.value.push({ reads: [], attachments: [], ...event.data });
     }
 
     const conversation = conversations.value.find((c) => c.id === event.data.conversationId);
-    if (conversation) {
-      conversation.messages = [event.data];
-      conversation.updatedAt = event.data.sentAt;
+    if (!conversation) {
+      // Conversation inconnue de la liste : fil créé pendant une coupure, ou
+      // auquel on vient d'être ajouté. Sans ce rattrapage, le message est
+      // perdu jusqu'au prochain chargement complet de la page.
+      if (activeUserId) fetchConversations(activeUserId, { silent: true });
+      return;
+    }
+
+    conversation.messages = [event.data];
+    conversation.updatedAt = event.data.sentAt;
+    // Le badge doit suivre le temps réel : la liste n'étant plus rechargée
+    // tant que la WebSocket tient, il resterait figé sinon.
+    if (!isActiveConversation && event.data.senderId !== activeUserId) {
+      conversation.unreadCount = (conversation.unreadCount ?? 0) + 1;
     }
   }
 
-  function scheduleReconnect() {
-    if (realtimeConnected.value) {
-      realtimeConnected.value = false;
-      startFallbackPolling();
+  /**
+   * Le jeton est relu à chaque connexion plutôt que capturé une fois pour
+   * toutes : après un rafraîchissement JWT, une reconnexion présentant
+   * l'ancien jeton serait rejetée en 4001 et boucherait indéfiniment. La ref
+   * `useCookie` du composable ne reflète pas les écritures faites ailleurs,
+   * d'où la lecture directe de `document.cookie` côté navigateur.
+   */
+  function readAuthToken(): string | null {
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp(`(?:^|; )${AUTH_TOKEN_COOKIE}=([^;]*)`));
+      const raw = match?.[1] ? decodeURIComponent(match[1]).trim() : '';
+      if (raw) return raw;
     }
+    return authTokenCookie.value?.trim() || null;
+  }
+
+  /**
+   * L'URL de la WebSocket est dérivée du contexte plutôt que reprise telle
+   * quelle : `NUXT_PUBLIC_GATEWAY_WS_BASE_URL` vaut `ws://localhost:3001` par
+   * défaut, valeur qui survit souvent au déploiement alors que l'HTTP, lui,
+   * passe par le proxy `/api`. Une page servie en HTTPS refuse en plus tout
+   * `ws://` (contenu mixte). On aligne donc le schéma sur celui de la page, et
+   * on bascule sur son origine quand la valeur configurée pointe sur la
+   * boucle locale alors que l'application est servie ailleurs.
+   */
+  function realtimeUrl(token: string): string {
+    const query = `?token=${encodeURIComponent(token)}`;
+    const configured = String(config.public.gatewayWsBaseUrl ?? '').replace(/\/$/, '');
+
+    if (typeof window === 'undefined') return `${configured}/message/ws${query}`;
+
+    const pageScheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const apiPrefix = String(config.public.gatewayBaseUrl ?? '');
+    const sameOrigin = () => {
+      const prefix = apiPrefix.startsWith('/') ? apiPrefix.replace(/\/$/, '') : '';
+      return `${pageScheme}//${window.location.host}${prefix}/message/ws${query}`;
+    };
+
+    let target: URL;
+    try {
+      target = new URL(configured.replace(/^ws/, 'http'));
+    } catch {
+      return sameOrigin();
+    }
+
+    if (LOOPBACK_HOSTS.includes(target.hostname) && !LOOPBACK_HOSTS.includes(window.location.hostname)) {
+      return sameOrigin();
+    }
+
+    const scheme = pageScheme === 'wss:' || target.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${scheme}//${target.host}/message/ws${query}`;
+  }
+
+  function armSilenceWatchdog() {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      silenceTimer = null;
+      // `close()` déclenche normalement `scheduleReconnect` via l'écouteur,
+      // mais un socket à moitié ouvert peut n'émettre aucun événement : on
+      // appelle donc explicitement la reconnexion, qui est idempotente.
+      closeSocket();
+      scheduleReconnect();
+    }, REALTIME_SILENCE_TIMEOUT_MS);
+  }
+
+  function closeSocket() {
+    if (!socket) return;
+    socket.removeEventListener('close', scheduleReconnect);
+    socket.removeEventListener('error', scheduleReconnect);
+    socket.close();
+    socket = null;
+  }
+
+  function scheduleReconnect() {
+    realtimeConnected.value = false;
+    // Le polling doit reprendre même si la WebSocket ne s'est jamais ouverte :
+    // le démarrer uniquement après une connexion réussie laissait la
+    // messagerie totalement figée dès que l'URL était injoignable.
+    startFallbackPolling();
     if (reconnectTimer || !activeUserId) return;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
@@ -240,21 +369,26 @@ export function useMessages() {
   function connectRealtime(userId: string, conversationIdGetter: () => string | null) {
     activeUserId = userId;
     getActiveConversationId = conversationIdGetter;
+    closeSocket();
 
-    const token = authTokenCookie.value?.trim();
+    const token = readAuthToken();
     if (!token) {
       startFallbackPolling();
       return;
     }
 
-    const wsBaseUrl = String(config.public.gatewayWsBaseUrl).replace(/\/$/, '');
-    socket = new WebSocket(`${wsBaseUrl}/message/ws?token=${encodeURIComponent(token)}`);
+    socket = new WebSocket(realtimeUrl(token));
 
     socket.addEventListener('open', () => {
       realtimeConnected.value = true;
       stopFallbackPolling();
+      armSilenceWatchdog();
+      // La liste a pu bouger pendant la coupure (nouvelle conversation,
+      // messages manqués) : la WebSocket ne rejoue pas l'historique.
+      if (activeUserId) fetchConversations(activeUserId, { silent: true });
     });
     socket.addEventListener('message', (event) => {
+      armSilenceWatchdog();
       try {
         handleRealtimeEvent(JSON.parse(event.data as string) as RealtimeEvent);
       } catch {
@@ -272,13 +406,12 @@ export function useMessages() {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    stopFallbackPolling();
-    if (socket) {
-      socket.removeEventListener('close', scheduleReconnect);
-      socket.removeEventListener('error', scheduleReconnect);
-      socket.close();
-      socket = null;
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
     }
+    stopFallbackPolling();
+    closeSocket();
     realtimeConnected.value = false;
   }
 

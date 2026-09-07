@@ -27,6 +27,10 @@ export default defineNuxtConfig({
       process.env.GATEWAY_INTERNAL_URL || "http://localhost:3001",
     public: {
       gatewayBaseUrl: process.env.NUXT_PUBLIC_GATEWAY_BASE_URL || "/api",
+      // Valeur de repli seulement : `useMessages` dérive l'URL réelle du
+      // contexte (schéma de la page, origine si celle-ci pointe sur la boucle
+      // locale). Un déploiement qui oublie cette variable dégrade donc vers le
+      // polling de secours au lieu de figer la messagerie.
       gatewayWsBaseUrl: process.env.NUXT_PUBLIC_GATEWAY_WS_BASE_URL || "ws://localhost:3001",
       gatewayDirectUrl: process.env.NUXT_PUBLIC_GATEWAY_DIRECT_URL || "http://localhost:3001",
       sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN || "",

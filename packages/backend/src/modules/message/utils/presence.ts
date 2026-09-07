@@ -25,6 +25,15 @@ export function isOnline(userId: string): boolean {
   return (userSockets.get(userId)?.size ?? 0) > 0;
 }
 
+/**
+ * Nombre de sockets encore ouverts pour cet utilisateur. Un même compte peut
+ * en tenir plusieurs (onglets, appareils) : la fermeture de l'un ne signifie
+ * pas que l'utilisateur est hors ligne — voir `wsController`.
+ */
+export function connectionCount(userId: string): number {
+  return userSockets.get(userId)?.size ?? 0;
+}
+
 export function getPresence(userIds: string[]): { userId: string; online: boolean; lastSeen: number | null }[] {
   return userIds.map((userId) => ({
     userId,
@@ -39,5 +48,12 @@ export function sendToUser(userId: string, payload: unknown): void {
   const data = JSON.stringify(payload);
   for (const socket of sockets) {
     if (socket.readyState === socket.OPEN) socket.send(data);
+  }
+}
+
+/** Diffuse à tous les utilisateurs listés (doublons ignorés). */
+export function sendToUsers(userIds: string[], payload: unknown): void {
+  for (const userId of new Set(userIds)) {
+    sendToUser(userId, payload);
   }
 }

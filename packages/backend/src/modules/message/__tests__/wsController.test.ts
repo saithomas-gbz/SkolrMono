@@ -22,19 +22,26 @@ const prismaMock = db as unknown as {
 let addConnectionSpy: ReturnType<typeof spyOn>;
 let removeConnectionSpy: ReturnType<typeof spyOn>;
 let sendToUserSpy: ReturnType<typeof spyOn>;
+// `presence` porte un état de module partagé par tous les fichiers de test du
+// process (presence.test.ts y enregistre ses propres utilisateurs) : `isOnline`
+// et `connectionCount` sont donc neutralisés par défaut, chaque test posant
+// ensuite la valeur dont il a besoin.
+let connectionCountSpy: ReturnType<typeof spyOn>;
+let isOnlineSpy: ReturnType<typeof spyOn>;
 
 function buildFastify(verifyImpl: (token: string) => unknown): FastifyInstance {
   return { jwt: { verify: mock(verifyImpl) } } as unknown as FastifyInstance;
 }
 
 function buildSocket() {
-  const listeners: Record<string, () => void> = {};
+  const listeners: Record<string, (data?: unknown) => void> = {};
   return {
     readyState: 1,
     OPEN: 1,
     send: mock(),
     close: mock(),
-    on: mock((event: string, listener: () => void) => {
+    terminate: mock(),
+    on: mock((event: string, listener: (data?: unknown) => void) => {
       listeners[event] = listener;
     }),
     listeners,
@@ -55,12 +62,17 @@ describe('wsController.handleConnection', () => {
     addConnectionSpy = spyOn(presence, 'addConnection').mockImplementation(() => {});
     removeConnectionSpy = spyOn(presence, 'removeConnection').mockImplementation(() => {});
     sendToUserSpy = spyOn(presence, 'sendToUser').mockImplementation(() => {});
+    isOnlineSpy = spyOn(presence, 'isOnline').mockReturnValue(false);
+    connectionCountSpy = spyOn(presence, 'connectionCount').mockReturnValue(0);
   });
 
   afterEach(() => {
     addConnectionSpy.mockRestore();
     removeConnectionSpy.mockRestore();
     sendToUserSpy.mockRestore();
+    connectionCountSpy.mockRestore();
+    isOnlineSpy.mockRestore();
+    delete process.env.MESSAGE_WS_HEARTBEAT_MS;
   });
 
   it('closes the socket when the token is missing or invalid', async () => {
@@ -115,6 +127,95 @@ describe('wsController.handleConnection', () => {
       userId: 'user-1',
       online: false,
     });
+  });
+
+  it('keeps the user online for peers when one socket of several closes (multi-onglet)', async () => {
+    // Régression #243 : fermer un onglet sur deux — ou un simple F5 — affichait
+    // l'utilisateur hors ligne chez ses interlocuteurs alors qu'il restait
+    // connecté par ailleurs.
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([{ userId: 'peer-1' }]);
+    connectionCountSpy.mockReturnValue(1);
+
+    await wsController.handleConnection(fastify, socket, request);
+    sendToUserSpy.mockClear();
+
+    socket.listeners.close!();
+    await flush();
+
+    expect(removeConnectionSpy).toHaveBeenCalledWith('user-1', socket);
+    expect(sendToUserSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not re-broadcast online presence for an already connected user', async () => {
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([{ userId: 'peer-1' }]);
+    isOnlineSpy.mockReturnValue(true);
+
+    await wsController.handleConnection(fastify, socket, request);
+
+    expect(addConnectionSpy).toHaveBeenCalledWith('user-1', socket);
+    expect(sendToUserSpy).not.toHaveBeenCalled();
+  });
+
+  it('answers a client ping with a pong', async () => {
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([]);
+
+    await wsController.handleConnection(fastify, socket, request);
+    socket.listeners.message!(JSON.stringify({ type: 'ping' }));
+
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'pong' }));
+  });
+
+  it('ignores a malformed client frame without closing the socket', async () => {
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([]);
+
+    await wsController.handleConnection(fastify, socket, request);
+    socket.listeners.message!('pas du json');
+
+    expect(socket.close).not.toHaveBeenCalled();
+    expect(socket.terminate).not.toHaveBeenCalled();
+  });
+
+  it('pings periodically and terminates a socket that never answers', async () => {
+    process.env.MESSAGE_WS_HEARTBEAT_MS = '5';
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([]);
+
+    await wsController.handleConnection(fastify, socket, request);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    socket.listeners.close!();
+
+    expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
+    expect(socket.terminate).toHaveBeenCalled();
+  });
+
+  it('keeps a socket alive as long as it answers the heartbeat', async () => {
+    process.env.MESSAGE_WS_HEARTBEAT_MS = '5';
+    const fastify = buildFastify(() => ({ userId: 'user-1', email: 'a@a.com', role: 'TEACHER' }));
+    const socket = buildSocket();
+    const request = buildRequest('good-token');
+    prismaMock.conversationParticipant.findMany.mockResolvedValue([]);
+
+    await wsController.handleConnection(fastify, socket, request);
+    const answering = setInterval(() => socket.listeners.message!(JSON.stringify({ type: 'pong' })), 2);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    clearInterval(answering);
+    socket.listeners.close!();
+
+    expect(socket.terminate).not.toHaveBeenCalled();
   });
 
   it('only broadcasts offline presence once even if both error and close fire', async () => {

@@ -17,6 +17,9 @@ mock.module('../../../shared/db', () => ({
     messageRead: {
       createMany: mock(),
     },
+    conversation: {
+      create: mock(),
+    },
   },
 }));
 
@@ -24,6 +27,7 @@ const prismaMock = db as unknown as {
   conversationParticipant: { findUnique: ReturnType<typeof mock>; findMany: ReturnType<typeof mock> };
   message: { findMany: ReturnType<typeof mock>; count: ReturnType<typeof mock> };
   messageRead: { createMany: ReturnType<typeof mock> };
+  conversation: { create: ReturnType<typeof mock> };
 };
 
 let sendToUserSpy: ReturnType<typeof spyOn>;
@@ -180,5 +184,59 @@ describe('conversationController.getConversationsByUser', () => {
         { id: 'conv-2', participants: [], messages: [], unreadCount: 0 },
       ],
     });
+  });
+});
+
+describe('conversationController.createConversation', () => {
+  let sendToUsersSpy: ReturnType<typeof spyOn>;
+
+  beforeEach(() => {
+    prismaMock.conversation.create.mockReset();
+    sendToUsersSpy = spyOn(presence, 'sendToUsers').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    sendToUsersSpy.mockRestore();
+  });
+
+  it('broadcasts the new conversation to every participant, creator included', async () => {
+    // Régression #243 : sans cette diffusion, une conversation créée par un
+    // tiers n'apparaissait jamais chez ses destinataires tant que la WebSocket
+    // tenait (le polling de secours étant coupé).
+    const conversation = {
+      id: 'conv-9',
+      name: 'Projet',
+      participants: [{ userId: 'user-1' }, { userId: 'user-2' }],
+      messages: [],
+    };
+    prismaMock.conversation.create.mockResolvedValue(conversation);
+
+    const request = {
+      messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
+      body: { name: 'Projet', participantIds: ['user-2'] },
+    } as unknown as FastifyRequest<{ Body: { name?: string; participantIds: string[] } }>;
+    const reply = buildReply();
+
+    await conversationController.createConversation(request, reply);
+
+    expect(sendToUsersSpy).toHaveBeenCalledWith(['user-1', 'user-2'], {
+      type: 'conversation',
+      data: { ...conversation, unreadCount: 0 },
+    });
+    expect(reply.status).toHaveBeenCalledWith(201);
+  });
+
+  it('does not duplicate the creator when they are also listed as a participant', async () => {
+    const conversation = { id: 'conv-10', participants: [], messages: [] };
+    prismaMock.conversation.create.mockResolvedValue(conversation);
+
+    const request = {
+      messageUser: { userId: 'user-1', email: 'a@a.com', role: 'TEACHER' },
+      body: { participantIds: ['user-1', 'user-2'] },
+    } as unknown as FastifyRequest<{ Body: { name?: string; participantIds: string[] } }>;
+
+    await conversationController.createConversation(request, buildReply());
+
+    expect(sendToUsersSpy).toHaveBeenCalledWith(['user-1', 'user-2'], expect.anything());
   });
 });
