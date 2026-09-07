@@ -139,7 +139,7 @@
 import { useAssignment, type CreateAssignmentBody } from '~/composables/useAssignment';
 import { useClass } from '~/composables/useClass';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'teacher'] });
 
 const router = useRouter();
 const { user } = useAuth();
