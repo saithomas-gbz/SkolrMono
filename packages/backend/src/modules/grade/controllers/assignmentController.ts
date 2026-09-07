@@ -1,6 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { teacherTeachesCourse } from '../lib/classServiceClient';
+import {
+  assignmentReadScope,
+  denyOutsideClassScope,
+  denyOutsideCourseScope,
+  scopedTeacherId,
+} from '../lib/teacherScope';
 import { invalidate } from '../lib/ttlCache';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
@@ -11,7 +17,8 @@ export interface CreateAssignmentBody {
   description?: string;
   classId: string;
   courseId: string;
-  teacherId: string;
+  /** Ignoré pour un TEACHER : son identité vient du jeton. */
+  teacherId?: string;
   assignedAt: string;
   dueAt?: string;
   maxScore?: number;
@@ -55,14 +62,42 @@ const assignmentInclude = {
   course: { select: { id: true, name: true } },
 } as const;
 
+/**
+ * Charge un devoir et refuse un enseignant hors de son périmètre. Renvoie
+ * `null` quand la réponse a déjà été envoyée (404 ou 403) — l'appelant sort.
+ */
+async function loadAssignmentInScope(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply,
+) {
+  const assignment = await db.assignment.findUnique({ where: { id: request.params.id } });
+  if (!assignment) {
+    await reply.status(404).send({ error: 'Assignment not found' });
+    return null;
+  }
+  if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+    return null;
+  }
+  return assignment;
+}
+
 export default {
   createAssignment: async (
     request: FastifyRequest<{ Body: CreateAssignmentBody }>,
     reply: FastifyReply,
   ) => {
     try {
-      const { title, description, classId, courseId, teacherId, assignedAt, dueAt, maxScore, coefficient } =
+      const { title, description, classId, courseId, assignedAt, dueAt, maxScore, coefficient } =
         request.body;
+
+      // Un enseignant est toujours l'auteur de ses propres devoirs ; seuls STAFF
+      // et ADMIN peuvent en déposer un au nom d'un tiers. Le `teacherId` du corps
+      // n'est donc lu que pour eux : le lire pour un TEACHER rendrait le contrôle
+      // ci-dessous auto-déclaratif (#234).
+      const teacherId = scopedTeacherId(request) ?? request.body.teacherId;
+      if (!teacherId) {
+        return reply.status(400).send({ error: 'teacherId is required' });
+      }
 
       const classExists = await db.class.findUnique({ where: { id: classId } });
       if (!classExists) {
@@ -108,12 +143,35 @@ export default {
     try {
       const { classId, courseId, teacherId, status } = request.query;
 
+      // Filtrage par rôle plutôt que 403, pour ne pas casser la liste quand aucun
+      // classId n'est fourni. Un enseignant ne voit que ses classes ; un élève ou
+      // un parent, les classes concernées et uniquement les devoirs publiés.
+      // STAFF et ADMIN gardent les filtres libres.
+      const scope = await assignmentReadScope(request);
+      let classWhere: { equals: string } | { in: string[] } | undefined = classId
+        ? { equals: classId }
+        : undefined;
+      if (scope) {
+        if (classId && !scope.classIds.includes(classId)) {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+        classWhere = classId ? { equals: classId } : { in: scope.classIds };
+      }
+
+      // Un brouillon n'est pas encore adressé à la classe : il ne doit apparaître
+      // ni aux élèves ni aux parents, quel que soit le filtre `status` demandé.
+      const statusWhere = scope?.publishedOnly
+        ? { status: { in: ['PUBLISHED', 'CLOSED'] as AssignmentStatus[] } }
+        : status
+          ? { status: status as AssignmentStatus }
+          : {};
+
       const assignments = await db.assignment.findMany({
         where: {
-          ...(classId ? { classId } : {}),
+          ...(classWhere ? { classId: classWhere } : {}),
           ...(courseId ? { courseId } : {}),
           ...(teacherId ? { teacherId } : {}),
-          ...(status ? { status: status as AssignmentStatus } : {}),
+          ...statusWhere,
         },
         include: { ...assignmentInclude, grades: { select: { status: true } } },
         orderBy: { assignedAt: 'desc' },
@@ -145,6 +203,19 @@ export default {
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
       }
+
+      // Route en `requireAuth` : sans ce contrôle, n'importe quel compte lisait
+      // n'importe quel devoir par son identifiant, brouillons compris (#234).
+      const scope = await assignmentReadScope(request);
+      if (scope) {
+        if (!scope.classIds.includes(assignment.classId)) {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+        if (scope.publishedOnly && assignment.status === 'DRAFT') {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+      }
+
       return reply.status(200).send({ data: assignment, message: 'Assignment fetched successfully' });
     } catch (error) {
       request.log.error(error);
@@ -160,10 +231,8 @@ export default {
       const { id } = request.params;
       const { title, description, assignedAt, dueAt, maxScore, coefficient, status } = request.body;
 
-      const existing = await db.assignment.findUnique({ where: { id } });
-      if (!existing) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const existing = await loadAssignmentInScope(request, reply);
+      if (!existing) return;
 
       if (existing.status === 'CLOSED' && status !== 'CLOSED') {
         return reply.status(400).send({ error: 'Closed assignment cannot be reopened' });
@@ -196,10 +265,8 @@ export default {
   ) => {
     try {
       const { id } = request.params;
-      const existing = await db.assignment.findUnique({ where: { id } });
-      if (!existing) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const existing = await loadAssignmentInScope(request, reply);
+      if (!existing) return;
 
       await db.assignment.delete({ where: { id } });
       return reply.status(200).send({ data: existing, message: 'Assignment deleted successfully' });
@@ -215,10 +282,9 @@ export default {
   ) => {
     try {
       const { id } = request.params;
-      const assignment = await db.assignment.findUnique({ where: { id } });
-      if (!assignment) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const assignment = await loadAssignmentInScope(request, reply);
+      if (!assignment) return;
+
       if (assignment.status !== 'DRAFT') {
         return reply.status(400).send({ error: 'Only DRAFT assignments can be published' });
       }
@@ -264,6 +330,9 @@ export default {
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
       }
+      if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+        return;
+      }
 
       const grades = await db.grade.findMany({
         where: { assignmentId: id },
@@ -301,6 +370,9 @@ export default {
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
       }
+      if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+        return;
+      }
       if (assignment.status === 'CLOSED') {
         return reply.status(400).send({ error: 'Assignment is closed, grades are read-only' });
       }
@@ -316,6 +388,23 @@ export default {
             });
           }
         }
+      }
+
+      // Les lignes saisies doivent porter sur des élèves de la classe du devoir.
+      // Sans ce contrôle, un enseignant pourtant dans son périmètre pouvait
+      // injecter des notes pour n'importe quel `userId` : l'upsert leur créait
+      // une ligne portant le `classId` du devoir, qui remontait ensuite sur le
+      // `/grades/user/:id` de la victime (#234).
+      const roster = await db.user.findMany({
+        where: { classId: assignment.classId, id: { in: entries.map((e) => e.userId) } },
+        select: { id: true },
+      });
+      const rosterIds = new Set(roster.map((u) => u.id));
+      const outsiders = entries.filter((e) => !rosterIds.has(e.userId));
+      if (outsiders.length > 0) {
+        return reply.status(400).send({
+          error: `Some users do not belong to this assignment's class: ${outsiders.map((e) => e.userId).join(', ')}`,
+        });
       }
 
       await db.$transaction(async (tx) => {
@@ -363,6 +452,10 @@ export default {
       const classExists = await db.class.findUnique({ where: { id: classId } });
       if (!classExists) {
         return reply.status(404).send({ error: 'Class not found' });
+      }
+      // Granularité classe et non cours : le carnet couvre toutes les matières.
+      if (await denyOutsideClassScope(request, reply, classId)) {
+        return;
       }
 
       const assignments = await db.assignment.findMany({
