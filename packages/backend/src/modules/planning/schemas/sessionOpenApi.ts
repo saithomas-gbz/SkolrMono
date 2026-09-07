@@ -11,6 +11,8 @@ const sessionProperties = {
   updatedAt: { type: 'string', format: 'date-time' },
 };
 
+const errorResponse = { type: 'object', properties: { error: { type: 'string' } } };
+
 export const sessionSchema = {
   list: {
     description:
@@ -35,6 +37,8 @@ export const sessionSchema = {
     },
     response: {
       200: { type: 'array', items: { type: 'object', properties: sessionProperties } },
+      401: errorResponse,
+      403: errorResponse,
     },
   },
   get: {
@@ -46,11 +50,13 @@ export const sessionSchema = {
     },
     response: {
       200: { type: 'object', properties: sessionProperties },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      404: errorResponse,
     },
   },
   update: {
-    description: 'Update a session',
+    description:
+      'Update a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne.',
     params: {
       type: 'object',
       properties: { id: { type: 'string', format: 'uuid' } },
@@ -68,11 +74,14 @@ export const sessionSchema = {
     },
     response: {
       200: { type: 'object', properties: sessionProperties },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      403: errorResponse,
+      404: errorResponse,
     },
   },
   delete: {
-    description: 'Delete a session',
+    description:
+      'Delete a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne.',
     params: {
       type: 'object',
       properties: { id: { type: 'string', format: 'uuid' } },
@@ -80,13 +89,16 @@ export const sessionSchema = {
     },
     response: {
       204: { type: 'null' },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      403: errorResponse,
+      404: errorResponse,
     },
   },
 };
 
 export const createSessionSchema = {
-  description: 'Create a session',
+  description:
+    'Create a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne.',
   body: {
     type: 'object',
     required: ['classId', 'courseId', 'teacherId', 'startAt', 'endAt'],
@@ -102,5 +114,7 @@ export const createSessionSchema = {
   },
   response: {
     201: { type: 'object', properties: sessionProperties },
+    401: errorResponse,
+    403: errorResponse,
   },
 };
