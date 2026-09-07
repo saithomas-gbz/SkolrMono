@@ -48,4 +48,19 @@ export async function requireAdminOrStaff(request: FastifyRequest, reply: Fastif
   request.parentUser = payload;
 }
 
-export { verifyToken };
+/**
+ * Consultation des enfants : le parent pour lui-même, l'admin ou la vie scolaire
+ * pour un parent donné. Les rôles `USER` et `TEACHER` n'ont rien à faire ici — le
+ * graphe parent ↔ enfant relie des adultes responsables à des mineurs (#241).
+ */
+export async function requireParentOrStaff(request: FastifyRequest, reply: FastifyReply) {
+  const payload = verifyToken(request);
+  if (!payload) {
+    return deny(reply, 401, 'Unauthorized');
+  }
+  if (!['PARENT', 'ADMIN', 'STAFF'].includes(payload.role)) {
+    return deny(reply, 403, 'Forbidden');
+  }
+  request.parentUser = payload;
+}
+

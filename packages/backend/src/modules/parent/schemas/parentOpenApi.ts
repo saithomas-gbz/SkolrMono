@@ -26,13 +26,16 @@ const linkProperties = {
 
 export const parentSchema = {
   getChildren: {
-    description: "Enfants rattachés au parent connecté (ou ?parentId= pour un appel inter-services)",
+    description:
+      "Enfants rattachés au parent connecté. `parentId` n'est honoré que pour un ADMIN "
+      + "ou un STAFF : un parent est toujours ramené à son propre identifiant.",
     querystring: {
       type: 'object',
       properties: { parentId: { type: 'string', format: 'uuid' } },
     },
     response: {
       200: { type: 'object', properties: { data: { type: 'array', items: { type: 'object', properties: childProperties } } } },
+      400: errorResponse,
       401: errorResponse,
       403: errorResponse,
     },
@@ -52,7 +55,7 @@ export const parentSchema = {
     },
   },
   getParentIds: {
-    description: "Parents rattachés à un enfant (appel inter-services, non protégé)",
+    description: "Parents rattachés à un enfant — réservé à ADMIN/STAFF.",
     querystring: {
       type: 'object',
       properties: { studentId: { type: 'string', format: 'uuid' } },
@@ -61,6 +64,8 @@ export const parentSchema = {
     response: {
       200: { type: 'object', properties: { data: { type: 'array', items: { type: 'string', format: 'uuid' } } } },
       400: errorResponse,
+      401: errorResponse,
+      403: errorResponse,
     },
   },
 };
