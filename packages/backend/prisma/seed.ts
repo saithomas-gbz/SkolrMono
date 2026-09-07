@@ -28,6 +28,65 @@ import {
   teacherIdsForClass,
 } from '../../../scripts/seed/dev-users';
 
+// ── calendrier de démonstration ──────────────────────────────────────────────
+
+/**
+ * Le seed décrivait une année scolaire figée (2025-09-01 → 2026-06-30) pendant
+ * que l'application, elle, tourne à la date du jour. L'écart grandissait d'une
+ * semaine par semaine : au bout de quelques mois l'emploi du temps de la semaine
+ * courante était vide, les bulletins ne montraient plus rien de récent, et la
+ * spec e2e `planning-walkthrough` a fini par échouer faute de trouver une séance.
+ *
+ * Toutes les dates ci-dessous restent écrites en clair — elles se lisent comme
+ * un vrai calendrier — mais sont décalées en bloc par `shiftDate` / `shiftDay`.
+ * Le décalage est un nombre entier de SEMAINES : les jours de la semaine sont
+ * donc préservés, ce dont dépendent `WEEKLY_SLOTS` (index de jour depuis lundi),
+ * les bornes lundi→vendredi des semaines de démonstration, et les week-ends
+ * exclus par `isSchoolDay`.
+ *
+ * L'ancrage vise la FIN de l'année scolaire plutôt que son début : « aujourd'hui »
+ * tombe toujours quelques semaines avant les vacances d'été, ce qui donne à la
+ * démonstration une année d'historique derrière elle (notes, absences, moyennes)
+ * et des devoirs récents de part et d'autre de la date du jour — dont le DRAFT,
+ * qui doit rester à venir. Ancrer sur la rentrée aurait donné un emploi du temps
+ * peuplé mais des écrans de statistiques et de bulletins vides.
+ *
+ * Contrepartie assumée : le décalage étant un nombre quelconque de semaines, les
+ * MOIS ne correspondent plus au calendrier scolaire français. Selon la date
+ * d'exécution, l'année seedée peut courir de décembre à septembre, avec des
+ * séances en août. Rien de tout cela n'est affiché : l'application ne montre
+ * jamais « l'année scolaire » ni les libellés de vacances, seulement des dates de
+ * séances et de devoirs — qui, elles, tombent naturellement autour d'aujourd'hui.
+ * Aligner les mois aurait imposé un décalage d'années entières, donc une
+ * démonstration sans historique dès qu'elle tourne en septembre.
+ */
+const REFERENCE_SCHOOL_END = new Date('2026-06-30T00:00:00Z');
+
+/** Nombre de semaines scolaires restantes après « aujourd'hui » dans le seed. */
+const WEEKS_LEFT_AFTER_TODAY = 3;
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const ONE_WEEK_MS = 7 * ONE_DAY_MS;
+
+/**
+ * Décalage global, en semaines entières. Calculé une seule fois au chargement du
+ * module pour que toutes les dates du seed restent cohérentes entre elles, même
+ * si le seed tourne à cheval sur minuit.
+ */
+const SHIFT_WEEKS = Math.round(
+  (Date.now() + WEEKS_LEFT_AFTER_TODAY * ONE_WEEK_MS - REFERENCE_SCHOOL_END.getTime()) / ONE_WEEK_MS,
+);
+
+/** Applique le décalage global à une date ISO du calendrier de référence. */
+function shiftDate(iso: string): Date {
+  return new Date(new Date(iso).getTime() + SHIFT_WEEKS * ONE_WEEK_MS);
+}
+
+/** Idem, pour les comparaisons de jours en `YYYY-MM-DD` (vacances, jours fériés). */
+function shiftDay(iso: string): string {
+  return shiftDate(iso).toISOString().slice(0, 10);
+}
+
 /**
  * Seed consolidé du monolithe modulaire (#114). Remplace les 7 seeds par service
  * (auth, billing, class, grade, planning, message, parent) qui écrivaient chacun
@@ -192,12 +251,12 @@ const DEV_ASSIGNMENT_IDS = {
 } as const;
 
 const devAssignments = [
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl1, title: 'Contrôle chapitre 1 — Fractions', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-05-15T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl2, title: 'Contrôle chapitre 2 — Géométrie', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-06-01T08:00:00Z'), maxScore: 20, coefficient: 2, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict, title: 'Dictée n°3', classId: CLASS_CM2A, courseId: COURSE_FRANCAIS, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-06-05T10:00:00Z'), maxScore: 10, coefficient: 1, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1, title: 'TP — Observation au microscope', classId: CLASS_6EME, courseId: COURSE_SCIENCES, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-05-20T14:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
-  { id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl, title: 'Contrôle — Préhistoire', classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-06-08T09:00:00Z'), maxScore: 20, coefficient: 1, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft, title: 'Contrôle chapitre 3 — Brouillon', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: new Date('2026-06-20T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'DRAFT' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl1, title: 'Contrôle chapitre 1 — Fractions', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-15T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl2, title: 'Contrôle chapitre 2 — Géométrie', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-01T08:00:00Z'), maxScore: 20, coefficient: 2, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict, title: 'Dictée n°3', classId: CLASS_CM2A, courseId: COURSE_FRANCAIS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-05T10:00:00Z'), maxScore: 10, coefficient: 1, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1, title: 'TP — Observation au microscope', classId: CLASS_6EME, courseId: COURSE_SCIENCES, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-20T14:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
+  { id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl, title: 'Contrôle — Préhistoire', classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-08T09:00:00Z'), maxScore: 20, coefficient: 1, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft, title: 'Contrôle chapitre 3 — Brouillon', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-20T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'DRAFT' as const },
 ];
 
 function gradeStatusForIndex(i: number): 'GRADED' | 'ABSENT' | 'PENDING' {
@@ -305,15 +364,21 @@ const WEEKLY_SLOTS: Slot[] = [
   { day: 4, sh: 10, sm: 0, eh: 11, em: 30, classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: TEACHER_HISTOIRE, room: 'B201' },
 ];
 
-const SCHOOL_START = new Date('2025-09-01T00:00:00Z');
-const SCHOOL_END = new Date('2026-06-30T00:00:00Z');
-const VACATIONS: Array<[string, string]> = [
-  ['2025-10-18', '2025-11-02'],
-  ['2025-12-20', '2026-01-04'],
-  ['2026-02-14', '2026-03-01'],
-  ['2026-04-11', '2026-04-26'],
-];
-const BANK_HOLIDAYS = new Set(['2025-11-11', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25']);
+const SCHOOL_START = shiftDate('2025-09-01T00:00:00Z');
+const SCHOOL_END = shiftDate('2026-06-30T00:00:00Z');
+// Vacances et jours fériés : conservés pour leur FORME (des trous réguliers dans
+// l'emploi du temps), pas pour leur date réelle — le décalage global les déplace.
+const VACATIONS: Array<[string, string]> = (
+  [
+    ['2025-10-18', '2025-11-02'],
+    ['2025-12-20', '2026-01-04'],
+    ['2026-02-14', '2026-03-01'],
+    ['2026-04-11', '2026-04-26'],
+  ] as Array<[string, string]>
+).map(([from, to]) => [shiftDay(from), shiftDay(to)]);
+const BANK_HOLIDAYS = new Set(
+  ['2025-11-11', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25'].map(shiftDay),
+);
 
 function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -365,7 +430,7 @@ async function seedPlanning(prisma: PrismaClient) {
   console.log(`[planning] ${sessionData.length} sessions (${WEEKLY_SLOTS.length} créneaux/semaine).`);
 
   const demoWeekSessions = await prisma.session.findMany({
-    where: { startAt: { gte: new Date('2025-10-13T00:00:00Z'), lte: new Date('2025-10-17T23:59:59Z') } },
+    where: { startAt: { gte: shiftDate('2025-10-13T00:00:00Z'), lte: shiftDate('2025-10-17T23:59:59Z') } },
     orderBy: { startAt: 'asc' },
   });
   const studentsCm2a = DEV_STUDENTS.filter((s) => s.classId === CLASS_CM2A).slice(0, 3);
@@ -389,7 +454,7 @@ async function seedPlanning(prisma: PrismaClient) {
   }
 
   const justifWeekSessions = await prisma.session.findMany({
-    where: { startAt: { gte: new Date('2025-09-08T00:00:00Z'), lte: new Date('2025-09-12T23:59:59Z') } },
+    where: { startAt: { gte: shiftDate('2025-09-08T00:00:00Z'), lte: shiftDate('2025-09-12T23:59:59Z') } },
     orderBy: { startAt: 'asc' },
   });
   const justifCm2aSessions = justifWeekSessions.filter((s) => s.classId === CLASS_CM2A);
