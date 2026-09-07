@@ -35,7 +35,7 @@ const prismaMock = db as unknown as {
 };
 const publishMock = publish as unknown as ReturnType<typeof mock>;
 
-let sendToUserSpy: ReturnType<typeof spyOn>;
+let sendToUsersSpy: ReturnType<typeof spyOn>;
 let getStorageProviderSpy: ReturnType<typeof spyOn>;
 const mockStorage = { save: mock(), read: mock() };
 
@@ -93,16 +93,16 @@ describe('messageController.sendMessage', () => {
     publishMock.mockReset();
     mockStorage.save.mockReset();
     mockStorage.read.mockReset();
-    sendToUserSpy = spyOn(presence, 'sendToUser').mockImplementation(() => {});
+    sendToUsersSpy = spyOn(presence, 'sendToUsers').mockImplementation(() => {});
     getStorageProviderSpy = spyOn(storageModule, 'getStorageProvider').mockReturnValue(mockStorage as never);
   });
 
   afterEach(() => {
-    sendToUserSpy.mockRestore();
+    sendToUsersSpy.mockRestore();
     getStorageProviderSpy.mockRestore();
   });
 
-  it('broadcasts the new message over WS to every other participant', async () => {
+  it('broadcasts the new message over WS to every participant, sender included', async () => {
     prismaMock.conversationParticipant.findUnique.mockResolvedValue({
       id: 'p-1',
       conversationId: 'conv-1',
@@ -123,9 +123,13 @@ describe('messageController.sendMessage', () => {
 
     await messageController.sendMessage(request, reply);
 
-    expect(sendToUserSpy).toHaveBeenCalledTimes(2);
-    expect(sendToUserSpy).toHaveBeenCalledWith('user-2', { type: 'message', data: message });
-    expect(sendToUserSpy).toHaveBeenCalledWith('user-3', { type: 'message', data: message });
+    // L'expéditeur est inclus : ses autres sessions (onglet, téléphone) doivent
+    // voir le message qu'il vient d'envoyer ailleurs (#243).
+    expect(sendToUsersSpy).toHaveBeenCalledTimes(1);
+    expect(sendToUsersSpy).toHaveBeenCalledWith(['user-1', 'user-2', 'user-3'], {
+      type: 'message',
+      data: message,
+    });
     expect(reply.status).toHaveBeenCalledWith(201);
   });
 
@@ -137,7 +141,7 @@ describe('messageController.sendMessage', () => {
     await messageController.sendMessage(request, reply);
 
     expect(reply.status).toHaveBeenCalledWith(403);
-    expect(sendToUserSpy).not.toHaveBeenCalled();
+    expect(sendToUsersSpy).not.toHaveBeenCalled();
   });
 
   it('multipart: crée le message et la pièce jointe, retourne 201', async () => {

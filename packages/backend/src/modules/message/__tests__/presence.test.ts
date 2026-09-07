@@ -33,6 +33,30 @@ describe('presence', () => {
     expect(presence.isOnline('user-3')).toBe(true);
   });
 
+  it('counts the sockets still open for a user', () => {
+    const socketA = buildSocket();
+    const socketB = buildSocket();
+    expect(presence.connectionCount('user-count')).toBe(0);
+    presence.addConnection('user-count', socketA);
+    presence.addConnection('user-count', socketB);
+    expect(presence.connectionCount('user-count')).toBe(2);
+    presence.removeConnection('user-count', socketA);
+    expect(presence.connectionCount('user-count')).toBe(1);
+  });
+
+  it('broadcasts to several users at once and ignores duplicates', () => {
+    const socketA = buildSocket();
+    const socketB = buildSocket();
+    presence.addConnection('user-multi-1', socketA);
+    presence.addConnection('user-multi-2', socketB);
+
+    presence.sendToUsers(['user-multi-1', 'user-multi-2', 'user-multi-1'], { type: 'ping' });
+
+    expect(socketA.send).toHaveBeenCalledTimes(1);
+    expect(socketB.send).toHaveBeenCalledTimes(1);
+    expect(socketA.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
+  });
+
   it('reports presence for a list of userIds', () => {
     const socket = buildSocket();
     presence.addConnection('user-4', socket);

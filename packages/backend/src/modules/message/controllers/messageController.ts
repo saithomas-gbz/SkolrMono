@@ -123,9 +123,14 @@ export default {
       recipientIds,
     }).catch((err) => console.error('[message-service] RabbitMQ publish failed:', err));
 
-    for (const recipientId of recipientIds) {
-      presence.sendToUser(recipientId, { type: 'message', data: fullMessage });
-    }
+    // La diffusion inclut l'expéditeur, contrairement aux notifications
+    // ci-dessus : ses autres sessions (onglet, téléphone) doivent voir le
+    // message qu'il vient d'envoyer depuis un autre appareil. Le client
+    // déduplique sur l'identifiant du message.
+    presence.sendToUsers(
+      participants.map((p) => p.userId),
+      { type: 'message', data: fullMessage },
+    );
 
     return reply.status(201).send({ data: fullMessage });
   },

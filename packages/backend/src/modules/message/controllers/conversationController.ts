@@ -25,6 +25,16 @@ export default {
       },
     });
 
+    // Sans cet événement, une conversation créée par un tiers n'apparaît chez
+    // ses destinataires qu'au prochain chargement complet de la page : le
+    // polling de secours qui rattrapait le cas est coupé dès que la WebSocket
+    // est connectée. Le créateur est inclus dans la diffusion pour ses autres
+    // sessions ; le client déduplique sur l'identifiant.
+    presence.sendToUsers(allParticipantIds, {
+      type: 'conversation',
+      data: { ...conversation, unreadCount: 0 },
+    });
+
     return reply.status(201).send({ data: conversation });
   },
 
