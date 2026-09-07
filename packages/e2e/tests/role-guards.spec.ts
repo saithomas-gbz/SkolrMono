@@ -44,13 +44,19 @@ for (const { path, label } of TEACHER_ROUTES) {
   });
 }
 
-test('le lien carnet de notes est visible pour un administrateur', async ({ page }) => {
+/**
+ * Le lien de navigation reste réservé aux enseignants : la page de création de
+ * devoir dérive ses classes et ses cours de l'enseignant connecté, donc un ADMIN
+ * n'y trouverait que des listes vides. Le middleware le laisse en revanche passer,
+ * pour la consultation d'un carnet de classe par lien direct.
+ */
+test("le lien carnet de notes n'est pas propose a un administrateur", async ({ page }) => {
   await loginAs(page, 'admin');
-  await expect(page.getByRole('link', { name: 'Carnet de notes' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Carnet de notes' })).toHaveCount(0);
 });
 
-test('un administrateur accede au carnet de notes', async ({ page }) => {
+test("un administrateur n'est pas redirige hors du carnet", async ({ page }) => {
   await loginAs(page, 'admin');
-  await page.goto('/grades/assignments/new');
-  await expect(page).toHaveURL(/\/grades\/assignments\/new(\?|$)/, { timeout: 15_000 });
+  await page.goto('/grades/classes/some-class-id');
+  await expect(page).toHaveURL(/\/grades\/classes\/some-class-id(\?|$)/, { timeout: 15_000 });
 });
