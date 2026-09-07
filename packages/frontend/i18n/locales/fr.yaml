@@ -440,7 +440,6 @@ grades:
 
 teacher:
   students_title: Mes élèves
-  restricted: "Cette page est réservée aux enseignants."
   class_student_table:
     loading_classes: "Chargement de vos classes…"
     invalid_session: "Session invalide : identifiant utilisateur manquant."

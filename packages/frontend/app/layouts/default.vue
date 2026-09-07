@@ -67,6 +67,13 @@ const navLinks = computed<ShellNavLink[]>(() => {
     links.push({ label: t('homework.title'), to: '/homework', icon: 'pi-check-square' });
   }
 
+  // Réservé aux enseignants, et pas seulement par prudence : la page cible dérive
+  // ses classes de `fetchClassesByTeacherId(user.id)` et ses cours de
+  // `fetchTeacherCourses(classId, user.id)`. Pour un ADMIN, qui n'enseigne aucune
+  // classe, les deux listes reviennent vides et le formulaire est un cul-de-sac —
+  // et même rempli, `createAssignment` refuserait (403) puisque l'admin n'enseigne
+  // pas le cours. Le middleware `teacher` laisse malgré tout passer les ADMIN, qui
+  // consultent légitimement le carnet d'une classe par lien direct (#235).
   if (isTeacher.value) {
     links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new', icon: 'pi-book' });
   }

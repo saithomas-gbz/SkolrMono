@@ -34,14 +34,55 @@ beforeEach(() => {
   getUsersByIds.mockResolvedValue([]);
 });
 
+/** Le garde de route attache `parentUser` ; les contrôleurs s'y fient désormais. */
+function asParent(userId: string) {
+  return { userId, email: `${userId}@skolr.local`, role: 'PARENT' };
+}
+function asAdmin() {
+  return { userId: 'admin-1', email: 'admin@skolr.local', role: 'ADMIN' };
+}
+
 describe('getChildren', () => {
-  it('utilise ?parentId= sans JWT pour un appel inter-services', async () => {
+  it("ignore le parentId du client pour un PARENT et retombe sur son jeton", async () => {
+    db.parentStudent.findMany.mockResolvedValue([]);
+    const reply = buildReply();
+
+    // Anciennement, fournir ?parentId= sautait entièrement le contrôle du jeton
+    // et livrait les enfants du parent demandé (#241).
+    await getChildren(
+      { query: { parentId: 'parent-victime' }, parentUser: asParent('parent-jwt') } as unknown as GetChildrenRequest,
+      reply,
+    );
+
+    expect(db.parentStudent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { parentId: 'parent-jwt' } }),
+    );
+  });
+
+  it('utilise son propre identifiant quand aucun parentId n\'est fourni', async () => {
+    db.parentStudent.findMany.mockResolvedValue([]);
+    const reply = buildReply();
+
+    await getChildren(
+      { query: {}, parentUser: asParent('parent-jwt') } as unknown as GetChildrenRequest,
+      reply,
+    );
+
+    expect(db.parentStudent.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { parentId: 'parent-jwt' } }),
+    );
+  });
+
+  it('honore le parentId pour un ADMIN', async () => {
     db.parentStudent.findMany.mockResolvedValue([
       { id: 'link-1', studentId: 'student-1', linkType: 'LEGAL_GUARDIAN', isPrimary: true },
     ]);
     const reply = buildReply();
 
-    await getChildren({ query: { parentId: 'parent-1' } } as unknown as GetChildrenRequest, reply);
+    await getChildren(
+      { query: { parentId: 'parent-1' }, parentUser: asAdmin() } as unknown as GetChildrenRequest,
+      reply,
+    );
 
     expect(db.parentStudent.findMany).toHaveBeenCalledWith({
       where: { parentId: 'parent-1' },
@@ -50,33 +91,16 @@ describe('getChildren', () => {
     expect(reply.send).toHaveBeenCalled();
   });
 
-  it('renvoie 401 sans parentId ni JWT valide', async () => {
+  it('renvoie 400 pour un ADMIN sans parentId', async () => {
     const reply = buildReply();
 
     await getChildren(
-      { query: {}, server: { jwt: { verify: () => { throw new Error('no token'); } } }, headers: {} } as unknown as GetChildrenRequest,
+      { query: {}, parentUser: asAdmin() } as unknown as GetChildrenRequest,
       reply,
     );
 
-    expect(reply.status).toHaveBeenCalledWith(401);
-  });
-
-  it('utilise le JWT (role PARENT) quand parentId est absent', async () => {
-    db.parentStudent.findMany.mockResolvedValue([]);
-    const reply = buildReply();
-
-    await getChildren(
-      {
-        query: {},
-        headers: { authorization: 'Bearer t' },
-        server: { jwt: { verify: () => ({ userId: 'parent-jwt', role: 'PARENT' }) } },
-      } as unknown as GetChildrenRequest,
-      reply,
-    );
-
-    expect(db.parentStudent.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { parentId: 'parent-jwt' } }),
-    );
+    expect(reply.status).toHaveBeenCalledWith(400);
+    expect(db.parentStudent.findMany).not.toHaveBeenCalled();
   });
 });
 
@@ -86,11 +110,7 @@ describe('getChildById', () => {
     const reply = buildReply();
 
     await getChildById(
-      {
-        params: { studentId: 'student-x' },
-        headers: { authorization: 'Bearer t' },
-        server: { jwt: { verify: () => ({ userId: 'parent-1', role: 'PARENT' }) } },
-      } as unknown as GetChildByIdRequest,
+      { params: { studentId: 'student-x' }, parentUser: asParent('parent-1') } as unknown as GetChildByIdRequest,
       reply,
     );
 
@@ -102,11 +122,7 @@ describe('getChildById', () => {
     const reply = buildReply();
 
     await getChildById(
-      {
-        params: { studentId: 'student-x' },
-        headers: { authorization: 'Bearer t' },
-        server: { jwt: { verify: () => ({ userId: 'admin-1', role: 'ADMIN' }) } },
-      } as unknown as GetChildByIdRequest,
+      { params: { studentId: 'student-x' }, parentUser: asAdmin() } as unknown as GetChildByIdRequest,
       reply,
     );
 
@@ -124,7 +140,7 @@ describe('getParentIds', () => {
     expect(reply.status).toHaveBeenCalledWith(400);
   });
 
-  it('renvoie les parentId rattachés à un enfant, sans authentification', async () => {
+  it('renvoie les parentId rattachés à un enfant', async () => {
     db.parentStudent.findMany.mockResolvedValue([
       { parentId: 'parent-1' },
       { parentId: 'parent-2' },

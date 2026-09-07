@@ -225,12 +225,7 @@
 import type { SubjectEntity } from '~/composables/useSubject';
 import type { CourseEntity } from '~/composables/useCourse';
 
-definePageMeta({ middleware: ['auth'] });
-
-const { hasRole } = useAuth();
-if (!hasRole('ADMIN')) {
-  await navigateTo('/');
-}
+definePageMeta({ middleware: ['auth', 'admin'] });
 
 const { fetchSubjects, deleteSubject, normalizeApiError } = useSubject();
 const { fetchCourses, deleteCourse } = useCourse();
