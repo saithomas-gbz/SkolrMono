@@ -3,10 +3,7 @@
     <Card>
       <template #title>{{ $t('teacher.students_title') }}</template>
       <template #content>
-        <TablesTeacherClassStudentTable v-if="isTeacher" :initial-class-id="initialClassId" />
-        <Message v-else severity="warn" :closable="false">
-          {{ $t('teacher.restricted') }}
-        </Message>
+        <TablesTeacherClassStudentTable :initial-class-id="initialClassId" />
       </template>
     </Card>
   </div>
@@ -14,12 +11,10 @@
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['auth'],
+  middleware: ['auth', 'teacher'],
 });
 
 const route = useRoute();
-const { hasRole } = useAuth();
-const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 
 const initialClassId = computed(() => {
   const q = route.query.classId;
