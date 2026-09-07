@@ -137,7 +137,7 @@ import {
 } from '~/composables/useAssignment';
 import type { AssignmentStats } from '~/composables/useGrade';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'teacher'] });
 
 const { t } = useI18n();
 const route = useRoute();

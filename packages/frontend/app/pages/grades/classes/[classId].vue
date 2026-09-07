@@ -104,7 +104,7 @@ import {
 } from '~/composables/useAssignment';
 import { useClass } from '~/composables/useClass';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'teacher'] });
 
 const route = useRoute();
 const classId = computed(() => route.params.classId as string);

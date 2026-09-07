@@ -67,7 +67,9 @@ const navLinks = computed<ShellNavLink[]>(() => {
     links.push({ label: t('homework.title'), to: '/homework', icon: 'pi-check-square' });
   }
 
-  if (isTeacher.value) {
+  // Le carnet est ouvert aux ADMIN côté API (`requireStaff`) : le lien doit
+  // suivre, sans quoi l'écran reste inaccessible depuis la navigation (#235).
+  if (isTeacher.value || isAdmin.value) {
     links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new', icon: 'pi-book' });
   }
 
