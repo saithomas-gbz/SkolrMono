@@ -174,9 +174,23 @@ async function findScheduleConflict(params: {
   return null;
 }
 
-const conflictMessage: Record<'teacher' | 'class', string> = {
-  teacher: 'This teacher already has a session overlapping this time slot',
-  class: 'This class already has a session overlapping this time slot',
+/**
+ * Le message reste en anglais comme le reste des erreurs du module, mais un code
+ * stable l'accompagne : `normalizeApiError` transmet le champ `error` tel quel à
+ * l'utilisateur, et un conflit d'horaire est une erreur de saisie ORDINAIRE — pas
+ * un cas limite. Sans ce code, l'interface française afficherait une phrase
+ * anglaise à chaque tentative de chevauchement. Le code doit être déclaré dans le
+ * schéma de réponse, sinon `fast-json-stringify` le supprime silencieusement.
+ */
+const conflictError: Record<'teacher' | 'class', { error: string; code: string }> = {
+  teacher: {
+    error: 'This teacher already has a session overlapping this time slot',
+    code: 'SESSION_CONFLICT_TEACHER',
+  },
+  class: {
+    error: 'This class already has a session overlapping this time slot',
+    code: 'SESSION_CONFLICT_CLASS',
+  },
 };
 
 export async function createSession(
@@ -199,7 +213,7 @@ export async function createSession(
     startAt: startDate,
     endAt: endDate,
   });
-  if (conflict) return reply.status(409).send({ error: conflictMessage[conflict] });
+  if (conflict) return reply.status(409).send(conflictError[conflict]);
 
   const session = await db.session.create({
     data: {
@@ -256,7 +270,7 @@ export async function updateSession(
       endAt: effectiveEnd,
       excludeId: existing.id,
     });
-    if (conflict) return reply.status(409).send({ error: conflictMessage[conflict] });
+    if (conflict) return reply.status(409).send(conflictError[conflict]);
   }
 
   const session = await db.session.update({

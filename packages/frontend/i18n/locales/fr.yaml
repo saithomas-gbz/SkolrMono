@@ -338,6 +338,8 @@ planning:
   session_dialog:
     edit: Modifier la session
     new: Nouvelle session
+    conflict_teacher: "Ce professeur a déjà une séance sur ce créneau."
+    conflict_class: "Cette classe a déjà une séance sur ce créneau."
     course_id: Cours
     course_placeholder: Choisir un cours
     teacher_id: Professeur

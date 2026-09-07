@@ -226,10 +226,23 @@ async function submit() {
     visible.value = false;
     emit('saved');
   } catch (e) {
-    error.value = normalizeApiError(e);
+    error.value = conflictMessage(e) ?? normalizeApiError(e);
   } finally {
     pending.value = false;
   }
+}
+
+/**
+ * Un chevauchement d'horaire est une erreur de saisie courante, pas un cas
+ * limite : `normalizeApiError` transmettrait tel quel le message anglais du
+ * backend dans une interface française. Le backend joint un code stable au 409,
+ * qu'on traduit ici. Tout autre code d'erreur retombe sur le message brut.
+ */
+function conflictMessage(e: unknown): string | null {
+  const code = (e as { data?: { code?: string } } | null)?.data?.code;
+  if (code === 'SESSION_CONFLICT_TEACHER') return t('planning.session_dialog.conflict_teacher');
+  if (code === 'SESSION_CONFLICT_CLASS') return t('planning.session_dialog.conflict_class');
+  return null;
 }
 </script>
 

@@ -13,6 +13,16 @@ const sessionProperties = {
 
 const errorResponse = { type: 'object', properties: { error: { type: 'string' } } };
 
+/**
+ * Réponse de conflit : le `code` permet à l'interface de traduire le message.
+ * `fast-json-stringify` n'émet que les propriétés déclarées — l'omettre ici le
+ * ferait disparaître de la réponse sans la moindre erreur.
+ */
+const conflictResponse = {
+  type: 'object',
+  properties: { error: { type: 'string' }, code: { type: 'string' } },
+};
+
 export const sessionSchema = {
   list: {
     description:
@@ -80,7 +90,7 @@ export const sessionSchema = {
       401: errorResponse,
       403: errorResponse,
       404: errorResponse,
-      409: errorResponse,
+      409: conflictResponse,
     },
   },
   delete: {
@@ -123,6 +133,6 @@ export const createSessionSchema = {
     400: errorResponse,
     401: errorResponse,
     403: errorResponse,
-    409: errorResponse,
+    409: conflictResponse,
   },
 };
