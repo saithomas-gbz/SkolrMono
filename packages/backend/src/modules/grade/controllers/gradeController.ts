@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
-import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { teacherTeachesCourse, getClassIdsForTeacher } from '../lib/classServiceClient';
+import { denyOutsideClassScope, denyOutsideCourseScope, scopedTeacherId } from '../lib/teacherScope';
 import { publish } from '../../../shared/events';
 import { invalidate } from '../lib/ttlCache';
 
@@ -18,7 +19,8 @@ export interface CreateGradeBody {
   value?: number;
   status?: string;
   comment?: string;
-  teacherId: string;
+  /** Ignoré pour un TEACHER : son identité vient du jeton. */
+  teacherId?: string;
 }
 
 export interface UpdateGradeBody {
@@ -30,7 +32,14 @@ export interface UpdateGradeBody {
 export default {
   getAllGrades: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const grades = await db.grade.findMany({ include: gradeInclude });
+      // Un enseignant ne voit que les notes de ses classes ; on filtre plutôt que
+      // de renvoyer 403 pour ne pas casser l'usage administrateur de la route.
+      const scopedTeacher = scopedTeacherId(request);
+      const where = scopedTeacher
+        ? { classId: { in: await getClassIdsForTeacher(scopedTeacher) } }
+        : {};
+
+      const grades = await db.grade.findMany({ where, include: gradeInclude });
       return reply.status(200).send({ data: grades, message: 'Grades fetched successfully' });
     } catch (error) {
       request.log.error(error);
@@ -48,6 +57,9 @@ export default {
       if (!grade) {
         return reply.status(404).send({ error: 'Grade not found' });
       }
+      if (await denyOutsideCourseScope(request, reply, grade.classId, grade.courseId)) {
+        return;
+      }
       return reply.status(200).send({ data: grade, message: 'Grade fetched successfully' });
     } catch (error) {
       request.log.error(error);
@@ -61,6 +73,10 @@ export default {
   ) => {
     try {
       const { classId } = request.params;
+      if (await denyOutsideClassScope(request, reply, classId)) {
+        return;
+      }
+
       const grades = await db.grade.findMany({
         where: { classId },
         include: gradeInclude,
@@ -94,8 +110,13 @@ export default {
     reply: FastifyReply,
   ) => {
     try {
-      const { assignmentId, userId, classId, courseId, value, status, comment, teacherId } = request.body;
+      const { assignmentId, userId, classId, courseId, value, status, comment } = request.body;
 
+      // Identité prise dans le jeton pour un enseignant : un `teacherId` fourni
+      // par le client rendrait le contrôle `teacherTeachesCourse` ci-dessous
+      // auto-déclaratif, donc contournable (#234). STAFF et ADMIN peuvent
+      // encore noter au nom d'un enseignant.
+      const teacherId = scopedTeacherId(request) ?? request.body.teacherId;
       if (!teacherId) {
         return reply.status(400).send({ error: 'teacherId is required' });
       }
@@ -175,6 +196,9 @@ export default {
       if (!existing) {
         return reply.status(404).send({ error: 'Grade not found' });
       }
+      if (await denyOutsideCourseScope(request, reply, existing.classId, existing.courseId)) {
+        return;
+      }
 
       const grade = await db.grade.update({
         where: { id },
@@ -204,6 +228,9 @@ export default {
       const existing = await db.grade.findUnique({ where: { id } });
       if (!existing) {
         return reply.status(404).send({ error: 'Grade not found' });
+      }
+      if (await denyOutsideCourseScope(request, reply, existing.classId, existing.courseId)) {
+        return;
       }
 
       const grade = await db.grade.delete({

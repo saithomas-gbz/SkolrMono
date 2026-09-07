@@ -116,9 +116,11 @@ export const createAssignmentSchema = {
       maxScore: { type: 'number' },
       coefficient: { type: 'number' },
     },
-    required: ['title', 'classId', 'courseId', 'teacherId', 'assignedAt'],
+    // `teacherId` n'est plus requis : pour un enseignant il vient du jeton, et
+    // n'est lu dans le corps que pour un STAFF ou un ADMIN déposant au nom d'un tiers (#234).
+    required: ['title', 'classId', 'courseId', 'assignedAt'],
   },
-  response: { 201: assignmentResponse, 400: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
+  response: { 201: assignmentResponse, 400: errorBody, 401: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const getAssignmentsSchema = {
@@ -133,14 +135,14 @@ export const getAssignmentsSchema = {
       status: { type: 'string', enum: ['DRAFT', 'PUBLISHED', 'CLOSED'] },
     },
   },
-  response: { 200: assignmentListResponse, 500: errorBody },
+  response: { 200: assignmentListResponse, 401: errorBody, 403: errorBody, 500: errorBody },
 } as const;
 
 export const getAssignmentByIdSchema = {
   description: 'Get assignment by id',
   tags: [assignmentTag],
   params: idParam,
-  response: { 200: assignmentResponse, 404: errorBody, 500: errorBody },
+  response: { 200: assignmentResponse, 401: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const updateAssignmentSchema = {
@@ -160,28 +162,28 @@ export const updateAssignmentSchema = {
     },
     additionalProperties: false,
   },
-  response: { 200: assignmentResponse, 400: errorBody, 404: errorBody, 500: errorBody },
+  response: { 200: assignmentResponse, 400: errorBody, 401: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const deleteAssignmentSchema = {
   description: 'Delete an assignment (cascades to grades)',
   tags: [assignmentTag],
   params: idParam,
-  response: { 200: assignmentResponse, 404: errorBody, 500: errorBody },
+  response: { 200: assignmentResponse, 401: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const publishAssignmentSchema = {
   description: 'Publish a DRAFT assignment — creates PENDING grades for all class students',
   tags: [assignmentTag],
   params: idParam,
-  response: { 200: assignmentResponse, 400: errorBody, 404: errorBody, 500: errorBody },
+  response: { 200: assignmentResponse, 400: errorBody, 401: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const getGradeGridSchema = {
   description: 'Get grade grid for an assignment (all students + their grades)',
   tags: [assignmentTag],
   params: idParam,
-  response: { 200: gradeGridResponse, 404: errorBody, 500: errorBody },
+  response: { 200: gradeGridResponse, 401: errorBody, 403: errorBody, 404: errorBody, 500: errorBody },
 } as const;
 
 export const batchUpdateGradesSchema = {
@@ -210,6 +212,8 @@ export const batchUpdateGradesSchema = {
   response: {
     200: { type: 'object', properties: { message: { type: 'string' } }, required: ['message'] },
     400: errorBody,
+    401: errorBody,
+    403: errorBody,
     404: errorBody,
     500: errorBody,
   },
@@ -253,6 +257,8 @@ export const getGradebookSchema = {
       },
       required: ['data', 'message'],
     },
+    401: errorBody,
+    403: errorBody,
     404: errorBody,
     500: errorBody,
   },

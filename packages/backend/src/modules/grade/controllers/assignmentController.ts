@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
-import { teacherTeachesCourse } from '../lib/classServiceClient';
+import { teacherTeachesCourse, getClassIdsForTeacher } from '../lib/classServiceClient';
+import { denyOutsideClassScope, denyOutsideCourseScope, scopedTeacherId } from '../lib/teacherScope';
 import { invalidate } from '../lib/ttlCache';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
@@ -11,7 +12,8 @@ export interface CreateAssignmentBody {
   description?: string;
   classId: string;
   courseId: string;
-  teacherId: string;
+  /** Ignoré pour un TEACHER : son identité vient du jeton. */
+  teacherId?: string;
   assignedAt: string;
   dueAt?: string;
   maxScore?: number;
@@ -55,14 +57,42 @@ const assignmentInclude = {
   course: { select: { id: true, name: true } },
 } as const;
 
+/**
+ * Charge un devoir et refuse un enseignant hors de son périmètre. Renvoie
+ * `null` quand la réponse a déjà été envoyée (404 ou 403) — l'appelant sort.
+ */
+async function loadAssignmentInScope(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply,
+) {
+  const assignment = await db.assignment.findUnique({ where: { id: request.params.id } });
+  if (!assignment) {
+    await reply.status(404).send({ error: 'Assignment not found' });
+    return null;
+  }
+  if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+    return null;
+  }
+  return assignment;
+}
+
 export default {
   createAssignment: async (
     request: FastifyRequest<{ Body: CreateAssignmentBody }>,
     reply: FastifyReply,
   ) => {
     try {
-      const { title, description, classId, courseId, teacherId, assignedAt, dueAt, maxScore, coefficient } =
+      const { title, description, classId, courseId, assignedAt, dueAt, maxScore, coefficient } =
         request.body;
+
+      // Un enseignant est toujours l'auteur de ses propres devoirs ; seuls STAFF
+      // et ADMIN peuvent en déposer un au nom d'un tiers. Le `teacherId` du corps
+      // n'est donc lu que pour eux : le lire pour un TEACHER rendrait le contrôle
+      // ci-dessous auto-déclaratif (#234).
+      const teacherId = scopedTeacherId(request) ?? request.body.teacherId;
+      if (!teacherId) {
+        return reply.status(400).send({ error: 'teacherId is required' });
+      }
 
       const classExists = await db.class.findUnique({ where: { id: classId } });
       if (!classExists) {
@@ -108,9 +138,24 @@ export default {
     try {
       const { classId, courseId, teacherId, status } = request.query;
 
+      // Un enseignant ne liste que les devoirs de ses classes : on filtre au lieu
+      // de renvoyer 403, pour ne pas casser la liste quand aucun classId n'est
+      // fourni. STAFF et ADMIN gardent les filtres libres.
+      const scopedTeacher = scopedTeacherId(request);
+      let classWhere: { equals: string } | { in: string[] } | undefined = classId
+        ? { equals: classId }
+        : undefined;
+      if (scopedTeacher) {
+        const teacherClassIds = await getClassIdsForTeacher(scopedTeacher);
+        if (classId && !teacherClassIds.includes(classId)) {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+        classWhere = classId ? { equals: classId } : { in: teacherClassIds };
+      }
+
       const assignments = await db.assignment.findMany({
         where: {
-          ...(classId ? { classId } : {}),
+          ...(classWhere ? { classId: classWhere } : {}),
           ...(courseId ? { courseId } : {}),
           ...(teacherId ? { teacherId } : {}),
           ...(status ? { status: status as AssignmentStatus } : {}),
@@ -160,10 +205,8 @@ export default {
       const { id } = request.params;
       const { title, description, assignedAt, dueAt, maxScore, coefficient, status } = request.body;
 
-      const existing = await db.assignment.findUnique({ where: { id } });
-      if (!existing) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const existing = await loadAssignmentInScope(request, reply);
+      if (!existing) return;
 
       if (existing.status === 'CLOSED' && status !== 'CLOSED') {
         return reply.status(400).send({ error: 'Closed assignment cannot be reopened' });
@@ -196,10 +239,8 @@ export default {
   ) => {
     try {
       const { id } = request.params;
-      const existing = await db.assignment.findUnique({ where: { id } });
-      if (!existing) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const existing = await loadAssignmentInScope(request, reply);
+      if (!existing) return;
 
       await db.assignment.delete({ where: { id } });
       return reply.status(200).send({ data: existing, message: 'Assignment deleted successfully' });
@@ -215,10 +256,9 @@ export default {
   ) => {
     try {
       const { id } = request.params;
-      const assignment = await db.assignment.findUnique({ where: { id } });
-      if (!assignment) {
-        return reply.status(404).send({ error: 'Assignment not found' });
-      }
+      const assignment = await loadAssignmentInScope(request, reply);
+      if (!assignment) return;
+
       if (assignment.status !== 'DRAFT') {
         return reply.status(400).send({ error: 'Only DRAFT assignments can be published' });
       }
@@ -264,6 +304,9 @@ export default {
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
       }
+      if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+        return;
+      }
 
       const grades = await db.grade.findMany({
         where: { assignmentId: id },
@@ -300,6 +343,9 @@ export default {
       const assignment = await db.assignment.findUnique({ where: { id } });
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
+      }
+      if (await denyOutsideCourseScope(request, reply, assignment.classId, assignment.courseId)) {
+        return;
       }
       if (assignment.status === 'CLOSED') {
         return reply.status(400).send({ error: 'Assignment is closed, grades are read-only' });
@@ -363,6 +409,10 @@ export default {
       const classExists = await db.class.findUnique({ where: { id: classId } });
       if (!classExists) {
         return reply.status(404).send({ error: 'Class not found' });
+      }
+      // Granularité classe et non cours : le carnet couvre toutes les matières.
+      if (await denyOutsideClassScope(request, reply, classId)) {
+        return;
       }
 
       const assignments = await db.assignment.findMany({

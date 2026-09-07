@@ -158,7 +158,9 @@ export const createGradeSchema = {
       comment: { type: 'string' },
       teacherId: { type: 'string' },
     },
-    required: ['assignmentId', 'userId', 'classId', 'courseId', 'teacherId'],
+    // `teacherId` n'est plus requis : pour un enseignant il vient du jeton, et
+    // n'est lu dans le corps que pour un STAFF ou un ADMIN notant au nom d'un tiers (#234).
+    required: ['assignmentId', 'userId', 'classId', 'courseId'],
   },
   response: {
     201: gradeResponse,
