@@ -229,11 +229,22 @@ export async function updateSession(
   // La détection de conflit doit porter sur les horaires/enseignant EFFECTIFS
   // après modification, pas seulement sur les champs fournis dans le body —
   // sinon déplacer uniquement `startAt` ne serait jamais comparé au bon `endAt`.
-  const effectiveStart = startAt ? new Date(startAt) : existing.startAt;
-  const effectiveEnd = endAt ? new Date(endAt) : existing.endAt;
+  // `new Date(...)` des deux côtés, y compris sur les valeurs existantes : la
+  // comparaison ci-dessous doit porter sur deux Date. Mélanger une Date et une
+  // chaîne ISO fait basculer JavaScript en comparaison lexicographique après
+  // conversion de la Date par `toString()`, dont le format ne se compare pas à
+  // de l'ISO — le test passait alors sans rien vérifier.
+  const effectiveStart = new Date(startAt ?? existing.startAt);
+  const effectiveEnd = new Date(endAt ?? existing.endAt);
   const effectiveTeacherId = teacherId ?? existing.teacherId;
 
-  if (effectiveEnd <= effectiveStart) {
+  // Validation restreinte aux requêtes qui touchent effectivement une borne.
+  // La valider inconditionnellement enfermait les séances déjà en base avec des
+  // bornes inversées — cas possible avant l'ajout de ce contrôle : changer leur
+  // seule salle renvoyait 400, en citant des bornes que l'appelant n'avait pas
+  // fournies. On refuse donc l'incohérence qu'on introduit, pas celle dont on
+  // hérite, ce qui laisse une porte de sortie pour corriger ces séances.
+  if ((startAt || endAt) && effectiveEnd <= effectiveStart) {
     return reply.status(400).send({ error: 'endAt must be strictly after startAt' });
   }
 

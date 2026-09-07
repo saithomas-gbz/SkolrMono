@@ -361,6 +361,44 @@ describe('Conflits d\'horaire et validation des bornes — /sessions (#245)', ()
     await app.close();
   });
 
+  it("PATCH /sessions/:id laisse corriger la salle d'une séance aux bornes déjà inversées", async () => {
+    // Séance héritée d'avant ce contrôle : ses bornes sont incohérentes. Valider
+    // inconditionnellement l'aurait rendue immodifiable, y compris pour un champ
+    // sans rapport — il n'y aurait plus eu de porte de sortie.
+    db.session.findUnique.mockResolvedValue({
+      ...sampleSession,
+      startAt: '2026-01-05T11:00:00.000Z',
+      endAt: '2026-01-05T10:00:00.000Z',
+    });
+    db.session.update.mockResolvedValue({ ...sampleSession, room: 'C12' });
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { room: 'C12' },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(db.session.update).toHaveBeenCalled();
+    await app.close();
+  });
+
+  it('PATCH /sessions/:id refuse une borne qui rend la séance incohérente', async () => {
+    // Seul `startAt` est fourni, mais il passe après le `endAt` existant :
+    // l'incohérence est bien introduite par cette requête, donc refusée.
+    db.session.findUnique.mockResolvedValue(sampleSession);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/sessions/${sampleSession.id}`,
+      payload: { startAt: '2026-01-05T23:00:00.000Z' },
+      headers: authHeader(app, admin),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(db.session.update).not.toHaveBeenCalled();
+    await app.close();
+  });
+
   it('PATCH /sessions/:id refuse de déplacer une séance sur un créneau déjà pris (409)', async () => {
     const takenSlot: SessionFixture = {
       id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
