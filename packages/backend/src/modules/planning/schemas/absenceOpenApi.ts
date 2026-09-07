@@ -9,6 +9,8 @@ const absenceProperties = {
   updatedAt: { type: 'string', format: 'date-time' },
 };
 
+const errorResponse = { type: 'object', properties: { error: { type: 'string' } } };
+
 export const absenceSchema = {
   list: {
     description: 'Get absences — filtrable par sessionId, userId, role',
@@ -23,6 +25,8 @@ export const absenceSchema = {
     },
     response: {
       200: { type: 'array', items: { type: 'object', properties: absenceProperties } },
+      401: errorResponse,
+      403: errorResponse,
     },
   },
   get: {
@@ -34,11 +38,13 @@ export const absenceSchema = {
     },
     response: {
       200: { type: 'object', properties: absenceProperties },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      403: errorResponse,
+      404: errorResponse,
     },
   },
   update: {
-    description: 'Justify or update an absence',
+    description: 'Justify or update an absence — staff uniquement.',
     params: {
       type: 'object',
       properties: { id: { type: 'string', format: 'uuid' } },
@@ -53,11 +59,13 @@ export const absenceSchema = {
     },
     response: {
       200: { type: 'object', properties: absenceProperties },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      403: errorResponse,
+      404: errorResponse,
     },
   },
   delete: {
-    description: 'Delete an absence',
+    description: 'Delete an absence — staff uniquement.',
     params: {
       type: 'object',
       properties: { id: { type: 'string', format: 'uuid' } },
@@ -65,13 +73,15 @@ export const absenceSchema = {
     },
     response: {
       204: { type: 'null' },
-      404: { type: 'object', properties: { error: { type: 'string' } } },
+      401: errorResponse,
+      403: errorResponse,
+      404: errorResponse,
     },
   },
 };
 
 export const createAbsenceSchema = {
-  description: 'Record an absence for a session',
+  description: 'Record an absence for a session — staff uniquement.',
   body: {
     type: 'object',
     required: ['sessionId', 'userId', 'role'],
@@ -85,6 +95,8 @@ export const createAbsenceSchema = {
   },
   response: {
     201: { type: 'object', properties: absenceProperties },
-    409: { type: 'object', properties: { error: { type: 'string' } } },
+    401: errorResponse,
+    403: errorResponse,
+    409: errorResponse,
   },
 };

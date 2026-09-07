@@ -113,11 +113,35 @@ export async function getSessionById(
   return reply.send(session);
 }
 
+/**
+ * Un TEACHER n'écrit que sur les classes où il enseigne ; STAFF et ADMIN gardent
+ * le pass-through. Symétrique du filtrage déjà appliqué en lecture par
+ * `getSessions` — sans quoi le garde `requireStaff` laisserait n'importe quel
+ * prof déplacer ou supprimer les séances d'un collègue (#233).
+ */
+async function denyIfOutsideTeacherScope(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  classId: string,
+): Promise<boolean> {
+  const planningUser = req.planningUser;
+  if (planningUser?.role !== 'TEACHER') return false;
+
+  const teacherClassIds = await getClassIdsForTeacher(planningUser.userId);
+  if (teacherClassIds.includes(classId)) return false;
+
+  await reply.status(403).send({ error: 'Forbidden' });
+  return true;
+}
+
 export async function createSession(
   req: FastifyRequest<{ Body: CreateSessionBody }>,
   reply: FastifyReply,
 ) {
   const { classId, courseId, teacherId, room, startAt, endAt, recurrenceRule } = req.body;
+
+  if (await denyIfOutsideTeacherScope(req, reply, classId)) return;
+
   const session = await db.session.create({
     data: {
       classId,
@@ -139,6 +163,8 @@ export async function updateSession(
   const existing = await db.session.findUnique({ where: { id: req.params.id } });
   if (!existing) return reply.status(404).send({ error: 'Session not found' });
 
+  if (await denyIfOutsideTeacherScope(req, reply, existing.classId)) return;
+
   const { room, startAt, endAt, recurrenceRule, teacherId } = req.body;
   const session = await db.session.update({
     where: { id: req.params.id },
@@ -159,6 +185,9 @@ export async function deleteSession(
 ) {
   const existing = await db.session.findUnique({ where: { id: req.params.id } });
   if (!existing) return reply.status(404).send({ error: 'Session not found' });
+
+  if (await denyIfOutsideTeacherScope(req, reply, existing.classId)) return;
+
   await db.session.delete({ where: { id: req.params.id } });
   return reply.status(204).send();
 }
