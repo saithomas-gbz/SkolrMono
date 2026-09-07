@@ -1,7 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 import { getUsersByIds } from '../lib/authServiceClient';
-import { verifyToken } from '../lib/authGuard';
 
 type GetChildrenQuery = { parentId?: string };
 type GetChildByIdParams = { studentId: string };
@@ -11,13 +10,16 @@ export async function getChildren(
   req: FastifyRequest<{ Querystring: GetChildrenQuery }>,
   reply: FastifyReply,
 ) {
-  let parentId = req.query.parentId;
+  const user = req.parentUser!;
 
+  // Le `parentId` du client n'est honoré que pour un ADMIN ou un STAFF. Un PARENT
+  // est toujours ramené à son propre identifiant : auparavant le contrôle du jeton
+  // vivait dans un `if (!parentId)`, si bien que fournir le paramètre sautait
+  // l'authentification et livrait les enfants de n'importe quel parent — avec leur
+  // fiche complète, nom et e-mail compris (#241).
+  const parentId = user.role === 'PARENT' ? user.userId : req.query.parentId;
   if (!parentId) {
-    const payload = verifyToken(req);
-    if (!payload) return reply.status(401).send({ error: 'Unauthorized' });
-    if (payload.role !== 'PARENT') return reply.status(403).send({ error: 'Forbidden' });
-    parentId = payload.userId;
+    return reply.status(400).send({ error: 'parentId is required' });
   }
 
   const links = await db.parentStudent.findMany({
@@ -43,8 +45,7 @@ export async function getChildById(
   reply: FastifyReply,
 ) {
   const { studentId } = req.params;
-  const payload = verifyToken(req);
-  if (!payload) return reply.status(401).send({ error: 'Unauthorized' });
+  const payload = req.parentUser!;
 
   if (payload.role === 'PARENT') {
     const link = await db.parentStudent.findUnique({
@@ -61,8 +62,11 @@ export async function getChildById(
 }
 
 /**
- * Recherche inverse "parents de cet enfant" — non protégée, appel inter-services
- * (notification-service) au même titre que GET /classes/teacher/:id sur class-service.
+ * Recherche inverse « parents de cet enfant ». Le commentaire précédent la disait
+ * volontairement non protégée, au titre d'un appel inter-services — justification
+ * caduque depuis #114 : les modules `notification` et `planning` passent par
+ * `parent/service.ts`, en intra-process. La route HTTP n'a plus d'appelant et
+ * reconstitue le graphe des responsables légaux : réservée à l'administration.
  */
 export async function getParentIds(
   req: FastifyRequest<{ Querystring: GetParentIdsQuery }>,
