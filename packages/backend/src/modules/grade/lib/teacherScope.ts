@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { teacherTeachesCourse, getClassIdsForTeacher } from './classServiceClient';
+import db from '../db';
 
 /**
  * Périmètre d'écriture et de lecture d'un enseignant sur le carnet de notes.
@@ -64,4 +65,47 @@ export async function denyOutsideClassScope(
 
   await reply.status(403).send({ error: 'Forbidden' });
   return true;
+}
+
+/**
+ * Périmètre de LECTURE des devoirs, tous rôles confondus.
+ *
+ * Les deux routes de lecture (`getAssignments`, `getAssignmentById`) sont en
+ * `requireAuth` : élèves et parents y accèdent légitimement, pour consulter leurs
+ * devoirs. Mais elles ne filtraient rien pour ces rôles — un élève recevait la
+ * liste de tous les devoirs de l'établissement, brouillons compris. Après le
+ * périmètre enseignant, un professeur s'y trouvait plus restreint qu'un élève.
+ *
+ * Renvoie `null` quand l'accès n'est pas restreint (STAFF, ADMIN).
+ */
+export async function assignmentReadScope(
+  request: FastifyRequest,
+): Promise<{ classIds: string[]; publishedOnly: boolean } | null> {
+  const gradeUser = request.gradeUser;
+  if (!gradeUser) return { classIds: [], publishedOnly: true };
+
+  if (gradeUser.role === SCOPED_ROLE) {
+    // Un enseignant voit ses classes, brouillons compris : il les rédige.
+    return { classIds: await getClassIdsForTeacher(gradeUser.userId), publishedOnly: false };
+  }
+
+  if (gradeUser.role === 'USER') {
+    const student = await db.user.findUnique({ where: { id: gradeUser.userId } });
+    return { classIds: student?.classId ? [student.classId] : [], publishedOnly: true };
+  }
+
+  if (gradeUser.role === 'PARENT') {
+    const links = await db.parentStudent.findMany({
+      where: { parentId: gradeUser.userId },
+      select: { studentId: true },
+    });
+    const children = await db.user.findMany({
+      where: { id: { in: links.map((l) => l.studentId) } },
+      select: { classId: true },
+    });
+    const classIds = [...new Set(children.map((c) => c.classId).filter((id): id is string => !!id))];
+    return { classIds, publishedOnly: true };
+  }
+
+  return null;
 }

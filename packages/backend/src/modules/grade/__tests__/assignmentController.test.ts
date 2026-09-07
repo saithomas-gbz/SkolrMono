@@ -74,13 +74,22 @@ const prismaMock = db as {
   $transaction: ReturnType<typeof mock>;
 };
 
+/**
+ * `gradeUser` par défaut : un ADMIN, donc un accès non restreint. Ces tests
+ * unitaires portent sur la mécanique des handlers, pas sur le périmètre — celui-ci
+ * est couvert par les tests de route, qui exercent les gardes. Un `gradeUser`
+ * absent est désormais refusé par `assignmentReadScope` (refus par défaut).
+ */
 function createMockRequest<RouteGeneric extends RouteGenericInterface = RouteGenericInterface>(
-  overrides: Partial<Pick<FastifyRequest<RouteGeneric>, 'body' | 'params' | 'query'>> = {},
+  overrides: Partial<Pick<FastifyRequest<RouteGeneric>, 'body' | 'params' | 'query'>> & {
+    gradeUser?: { userId: string; email: string; role: string };
+  } = {},
 ): FastifyRequest<RouteGeneric> {
   return {
     body: (overrides.body ?? {}) as FastifyRequest<RouteGeneric>['body'],
     params: (overrides.params ?? {}) as FastifyRequest<RouteGeneric>['params'],
     query: (overrides.query ?? {}) as FastifyRequest<RouteGeneric>['query'],
+    gradeUser: overrides.gradeUser ?? { userId: 'admin-1', email: 'admin@skolr.local', role: 'ADMIN' },
     log: { error: mock() },
   } as unknown as FastifyRequest<RouteGeneric>;
 }
@@ -319,6 +328,7 @@ describe('batchUpdateGrades', () => {
 
   it('invalide le cache stats des clés concernées après une écriture réussie', async () => {
     prismaMock.assignment.findUnique.mockResolvedValue({ ...sampleAssignment, status: 'PUBLISHED' });
+    prismaMock.user.findMany.mockResolvedValue([{ id: 'user-1' }]);
     prismaMock.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => fn({ grade: { upsert: mock() } }));
     const req = createMockRequest<{ Params: { id: string }; Body: BatchUpdateGradesBody }>({
       params: { id: 'assignment-1' },

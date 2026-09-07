@@ -218,7 +218,7 @@ describe('GradeRoutes', () => {
   });
 
   it('POST /grades creates a grade for a TEACHER', async () => {
-    prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
+    prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1', classId: 'class-1', courseId: 'course-1' });
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
     prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
     prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
@@ -244,7 +244,7 @@ describe('GradeRoutes', () => {
   });
 
   it('POST /grades returns 400 when user does not belong to class', async () => {
-    prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
+    prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1', classId: 'class-1', courseId: 'course-1' });
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'other-class' });
     prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
     prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
@@ -408,7 +408,7 @@ describe('GradeRoutes', () => {
     });
 
     it('POST /grades ignore un teacherId du corps pour un enseignant', async () => {
-      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1' });
+      prismaMock.assignment.findUnique.mockResolvedValue({ id: 'assignment-1', classId: 'class-1', courseId: 'course-1' });
       prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
       prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
       prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
@@ -430,6 +430,71 @@ describe('GradeRoutes', () => {
       });
       expect(res.statusCode).toBe(201);
       expect(teacherTeachesCourseMock).toHaveBeenCalledWith('class-1', 'teacher-1', 'course-1');
+      await app.close();
+    });
+  });
+  describe('trous fermes apres review (#234)', () => {
+    it('GET /grades/user/:id restreint un enseignant a ses classes', async () => {
+      getClassIdsForTeacherMock.mockResolvedValue(['class-1']);
+      prismaMock.grade.findMany.mockResolvedValue([sampleGrade]);
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/grades/user/user-1',
+        headers: authHeader(app, teacherPayload),
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Sans ce filtre, un prof lisait toutes les notes de l'eleve, toutes
+      // classes et toutes matieres confondues.
+      expect(prismaMock.grade.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1', classId: { in: ['class-1'] } } }),
+      );
+      await app.close();
+    });
+
+    it('GET /grades/user/:id ne filtre pas pour un eleve consultant ses notes', async () => {
+      prismaMock.grade.findMany.mockResolvedValue([sampleGrade]);
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/grades/user/user-1',
+        headers: authHeader(app, studentPayload),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(prismaMock.grade.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'user-1' } }),
+      );
+      await app.close();
+    });
+
+    it('POST /grades refuse un couple classe/cours different de celui du devoir', async () => {
+      prismaMock.assignment.findUnique.mockResolvedValue({
+        id: 'assignment-1',
+        classId: 'class-9',
+        courseId: 'course-9',
+      });
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+      prismaMock.class.findUnique.mockResolvedValue({ id: 'class-1' });
+      prismaMock.course.findUnique.mockResolvedValue({ id: 'course-1' });
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'POST',
+        url: '/grades',
+        headers: authHeader(app, teacherPayload),
+        payload: {
+          assignmentId: 'assignment-1',
+          userId: 'user-1',
+          // Couple ou l'enseignant est legitime, mais qui n'est pas celui du devoir.
+          classId: 'class-1',
+          courseId: 'course-1',
+          value: 16,
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(prismaMock.grade.create).not.toHaveBeenCalled();
       await app.close();
     });
   });

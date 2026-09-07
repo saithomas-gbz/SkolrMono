@@ -94,8 +94,20 @@ export default {
   ) => {
     try {
       const { userId } = request.params;
+
+      // `requireSelfOrStaff` laisse passer l'élève lui-même, un parent lié, et
+      // TOUT membre du personnel — dont n'importe quel enseignant. Sans le filtre
+      // ci-dessous, un prof de maths de CM2-A lisait les notes de n'importe quel
+      // élève, toutes classes et toutes matières confondues : c'est la route de
+      // lecture la plus large du module, et elle échappait au périmètre (#234).
+      // Granularité classe, cohérente avec `getGradesByClassId` et le carnet.
+      const scopedTeacher = scopedTeacherId(request);
+      const where = scopedTeacher
+        ? { userId, classId: { in: await getClassIdsForTeacher(scopedTeacher) } }
+        : { userId };
+
       const grades = await db.grade.findMany({
-        where: { userId },
+        where,
         include: gradeInclude,
       });
       return reply.status(200).send({ data: grades, message: 'Grades fetched successfully' });
@@ -143,6 +155,19 @@ export default {
 
       if (user.classId !== classId) {
         return reply.status(400).send({ error: 'User does not belong to this class' });
+      }
+
+      // Le couple (classe, cours) du corps doit être celui du devoir. C'est
+      // `teacherTeachesCourse` qui décide du droit d'écrire, et il l'évalue sur ce
+      // couple : le laisser diverger du devoir permettait à un enseignant
+      // légitime sur class-1/course-1 de rattacher une note à un devoir d'une
+      // autre classe, en déclarant son propre couple. La ligne apparaissait alors
+      // dans la grille du devoir visé, `getGradeGrid` filtrant sur le seul
+      // `assignmentId` (#234).
+      if (assignment.classId !== classId || assignment.courseId !== courseId) {
+        return reply
+          .status(400)
+          .send({ error: 'classId and courseId must match the assignment' });
       }
 
       const allowed = await teacherTeachesCourse(classId, teacherId, courseId);

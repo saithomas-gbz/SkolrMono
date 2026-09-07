@@ -1,7 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
-import { teacherTeachesCourse, getClassIdsForTeacher } from '../lib/classServiceClient';
-import { denyOutsideClassScope, denyOutsideCourseScope, scopedTeacherId } from '../lib/teacherScope';
+import { teacherTeachesCourse } from '../lib/classServiceClient';
+import {
+  assignmentReadScope,
+  denyOutsideClassScope,
+  denyOutsideCourseScope,
+  scopedTeacherId,
+} from '../lib/teacherScope';
 import { invalidate } from '../lib/ttlCache';
 
 export type AssignmentStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
@@ -138,27 +143,35 @@ export default {
     try {
       const { classId, courseId, teacherId, status } = request.query;
 
-      // Un enseignant ne liste que les devoirs de ses classes : on filtre au lieu
-      // de renvoyer 403, pour ne pas casser la liste quand aucun classId n'est
-      // fourni. STAFF et ADMIN gardent les filtres libres.
-      const scopedTeacher = scopedTeacherId(request);
+      // Filtrage par rôle plutôt que 403, pour ne pas casser la liste quand aucun
+      // classId n'est fourni. Un enseignant ne voit que ses classes ; un élève ou
+      // un parent, les classes concernées et uniquement les devoirs publiés.
+      // STAFF et ADMIN gardent les filtres libres.
+      const scope = await assignmentReadScope(request);
       let classWhere: { equals: string } | { in: string[] } | undefined = classId
         ? { equals: classId }
         : undefined;
-      if (scopedTeacher) {
-        const teacherClassIds = await getClassIdsForTeacher(scopedTeacher);
-        if (classId && !teacherClassIds.includes(classId)) {
+      if (scope) {
+        if (classId && !scope.classIds.includes(classId)) {
           return reply.status(403).send({ error: 'Forbidden' });
         }
-        classWhere = classId ? { equals: classId } : { in: teacherClassIds };
+        classWhere = classId ? { equals: classId } : { in: scope.classIds };
       }
+
+      // Un brouillon n'est pas encore adressé à la classe : il ne doit apparaître
+      // ni aux élèves ni aux parents, quel que soit le filtre `status` demandé.
+      const statusWhere = scope?.publishedOnly
+        ? { status: { in: ['PUBLISHED', 'CLOSED'] as AssignmentStatus[] } }
+        : status
+          ? { status: status as AssignmentStatus }
+          : {};
 
       const assignments = await db.assignment.findMany({
         where: {
           ...(classWhere ? { classId: classWhere } : {}),
           ...(courseId ? { courseId } : {}),
           ...(teacherId ? { teacherId } : {}),
-          ...(status ? { status: status as AssignmentStatus } : {}),
+          ...statusWhere,
         },
         include: { ...assignmentInclude, grades: { select: { status: true } } },
         orderBy: { assignedAt: 'desc' },
@@ -190,6 +203,19 @@ export default {
       if (!assignment) {
         return reply.status(404).send({ error: 'Assignment not found' });
       }
+
+      // Route en `requireAuth` : sans ce contrôle, n'importe quel compte lisait
+      // n'importe quel devoir par son identifiant, brouillons compris (#234).
+      const scope = await assignmentReadScope(request);
+      if (scope) {
+        if (!scope.classIds.includes(assignment.classId)) {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+        if (scope.publishedOnly && assignment.status === 'DRAFT') {
+          return reply.status(403).send({ error: 'Forbidden' });
+        }
+      }
+
       return reply.status(200).send({ data: assignment, message: 'Assignment fetched successfully' });
     } catch (error) {
       request.log.error(error);
@@ -362,6 +388,23 @@ export default {
             });
           }
         }
+      }
+
+      // Les lignes saisies doivent porter sur des élèves de la classe du devoir.
+      // Sans ce contrôle, un enseignant pourtant dans son périmètre pouvait
+      // injecter des notes pour n'importe quel `userId` : l'upsert leur créait
+      // une ligne portant le `classId` du devoir, qui remontait ensuite sur le
+      // `/grades/user/:id` de la victime (#234).
+      const roster = await db.user.findMany({
+        where: { classId: assignment.classId, id: { in: entries.map((e) => e.userId) } },
+        select: { id: true },
+      });
+      const rosterIds = new Set(roster.map((u) => u.id));
+      const outsiders = entries.filter((e) => !rosterIds.has(e.userId));
+      if (outsiders.length > 0) {
+        return reply.status(400).send({
+          error: `Some users do not belong to this assignment's class: ${outsiders.map((e) => e.userId).join(', ')}`,
+        });
       }
 
       await db.$transaction(async (tx) => {

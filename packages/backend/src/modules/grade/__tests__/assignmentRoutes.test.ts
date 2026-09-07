@@ -26,6 +26,7 @@ mock.module('../db', () => ({
     assignment: { findUnique: mock(), findMany: mock(), create: mock(), update: mock(), delete: mock() },
     grade: { findUnique: mock(), findMany: mock(), upsert: mock() },
     user: { findUnique: mock(), findMany: mock() },
+    parentStudent: { findMany: mock(), findUnique: mock() },
     class: { findUnique: mock() },
     course: { findUnique: mock() },
     $transaction: mock(),
@@ -37,6 +38,7 @@ const db = (await import('../db')).default as unknown as {
   assignment: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete', ReturnType<typeof mock>>;
   grade: Record<'findUnique' | 'findMany' | 'upsert', ReturnType<typeof mock>>;
   user: Record<'findUnique' | 'findMany', ReturnType<typeof mock>>;
+  parentStudent: Record<'findMany' | 'findUnique', ReturnType<typeof mock>>;
   class: Record<'findUnique', ReturnType<typeof mock>>;
   course: Record<'findUnique', ReturnType<typeof mock>>;
   $transaction: ReturnType<typeof mock>;
@@ -78,7 +80,7 @@ const sampleAssignment = {
 };
 
 beforeEach(() => {
-  for (const model of [db.assignment, db.grade, db.user, db.class, db.course]) {
+  for (const model of [db.assignment, db.grade, db.user, db.class, db.course, db.parentStudent]) {
     for (const fn of Object.values(model)) fn.mockReset();
   }
   db.$transaction.mockReset();
@@ -276,5 +278,111 @@ describe('Périmètre enseignant sur les devoirs', () => {
     expect(res.statusCode).toBe(201);
     expect(teacherTeachesCourseMock).toHaveBeenCalledWith('class-1', 'teacher-7', 'course-1');
     await app.close();
+  });
+  describe('lecture des devoirs par un eleve ou un parent (#234)', () => {
+    const student = { userId: 'user-1', email: 'eleve@skolr.local', role: 'USER' };
+    const parent = { userId: 'parent-1', email: 'parent@skolr.local', role: 'PARENT' };
+
+    it('GET /assignments restreint un eleve a sa classe et masque les brouillons', async () => {
+      db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+      db.assignment.findMany.mockResolvedValue([]);
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/assignments',
+        headers: authHeader(app, student),
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Avant : la liste complete de l'etablissement, brouillons compris — un
+      // eleve etait moins restreint qu'un enseignant.
+      expect(db.assignment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            classId: { in: ['class-1'] },
+            status: { in: ['PUBLISHED', 'CLOSED'] },
+          }),
+        }),
+      );
+      await app.close();
+    });
+
+    it('GET /assignments restreint un parent aux classes de ses enfants', async () => {
+      db.parentStudent.findMany.mockResolvedValue([{ studentId: 'child-1' }]);
+      db.user.findMany.mockResolvedValue([{ classId: 'class-1' }]);
+      db.assignment.findMany.mockResolvedValue([]);
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/assignments',
+        headers: authHeader(app, parent),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(db.assignment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ classId: { in: ['class-1'] } }),
+        }),
+      );
+      await app.close();
+    });
+
+    it('GET /assignments/:id masque un brouillon a un eleve de la classe', async () => {
+      db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+      db.assignment.findUnique.mockResolvedValue(sampleAssignment); // status DRAFT
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/assignments/assignment-1',
+        headers: authHeader(app, student),
+      });
+
+      expect(res.statusCode).toBe(403);
+      await app.close();
+    });
+
+    it('GET /assignments/:id refuse un devoir hors de la classe de l\'eleve', async () => {
+      db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-9' });
+      db.assignment.findUnique.mockResolvedValue({ ...sampleAssignment, status: 'PUBLISHED' });
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/assignments/assignment-1',
+        headers: authHeader(app, student),
+      });
+
+      expect(res.statusCode).toBe(403);
+      await app.close();
+    });
+
+    it('GET /assignments/:id laisse un eleve lire un devoir publie de sa classe', async () => {
+      db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+      db.assignment.findUnique.mockResolvedValue({ ...sampleAssignment, status: 'PUBLISHED' });
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/assignments/assignment-1',
+        headers: authHeader(app, student),
+      });
+
+      expect(res.statusCode).toBe(200);
+      await app.close();
+    });
+
+    it('PATCH /assignments/:id/grades/batch refuse un eleve hors de la classe du devoir', async () => {
+      db.assignment.findUnique.mockResolvedValue({ ...sampleAssignment, status: 'PUBLISHED' });
+      db.user.findMany.mockResolvedValue([]); // aucun des userId n'est au roster
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/assignments/assignment-1/grades/batch',
+        headers: authHeader(app, teacher),
+        payload: { entries: [{ userId: 'intrus-1', status: 'GRADED', value: 15 }] },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(db.$transaction).not.toHaveBeenCalled();
+      await app.close();
+    });
   });
 });
