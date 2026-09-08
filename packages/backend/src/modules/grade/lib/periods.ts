@@ -9,7 +9,8 @@
 
 export const PERIOD_COUNT = 3;
 
-export interface PeriodBounds {
+/** Interne : les signatures l'exposent structurellement, rien ne l'importe. */
+interface PeriodBounds {
   index: number;
   start: Date;
   end: Date;
