@@ -5,7 +5,7 @@ export type UserProfile = {
   id: string;
   name: string | null;
   email: string;
-  role: 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PARENT';
+  role: 'USER' | 'TEACHER' | 'STAFF' | 'ADMIN' | 'PLATFORM_ADMIN' | 'PARENT';
   createdAt?: string;
 };
 

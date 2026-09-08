@@ -41,6 +41,8 @@ nav:
   role_staff: Vie scolaire
   role_parent: Parent
   role_admin: Administrateur
+  role_platform_admin: Administrateur plateforme
+  establishments: Établissements
   main_navigation: Navigation principale
   skip_to_content: Aller au contenu principal
   open_user_menu: "Menu utilisateur de {name}"
@@ -228,6 +230,16 @@ admin:
     topics: Sujets
     no_topics: Aucun sujet
     topic_placeholder: "Nom du sujet (ex: Trigonométrie)"
+
+platform:
+  title: Établissements
+  hint: "Vue plateforme : tous les établissements et l'état de leur abonnement."
+  loading: "Chargement des établissements…"
+  empty: "Aucun établissement pour le moment."
+  column_name: Établissement
+  column_status: Abonnement
+  column_plan: Plan
+  column_contact: Contact facturation
 
 billing:
   title: Facturation

@@ -40,6 +40,17 @@ export function useBilling() {
     return response.data;
   }
 
+  /**
+   * Liste de tous les établissements — réservée au rôle `PLATFORM_ADMIN` côté
+   * backend (`requirePlatformAdmin`). C'est sa seule capacité propre : les
+   * écrans d'administration classiques sont, eux, portés par l'ADMIN d'un
+   * établissement donné.
+   */
+  async function fetchEstablishments() {
+    const response = await api<{ data: BillingEstablishment[] }>('/billing/establishments');
+    return response.data;
+  }
+
   async function fetchPlans() {
     const response = await api<{ data: BillingPlan[] }>('/billing/plans');
     return response.data;
@@ -60,6 +71,7 @@ export function useBilling() {
 
   return {
     fetchEstablishment,
+    fetchEstablishments,
     fetchPlans,
     createCheckoutSession,
     createPortalSession,

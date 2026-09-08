@@ -38,6 +38,7 @@ const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isAdmin = computed(() => hasRole('ADMIN'));
 const isStudent = computed(() => hasRole('USER'));
 const isParent = computed(() => hasRole('PARENT'));
+const isPlatformAdmin = computed(() => hasRole('PLATFORM_ADMIN'));
 
 const navLinks = computed<ShellNavLink[]>(() => {
   // Pas de lien « Accueil » : `/` et `/dashboard` sont deux redirecteurs sans
@@ -80,6 +81,10 @@ const navLinks = computed<ShellNavLink[]>(() => {
   // consultent légitimement le carnet d'une classe par lien direct (#235).
   if (isTeacher.value) {
     links.push({ label: t('nav.gradebook'), to: '/grades/assignments/new', icon: 'pi-book' });
+  }
+
+  if (isPlatformAdmin.value) {
+    links.push({ label: t('nav.establishments'), to: '/platform', icon: 'pi-building' });
   }
 
   if (isParent.value) {
