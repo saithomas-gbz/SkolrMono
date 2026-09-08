@@ -5,7 +5,13 @@ import { test, expect, loginAs } from '../fixtures/auth';
 test.use({ video: 'on' });
 
 // Chemins résolus depuis le cwd Playwright (packages/e2e).
-const demoDir = 'demo';
+//
+// `demo/generated/` est ignoré par git : ces captures sont réécrites à chaque
+// exécution, et tant qu'elles étaient versionnées, lancer la suite laissait
+// trois PNG modifiés dans le `git status` de n'importe qui — d'où deux commits
+// de captures par inadvertance et un rebase bloqué (#271). Les captures
+// `-pr120` restées dans `demo/` sont l'instantané d'époque, lui figé.
+const demoDir = 'demo/generated';
 
 // IDs seedés (scripts/seed/dev-users.ts, DEV_CLASS_IDS / DEV_USER_IDS.teacher) —
 // `dev.teacher` est prof principal des deux classes de démo.
@@ -44,7 +50,7 @@ test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', (
 
     await gotoPopulatedWeek(page);
     await expect(page.locator('.fc-event').first()).toBeVisible();
-    await page.screenshot({ path: `${demoDir}/planning-teacher-mine-pr120.png`, fullPage: true });
+    await page.screenshot({ path: `${demoDir}/planning-teacher-mine.png`, fullPage: true });
 
     // --- Enseignant : sélection d'une classe dans le dropdown unique ------------
     await displayDropdown.click();
@@ -58,7 +64,7 @@ test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', (
     // `is-mine`), sans badge texte « Moi ».
     await expect(page.locator('.fc-event.is-mine').first()).toBeVisible();
     await expect(page.locator('.ev-mine')).toHaveCount(0);
-    await page.screenshot({ path: `${demoDir}/planning-teacher-class-pr120.png`, fullPage: true });
+    await page.screenshot({ path: `${demoDir}/planning-teacher-class.png`, fullPage: true });
 
     // --- Admin : filtre professeur toujours présent, filtre élève supprimé -----
     // Déconnexion (cookie de session) avant de se reconnecter en admin, sinon le
@@ -72,7 +78,7 @@ test.describe('Emploi du temps — filtres simplifiés (issue #120, PR #120)', (
     await expect(page.getByLabel('Filtrer par élève')).toHaveCount(0);
     await gotoPopulatedWeek(page);
     await expect(page.locator('.fc-event').first()).toBeVisible();
-    await page.screenshot({ path: `${demoDir}/planning-admin-pr120.png`, fullPage: true });
+    await page.screenshot({ path: `${demoDir}/planning-admin.png`, fullPage: true });
   });
 
   test('deep-links ?classId= et ?teacherId= reflètent l\'état au chargement', async ({ page }) => {
