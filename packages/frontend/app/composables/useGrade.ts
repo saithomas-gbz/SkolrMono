@@ -88,12 +88,23 @@ export type TrendPoint = { date: string; average: number };
 
 export type Rank = { position: number; totalStudents: number } | null;
 
+/** Moyenne d'une période de l'année scolaire ; `average` est nul si aucune note. */
+export type PeriodAverage = {
+  index: number;
+  start: string;
+  end: string;
+  average: number | null;
+};
+
 export type UserStats = {
   userId: string;
   average: number | null;
   byCourse: CourseAverage[];
   trend: TrendPoint[];
   rank: Rank;
+  byPeriod: PeriodAverage[];
+  /** Écart entre les deux dernières périodes renseignées, nul s'il n'y en a qu'une. */
+  periodDelta: number | null;
 };
 
 export type AssignmentStats = {

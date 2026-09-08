@@ -20,11 +20,23 @@ mock.module('../lib/classServiceClient', () => ({
   teacherTeachesCourse: mock(() => Promise.resolve(true)),
 }));
 
+// Année scolaire de référence pour le découpage en périodes (#254). Bornes
+// larges par défaut : les cas existants portent sur la moyenne et le rang, pas
+// sur les périodes, et doivent rester lisibles.
+mock.module('../lib/planningServiceClient', () => ({
+  schoolYearBounds: mock(() =>
+    Promise.resolve({ start: new Date('2026-01-01T00:00:00Z'), end: new Date('2026-12-31T00:00:00Z') }),
+  ),
+}));
+
 const statsController = (await import('../controllers/statsController')).default;
 const db = (await import('../db')).default as unknown as {
   grade: { findMany: ReturnType<typeof mock>; count: ReturnType<typeof mock> };
   user: { findUnique: ReturnType<typeof mock>; findMany: ReturnType<typeof mock> };
   assignment: { findUnique: ReturnType<typeof mock> };
+};
+const { schoolYearBounds } = (await import('../lib/planningServiceClient')) as unknown as {
+  schoolYearBounds: ReturnType<typeof mock>;
 };
 const { getClassIdsForTeacher, teacherTeachesCourse } = (await import('../lib/classServiceClient')) as unknown as {
   getClassIdsForTeacher: ReturnType<typeof mock>;
@@ -173,6 +185,56 @@ describe('getUserStats', () => {
     expect(call.data.trend[0].average).toBe(10);
     expect(call.data.trend[1].average).toBe(15);
     expect(call.data.rank).toEqual({ position: 2, totalStudents: 2 });
+  });
+
+  it('répartit les notes par période de l\'année scolaire', async () => {
+    // Année 2026 découpée en trois : une note dans la première période, une dans
+    // la deuxième, rien dans la troisième.
+    db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+    db.grade.findMany.mockImplementation((args: { where?: { userId?: string } }) => {
+      if (args.where?.userId === 'user-1') {
+        return Promise.resolve([
+          gradeFixture({ value: 10, assignment: { assignedAt: new Date('2026-02-01T00:00:00Z'), coefficient: 1 } }),
+          gradeFixture({ value: 16, assignment: { assignedAt: new Date('2026-07-01T00:00:00Z'), coefficient: 1 } }),
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const reply = buildReply();
+    await statsController.getUserStats(
+      { params: { userId: 'user-1' } } as unknown as GetUserStatsRequest,
+      reply,
+    );
+
+    const call = (reply.send as ReturnType<typeof mock>).mock.calls[0]?.[0];
+    expect(call.data.byPeriod).toHaveLength(3);
+    expect(call.data.byPeriod[0].average).toBe(10);
+    expect(call.data.byPeriod[1].average).toBe(16);
+    expect(call.data.byPeriod[2].average).toBeNull();
+    expect(call.data.periodDelta).toBe(6);
+  });
+
+  it('renonce au découpage quand aucune séance n\'est planifiée', async () => {
+    // Sans séance, les bornes de l'année sont inconnues : mieux vaut ne rien
+    // découper que d'inventer une année et produire des périodes fantaisistes.
+    schoolYearBounds.mockResolvedValueOnce(null);
+    db.user.findUnique.mockResolvedValue({ id: 'user-1', classId: 'class-1' });
+    db.grade.findMany.mockResolvedValue([
+      gradeFixture({ value: 12, assignment: { assignedAt: new Date('2026-02-01T00:00:00Z'), coefficient: 1 } }),
+    ]);
+
+    const reply = buildReply();
+    await statsController.getUserStats(
+      { params: { userId: 'user-1' } } as unknown as GetUserStatsRequest,
+      reply,
+    );
+
+    const call = (reply.send as ReturnType<typeof mock>).mock.calls[0]?.[0];
+    expect(call.data.byPeriod).toEqual([]);
+    expect(call.data.periodDelta).toBeNull();
+    // La moyenne générale, elle, reste calculée.
+    expect(call.data.average).toBe(12);
   });
 });
 

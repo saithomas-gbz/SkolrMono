@@ -2,6 +2,8 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../db';
 import { weightedAverage, median, rankOf, gradeDistributionBuckets, groupGradesByCourse } from '../lib/stats';
 import { getClassIdsForTeacher, teacherTeachesCourse } from '../lib/classServiceClient';
+import { schoolYearBounds } from '../lib/planningServiceClient';
+import { periodDelta, periodIndexOf, splitIntoPeriods, PERIOD_COUNT } from '../lib/periods';
 import { getOrCompute } from '../lib/ttlCache';
 
 type GradeStatus = 'PENDING' | 'GRADED' | 'ABSENT' | 'EXEMPT';
@@ -125,7 +127,41 @@ export default {
           .filter((a): a is { id: string; average: number } => a.average !== null);
         const rank = rankOf(classmateAverages, userId);
 
-        return { userId, average, byCourse, trend, rank };
+        // Moyenne par période de l'année scolaire (#254). Les bornes viennent
+        // des séances planifiées : un découpage sur des mois codés en dur
+        // tomberait à côté, le calendrier de démonstration glissant avec la date
+        // du jour. Sans séance planifiée, on renonce au découpage plutôt que
+        // d'inventer une année.
+        const bounds = await schoolYearBounds();
+        const periods = bounds ? splitIntoPeriods(bounds.start, bounds.end) : [];
+        const buckets: WeightedEntry[][] = Array.from({ length: PERIOD_COUNT }, () => []);
+        if (periods.length > 0) {
+          for (const g of grades) {
+            const index = periodIndexOf(g.assignment.assignedAt, periods);
+            if (index === null) continue;
+            buckets[index]!.push({
+              value: g.value,
+              coefficient: g.assignment.coefficient,
+              status: g.status,
+            });
+          }
+        }
+        const byPeriod = periods.map((period) => ({
+          index: period.index,
+          start: period.start.toISOString(),
+          end: period.end.toISOString(),
+          average: weightedAverage(buckets[period.index]!),
+        }));
+
+        return {
+          userId,
+          average,
+          byCourse,
+          trend,
+          rank,
+          byPeriod,
+          periodDelta: periodDelta(byPeriod.map((p) => p.average)),
+        };
       });
 
       if (!data) return reply.status(404).send({ error: 'User not found' });

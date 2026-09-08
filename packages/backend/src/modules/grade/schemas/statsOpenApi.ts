@@ -70,6 +70,21 @@ const classStats = {
   required: ['classId', 'average', 'byCourse', 'distribution'],
 } as const;
 
+/**
+ * Moyenne d'une période de l'année scolaire. `average` est nul tant qu'aucune
+ * note n'y a été saisie — une période à venir, ou une période sans devoir noté.
+ */
+const periodAverage = {
+  type: 'object',
+  properties: {
+    index: { type: 'number' },
+    start: { type: 'string', format: 'date-time' },
+    end: { type: 'string', format: 'date-time' },
+    average: { type: 'number', nullable: true },
+  },
+  required: ['index', 'start', 'end', 'average'],
+} as const;
+
 const userStats = {
   type: 'object',
   properties: {
@@ -78,8 +93,12 @@ const userStats = {
     byCourse: { type: 'array', items: courseAverage },
     trend: { type: 'array', items: trendPoint },
     rank,
+    // Déclarés explicitement : `fast-json-stringify` n'émet que les propriétés
+    // du schéma, et les omettre les supprimerait de la réponse sans erreur.
+    byPeriod: { type: 'array', items: periodAverage },
+    periodDelta: { type: 'number', nullable: true },
   },
-  required: ['userId', 'average', 'byCourse', 'trend', 'rank'],
+  required: ['userId', 'average', 'byCourse', 'trend', 'rank', 'byPeriod'],
 } as const;
 
 const assignmentStats = {
@@ -113,7 +132,8 @@ export const getClassStatsSchema = {
 } as const;
 
 export const getUserStatsSchema = {
-  description: 'Get grade statistics for a user (average, trend over time, rank in class)',
+  description:
+    'Get grade statistics for a user (average, trend over time, rank in class, average per school-year period)',
   tags: [statsTag],
   params: {
     type: 'object',
