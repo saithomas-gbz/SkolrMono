@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 import stripe from '../lib/stripeClient';
+import { portalReturnUrl } from '../lib/redirectUrls';
 
 export default {
   createPortalSession: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -15,7 +16,9 @@ export default {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: establishment.stripeCustomerId,
-      return_url: process.env.STRIPE_SUCCESS_URL ?? 'http://localhost:3003/admin/billing',
+      // Surtout pas l'URL de succès : elle porte `?success=1`, et le retour de
+      // portail annoncerait un paiement même après une annulation (#267).
+      return_url: portalReturnUrl(),
     });
 
     return reply.status(200).send({ url: session.url });

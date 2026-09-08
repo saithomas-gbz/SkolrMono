@@ -9,6 +9,7 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import dotenv from 'dotenv';
 import { testDatabaseConnection } from './shared/db';
 import { collectHttpMetrics, startMetricsServer } from './shared/metrics';
+import { assertBillingRedirectsConfigured } from './modules/billing/lib/redirectUrls';
 import { modules } from './modules';
 
 dotenv.config();
@@ -117,6 +118,12 @@ export async function buildApp() {
 
 const start = async () => {
   try {
+    // Avant d'ouvrir le port : une redirection de paiement mal configurée
+    // enverrait un client fraichement débité sur une impasse, et ne se
+    // remarquerait qu'au premier paiement réel (#267). Sans clé Stripe, la
+    // facturation est inactive et cette vérification ne s'applique pas.
+    assertBillingRedirectsConfigured();
+
     const app = await buildApp();
 
     await app.ready();

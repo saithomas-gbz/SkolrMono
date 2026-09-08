@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import db from '../../../shared/db';
 import stripe from '../lib/stripeClient';
 import { getPlans } from '../lib/plans';
+import { cancelUrl, successUrl } from '../lib/redirectUrls';
 
 export interface CheckoutBody {
   priceId: string;
@@ -41,8 +42,8 @@ export default {
       customer: stripeCustomerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: process.env.STRIPE_SUCCESS_URL ?? 'http://localhost:3003/admin/billing?success=1',
-      cancel_url: process.env.STRIPE_CANCEL_URL ?? 'http://localhost:3003/admin/billing?canceled=1',
+      success_url: successUrl(),
+      cancel_url: cancelUrl(),
     });
 
     return reply.status(200).send({ url: session.url });
