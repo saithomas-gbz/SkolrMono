@@ -2,11 +2,13 @@ import { readFileSync } from 'node:fs';
 import { test, expect, loginAs } from '../fixtures/auth';
 
 test.describe('Bulletin PDF — bouton de téléchargement (/grades/my-grades)', () => {
-  test('bouton masqué pour un rôle non-USER (canAccess=false)', async ({ page }) => {
+  test('un rôle non-USER est redirigé, sans atteindre le bouton', async ({ page }) => {
+    // La page montait auparavant pour tout le monde en masquant son contenu par
+    // `v-if` ; elle est désormais protégée par le middleware `student` (#256).
+    // Le bouton n'est donc plus seulement masqué : la page n'est pas atteinte.
     await loginAs(page, 'teacher');
     await page.goto('/grades/my-grades');
-    // grades.my_grades.restricted
-    await expect(page.getByText('Cette page est réservée aux élèves.')).toBeVisible();
+    await expect(page).toHaveURL(/\/(dashboard|teacher)(\/|$|\?)/, { timeout: 15_000 });
     await expect(page.getByRole('button', { name: 'Télécharger le bulletin PDF' })).toHaveCount(0);
   });
 

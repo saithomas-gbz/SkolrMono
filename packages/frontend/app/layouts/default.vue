@@ -40,8 +40,12 @@ const isStudent = computed(() => hasRole('USER'));
 const isParent = computed(() => hasRole('PARENT'));
 
 const navLinks = computed<ShellNavLink[]>(() => {
+  // Pas de lien « Accueil » : `/` et `/dashboard` sont deux redirecteurs sans
+  // contenu propre, et `/` renvoie vers `/dashboard` dès qu'on est connecté —
+  // le lien n'étant visible que connecté, il ferait doublon. Les deux routes
+  // restent en place : `/` est le point d'entrée du domaine nu, et cinq
+  // middlewares renvoient vers `/dashboard` en cas de refus de rôle (#256).
   const links: ShellNavLink[] = [
-    { label: t('nav.home'), to: '/', icon: 'pi-home' },
     { label: t('nav.dashboard'), to: '/dashboard', icon: 'pi-th-large' },
   ];
 

@@ -57,7 +57,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 import type { AbsenceJustification } from '~/composables/usePlanning';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'parent'] });
 
 const { fetchAbsenceJustifications, downloadJustificationDocument } = usePlanning();
 const { activeChildId } = useParentChild();

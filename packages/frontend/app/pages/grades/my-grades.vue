@@ -2,7 +2,7 @@
   <div class="page">
     <Teleport to="#topbar-actions">
       <Button
-        v-if="canAccess && !pending && courseGroups.length > 0"
+        v-if="!pending && courseGroups.length > 0"
         icon="pi pi-download"
         :label="downloading ? $t('grades.my_grades.downloading') : $t('grades.my_grades.download_bulletin')"
         :loading="downloading"
@@ -12,73 +12,67 @@
     </Teleport>
     <Card>
       <template #content>
-        <Message v-if="!canAccess" severity="warn" :closable="false">
-          {{ $t('grades.my_grades.restricted') }}
-        </Message>
+        <Message v-if="fetchError" severity="error" :closable="false">{{ fetchError }}</Message>
+
+        <div v-else-if="pending" class="loading">
+          <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
+          <span>{{ $t('grades.my_grades.loading') }}</span>
+        </div>
 
         <template v-else>
-          <Message v-if="fetchError" severity="error" :closable="false">{{ fetchError }}</Message>
-
-          <div v-else-if="pending" class="loading">
-            <ProgressSpinner style="width: 2rem; height: 2rem" stroke-width="4" />
-            <span>{{ $t('grades.my_grades.loading') }}</span>
-          </div>
+          <p v-if="courseGroups.length === 0" class="empty">{{ $t('grades.my_grades.empty') }}</p>
 
           <template v-else>
-            <p v-if="courseGroups.length === 0" class="empty">{{ $t('grades.my_grades.empty') }}</p>
+            <div v-if="stats" class="kpi-row">
+              <KpiCard
+                :value="stats.average !== null ? roundScore(stats.average) : '—'"
+                :label="$t('grades.my_grades.kpi_overall')"
+              />
+              <KpiCard
+                v-if="bestSubject"
+                :value="roundScore(bestSubject.average!)"
+                :label="`${$t('grades.my_grades.kpi_best')} — ${bestSubject.courseName}`"
+                variant="accent"
+              />
+              <KpiCard
+                v-if="worstSubject"
+                :value="roundScore(worstSubject.average!)"
+                :label="`${$t('grades.my_grades.kpi_worst')} — ${worstSubject.courseName}`"
+              />
+              <KpiCard
+                v-if="trendDelta !== null"
+                :value="`${trendDelta > 0 ? '+' : ''}${roundScore(trendDelta)}`"
+                :label="$t('grades.my_grades.kpi_trend')"
+              />
+            </div>
 
-            <template v-else>
-              <div v-if="stats" class="kpi-row">
-                <KpiCard
-                  :value="stats.average !== null ? roundScore(stats.average) : '—'"
-                  :label="$t('grades.my_grades.kpi_overall')"
-                />
-                <KpiCard
-                  v-if="bestSubject"
-                  :value="roundScore(bestSubject.average!)"
-                  :label="`${$t('grades.my_grades.kpi_best')} — ${bestSubject.courseName}`"
-                  variant="accent"
-                />
-                <KpiCard
-                  v-if="worstSubject"
-                  :value="roundScore(worstSubject.average!)"
-                  :label="`${$t('grades.my_grades.kpi_worst')} — ${worstSubject.courseName}`"
-                />
-                <KpiCard
-                  v-if="trendDelta !== null"
-                  :value="`${trendDelta > 0 ? '+' : ''}${roundScore(trendDelta)}`"
-                  :label="$t('grades.my_grades.kpi_trend')"
-                />
-              </div>
-
-              <Accordion :value="0" class="course-groups">
-                <AccordionPanel v-for="(group, index) in courseGroups" :key="group.course.id" :value="index">
-                  <AccordionHeader>
-                    <div class="course-title-row">
-                      <span>{{ group.course.name }}</span>
-                      <Tag
-                        :value="
-                          group.average !== null
-                            ? `${$t('grades.my_grades.average')} ${roundScore(group.average)}/20`
-                            : $t('grades.my_grades.no_average')
-                        "
-                        :severity="gradeSeverity(group.average)"
-                      />
-                    </div>
-                  </AccordionHeader>
-                  <AccordionContent>
-                    <div v-for="grade in group.grades" :key="grade.id" class="grade-row">
-                      <span class="grade-date">{{ formatDate(grade.createdAt) }}</span>
-                      <span class="grade-comment">{{ grade.comment ?? '—' }}</span>
-                      <Tag
-                        :value="statusLabel(grade)"
-                        :severity="grade.status === 'GRADED' ? gradeSeverity(grade.value) : 'secondary'"
-                      />
-                    </div>
-                  </AccordionContent>
-                </AccordionPanel>
-              </Accordion>
-            </template>
+            <Accordion :value="0" class="course-groups">
+              <AccordionPanel v-for="(group, index) in courseGroups" :key="group.course.id" :value="index">
+                <AccordionHeader>
+                  <div class="course-title-row">
+                    <span>{{ group.course.name }}</span>
+                    <Tag
+                      :value="
+                        group.average !== null
+                          ? `${$t('grades.my_grades.average')} ${roundScore(group.average)}/20`
+                          : $t('grades.my_grades.no_average')
+                      "
+                      :severity="gradeSeverity(group.average)"
+                    />
+                  </div>
+                </AccordionHeader>
+                <AccordionContent>
+                  <div v-for="grade in group.grades" :key="grade.id" class="grade-row">
+                    <span class="grade-date">{{ formatDate(grade.createdAt) }}</span>
+                    <span class="grade-comment">{{ grade.comment ?? '—' }}</span>
+                    <Tag
+                      :value="statusLabel(grade)"
+                      :severity="grade.status === 'GRADED' ? gradeSeverity(grade.value) : 'secondary'"
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionPanel>
+            </Accordion>
           </template>
         </template>
       </template>
@@ -91,16 +85,14 @@ import { useGrade, averageGradeValues, type GradeCourse, type GradeEntity, type 
 import { useAuthTokenCookie } from '~/composables/authSession';
 import KpiCard from '~/components/ui/KpiCard.vue';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'student'] });
 
 const { t } = useI18n();
-const { hasRole, userId } = useAuth();
+const { userId } = useAuth();
 const { fetchGradesByUserId, fetchUserStats, normalizeApiError, roundScore } = useGrade();
 const config = useRuntimeConfig();
 const authTokenCookie = useAuthTokenCookie();
 const toast = useToast();
-
-const canAccess = computed(() => hasRole('USER'));
 
 usePageHeader().setPageHeader({ title: t('grades.my_grades.title') });
 
@@ -176,11 +168,7 @@ async function load() {
 }
 
 onMounted(() => {
-  if (canAccess.value) {
-    void load();
-  } else {
-    pending.value = false;
-  }
+  void load();
 });
 
 function gradeSeverity(value: number | null): 'success' | 'warn' | 'danger' | 'secondary' {

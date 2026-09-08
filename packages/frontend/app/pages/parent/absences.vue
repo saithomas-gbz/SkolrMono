@@ -55,7 +55,7 @@
 import { normalizeApiError } from '~/composables/useClass';
 import type { Absence } from '~/composables/usePlanning';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ middleware: ['auth', 'parent'] });
 
 type Row = Absence & { sessionDate: string };
 
