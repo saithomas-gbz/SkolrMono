@@ -58,6 +58,21 @@ describe('assertBillingRedirectsConfigured', () => {
     ).toThrow(/STRIPE_SUCCESS_URL et STRIPE_CANCEL_URL/);
   });
 
+  it("accorde le message au nombre de variables manquantes", () => {
+    // Message lu par un exploitant au moment ou le service refuse de demarrer :
+    // il doit etre correct, pas seulement comprehensible.
+    expect(() =>
+      assertBillingRedirectsConfigured({ STRIPE_SECRET_KEY: 'sk_test_x' } as NodeJS.ProcessEnv),
+    ).toThrow(/ne sont pas définies\. Sans elles, .*Renseignez-les/);
+
+    expect(() =>
+      assertBillingRedirectsConfigured({
+        STRIPE_SECRET_KEY: 'sk_test_x',
+        STRIPE_SUCCESS_URL: 'https://skolr.example/ok',
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/n'est pas définie\. Sans elle, .*Renseignez-la/);
+  });
+
   it('nomme la seule variable manquante', () => {
     expect(() =>
       assertBillingRedirectsConfigured({

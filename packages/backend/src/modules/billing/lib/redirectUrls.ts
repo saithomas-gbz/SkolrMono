@@ -57,12 +57,14 @@ export function assertBillingRedirectsConfigured(env = process.env): void {
     (name) => !env[name],
   );
   if (manquantes.length > 0) {
+    const plusieurs = manquantes.length > 1;
     throw new Error(
-      `[billing] Stripe est actif mais ${manquantes.join(' et ')} ${
-        manquantes.length > 1 ? 'ne sont pas définies' : "n'est pas définie"
-      }. ` +
-        'Sans elle, un client qui vient de payer serait redirigé dans le vide. ' +
-        'Renseignez-la, ou retirez STRIPE_SECRET_KEY pour désactiver la facturation.',
+      `[billing] Stripe est actif mais ${manquantes.join(' et ')} ` +
+        `${plusieurs ? 'ne sont pas définies' : "n'est pas définie"}. ` +
+        'Sans ' +
+        `${plusieurs ? 'elles' : 'elle'}, un client qui vient de payer serait redirigé dans le vide. ` +
+        `${plusieurs ? 'Renseignez-les' : 'Renseignez-la'}, ` +
+        'ou retirez STRIPE_SECRET_KEY pour désactiver la facturation.',
     );
   }
 }
