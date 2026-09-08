@@ -359,10 +359,6 @@ planning:
     room_placeholder: "Ex: B204"
     start: Début
     end: Fin
-    recurrence: Récurrence
-    recurrence_none: Aucune
-    recurrence_weekly: Hebdomadaire
-    recurrence_biweekly: Bi-hebdomadaire
 
 homework:
   title: Devoirs
