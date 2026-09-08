@@ -18,7 +18,8 @@ const props = defineProps<{
   sessions: Session[];
   courseNames?: Map<string, string>;
   teacherNames?: Map<string, string>;
-  canEdit?: boolean;
+  /** Autorise la création d'une séance par clic sur un créneau vide. */
+  canCreate?: boolean;
   /** Id du prof connecté : ses séances sont mises en évidence (vue classe). */
   currentUserId?: string | null;
 }>();
@@ -32,7 +33,7 @@ const sessions       = computed(() => props.sessions);
 const courseNames    = computed(() => props.courseNames);
 const teacherNames   = computed(() => props.teacherNames);
 const currentUserId  = computed(() => props.currentUserId);
-const canEdit        = computed(() => props.canEdit);
+const canCreate      = computed(() => props.canCreate);
 
 // Couleur par matière (déterministe sur courseId)
 function courseColor(courseId: string) {
@@ -105,7 +106,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     return { html: buildEventHtml(courseName, teacherName, session.room, accentColor, textColor) };
   },
   eventClick: handleEventClick,
-  dateClick: canEdit.value ? (arg) => emit('slot-click', arg.date) : undefined,
+  dateClick: canCreate.value ? (arg) => emit('slot-click', arg.date) : undefined,
   height: 'auto',
   expandRows: true,
   nowIndicator: true,

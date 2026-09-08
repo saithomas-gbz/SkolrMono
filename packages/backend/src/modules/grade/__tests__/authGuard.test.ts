@@ -6,7 +6,7 @@ mock.module('../db', () => ({
   default: { parentStudent: { findUnique: findUniqueParentStudent } },
 }));
 
-const { requireAuth, requireStaff, requireSelfOrStaff } = await import('../lib/authGuard');
+const { requireAuth, requireStaff, requireAdministration, requireSelfOrStaff } = await import('../lib/authGuard');
 
 function buildRequest(verify: ReturnType<typeof mock>, params: Record<string, string> = {}): FastifyRequest {
   return {
@@ -73,6 +73,49 @@ describe('requireStaff', () => {
 
     expect(reply.status).not.toHaveBeenCalled();
     expect(request.gradeUser).toEqual(payload);
+  });
+});
+
+describe('requireAdministration', () => {
+  it('renvoie 401 si le token est invalide', async () => {
+    const request = buildRequest(mock(() => { throw new Error('invalid token'); }));
+    const reply = buildReply();
+
+    await requireAdministration(request, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(401);
+  });
+
+  it('renvoie 403 pour un TEACHER — c\'est toute la différence avec requireStaff', async () => {
+    const request = buildRequest(mock(() => ({ userId: 't1', email: 'prof@skolr.local', role: 'TEACHER' })));
+    const reply = buildReply();
+
+    await requireAdministration(request, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(403);
+    expect(request.gradeUser).toBeUndefined();
+  });
+
+  it('renvoie 403 pour un USER (élève)', async () => {
+    const request = buildRequest(mock(() => ({ userId: 'u1', email: 'eleve@skolr.local', role: 'USER' })));
+    const reply = buildReply();
+
+    await requireAdministration(request, reply);
+
+    expect(reply.status).toHaveBeenCalledWith(403);
+  });
+
+  it('laisse passer un STAFF et un ADMIN', async () => {
+    for (const role of ['STAFF', 'ADMIN']) {
+      const payload = { userId: 'a1', email: 'admin@skolr.local', role };
+      const request = buildRequest(mock(() => payload));
+      const reply = buildReply();
+
+      await requireAdministration(request, reply);
+
+      expect(reply.status).not.toHaveBeenCalled();
+      expect(request.gradeUser).toEqual(payload);
+    }
   });
 });
 

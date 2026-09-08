@@ -180,23 +180,22 @@ describe('Écritures de séances', () => {
     }
   }
 
-  it('POST /sessions accepte un enseignant dans une de ses classes', async () => {
-    getClassIdsForTeacher.mockResolvedValue(['33333333-3333-4333-8333-333333333333']);
+  it('POST /sessions accepte un ADMIN', async () => {
     db.session.create.mockResolvedValue(sampleSession);
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'POST',
       url: '/sessions',
       payload: createSessionBody,
-      headers: authHeader(app, teacher),
+      headers: authHeader(app, admin),
     });
     expect(res.statusCode).toBe(201);
     expect(db.session.create).toHaveBeenCalled();
     await app.close();
   });
 
-  it('POST /sessions refuse un enseignant hors de ses classes', async () => {
-    getClassIdsForTeacher.mockResolvedValue(['44444444-4444-4444-8444-444444444444']);
+  it('POST /sessions refuse un enseignant, y compris dans une de ses classes', async () => {
+    getClassIdsForTeacher.mockResolvedValue(['33333333-3333-4333-8333-333333333333']);
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'POST',

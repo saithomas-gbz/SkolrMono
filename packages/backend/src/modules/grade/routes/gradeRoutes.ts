@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import gradeController from '../controllers/gradeController';
-import { requireSelfOrStaff, requireStaff } from '../lib/authGuard';
+import { requireAdministration, requireSelfOrStaff, requireStaff } from '../lib/authGuard';
 import {
   createGradeSchema,
   deleteGradeSchema,
@@ -44,7 +44,7 @@ export default async function gradeRoutes(fastify: FastifyInstance) {
   );
   fastify.delete(
     '/grades/:id',
-    { schema: deleteGradeSchema, preHandler: requireStaff },
+    { schema: deleteGradeSchema, preHandler: requireAdministration },
     gradeController.deleteGrade,
   );
 }
