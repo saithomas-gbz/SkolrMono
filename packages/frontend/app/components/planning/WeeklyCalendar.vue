@@ -22,6 +22,14 @@ const props = defineProps<{
   canCreate?: boolean;
   /** Id du prof connecté : ses séances sont mises en évidence (vue classe). */
   currentUserId?: string | null;
+  /**
+   * Séances dont l'enseignant est déclaré absent.
+   *
+   * Déclarer une absence sert à prévenir : sans cette information, le créneau
+   * s'affichait à l'identique dans l'emploi du temps de la classe, et les élèves
+   * se présentaient à un cours qui n'aurait pas lieu.
+   */
+  absentTeacherSessionIds?: Set<string>;
 }>();
 
 const emit = defineEmits<{
@@ -34,6 +42,7 @@ const courseNames    = computed(() => props.courseNames);
 const teacherNames   = computed(() => props.teacherNames);
 const currentUserId  = computed(() => props.currentUserId);
 const canCreate      = computed(() => props.canCreate);
+const seancesSansProf = computed(() => props.absentTeacherSessionIds ?? new Set<string>());
 
 // Couleur par matière (déterministe sur courseId)
 function courseColor(courseId: string) {
@@ -47,18 +56,41 @@ const events = computed(() =>
     const courseName  = courseNames.value?.get(s.courseId) ?? null;
     const teacherName = teacherNames.value?.get(s.teacherId) ?? null;
     const isMine      = currentUserId.value != null && s.teacherId === currentUserId.value;
+    const sansProf    = seancesSansProf.value.has(s.id);
     return {
       id: s.id,
       title: courseName ?? '',
       start: s.startAt,
       end: s.endAt,
-      extendedProps: { session: s, courseName, teacherName, isMine, accentColor: color.border, textColor: color.text },
+      extendedProps: {
+        session: s,
+        courseName,
+        teacherName,
+        isMine,
+        sansProf,
+        accentColor: color.border,
+        textColor: color.text,
+      },
       backgroundColor: color.bg,
       borderColor: 'transparent',
-      classNames: isMine ? ['is-mine'] : [],
+      classNames: [...(isMine ? ['is-mine'] : []), ...(sansProf ? ['is-teacher-absent'] : [])],
     };
   }),
 );
+
+/**
+ * Ces valeurs sont interpolées dans du HTML brut, que FullCalendar injecte tel
+ * quel. Un nom de salle ou de matière contenant des chevrons s'exécuterait :
+ * ils viennent de l'administration, mais rien ne garantit qu'ils resteront
+ * toujours saisis par elle.
+ */
+function echapper(valeur: string): string {
+  return valeur
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 function buildEventHtml(
   courseName: string | null,
@@ -66,12 +98,17 @@ function buildEventHtml(
   room: string | null,
   accentColor: string,
   textColor: string,
+  enseignantAbsent: boolean,
+  libelleAbsent: string,
 ): string {
-  const courseEl  = courseName  ? `<span class="ev-course">${courseName}</span>`   : '';
-  const teacherEl = teacherName ? `<span class="ev-teacher">${teacherName}</span>` : '';
-  const roomEl    = room        ? `<span class="ev-room">🏫 ${room}</span>`        : '';
+  const courseEl  = courseName  ? `<span class="ev-course">${echapper(courseName)}</span>`   : '';
+  const teacherEl = teacherName ? `<span class="ev-teacher">${echapper(teacherName)}</span>` : '';
+  const roomEl    = room        ? `<span class="ev-room">🏫 ${echapper(room)}</span>`        : '';
+  const absentEl  = enseignantAbsent
+    ? `<span class="ev-absent">${echapper(libelleAbsent)}</span>`
+    : '';
   const style = `border-left:3px solid ${accentColor}; color:${textColor}`;
-  return `<div class="ev-body" style="${style}">${courseEl}${teacherEl}${roomEl}</div>`;
+  return `<div class="ev-body" style="${style}">${courseEl}${teacherEl}${roomEl}${absentEl}</div>`;
 }
 
 function handleEventClick(arg: EventClickArg) {
@@ -96,14 +133,26 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   buttonText: { today: t('planning.today'), prev: '‹', next: '›' },
   events: events.value,
   eventContent: (arg) => {
-    const { courseName, teacherName, session, accentColor, textColor } = arg.event.extendedProps as {
+    const { courseName, teacherName, session, accentColor, textColor, sansProf } = arg.event
+      .extendedProps as {
       session: Session;
       courseName: string | null;
       teacherName: string | null;
       accentColor: string;
       textColor: string;
+      sansProf: boolean;
     };
-    return { html: buildEventHtml(courseName, teacherName, session.room, accentColor, textColor) };
+    return {
+      html: buildEventHtml(
+        courseName,
+        teacherName,
+        session.room,
+        accentColor,
+        textColor,
+        sansProf,
+        t('planning.teacher_absent'),
+      ),
+    };
   },
   eventClick: handleEventClick,
   dateClick: canCreate.value ? (arg) => emit('slot-click', arg.date) : undefined,
@@ -117,6 +166,30 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 <style scoped>
 .weekly-calendar {
   width: 100%;
+}
+
+/*
+ * Séance dont l'enseignant est absent : le créneau reste visible — il occupe
+ * toujours la grille et l'information « ce cours n'aura pas lieu » compte plus
+ * que le cours lui-même — mais il est désaturé et barré pour se distinguer au
+ * premier coup d'oeil d'un cours assuré.
+ */
+.weekly-calendar :deep(.fc-event.is-teacher-absent) {
+  opacity: 0.55;
+}
+
+.weekly-calendar :deep(.fc-event.is-teacher-absent .ev-course),
+.weekly-calendar :deep(.fc-event.is-teacher-absent .ev-teacher) {
+  text-decoration: line-through;
+}
+
+.weekly-calendar :deep(.ev-absent) {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .weekly-calendar :deep(.fc) {

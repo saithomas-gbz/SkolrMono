@@ -44,6 +44,57 @@ beforeEach(() => {
 });
 
 describe('getAbsences', () => {
+  it('un eleve peut lire les absences des enseignants', async () => {
+    // Une absence d'enseignant est une information d'organisation : toute la
+    // classe doit savoir qu'un cours n'aura pas lieu. Sans cette exception, le
+    // cloisonnement de #80 renvoyait une liste vide et le creneau s'affichait
+    // comme assure dans l'emploi du temps des eleves.
+    const req = {
+      query: { role: 'TEACHER' },
+      planningUser: { userId: 'eleve-1', role: 'USER' },
+    } as unknown as GetAbsencesRequest;
+    const reply = buildReply();
+
+    await getAbsences(req, reply);
+
+    expect(db.absence.findMany).toHaveBeenCalledWith({
+      where: { role: 'TEACHER' },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('un eleve reste cloisonne sur les absences d eleves', async () => {
+    // L'ouverture ci-dessus ne doit valoir que pour `role=TEACHER` : sans ce
+    // filtre, un eleve lirait les absences de ses camarades.
+    const req = {
+      query: { role: 'STUDENT', userId: 'camarade-2' },
+      planningUser: { userId: 'eleve-1', role: 'USER' },
+    } as unknown as GetAbsencesRequest;
+    const reply = buildReply();
+
+    await getAbsences(req, reply);
+
+    expect(db.absence.findMany).toHaveBeenCalledWith({
+      where: { userId: 'eleve-1', role: 'STUDENT' },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('un eleve sans filtre de role ne voit que les siennes', async () => {
+    const req = {
+      query: {},
+      planningUser: { userId: 'eleve-1', role: 'USER' },
+    } as unknown as GetAbsencesRequest;
+    const reply = buildReply();
+
+    await getAbsences(req, reply);
+
+    expect(db.absence.findMany).toHaveBeenCalledWith({
+      where: { userId: 'eleve-1' },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
   it('filtre par justified seul (comportement inchangé)', async () => {
     const req = { query: { justified: false } } as unknown as GetAbsencesRequest;
     const reply = buildReply();
