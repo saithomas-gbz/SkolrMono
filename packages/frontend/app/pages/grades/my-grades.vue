@@ -129,6 +129,16 @@ type CourseGroup = {
   average: number | null;
 };
 
+/**
+ * Moyennes par matière renvoyées par l'API, indexées par cours.
+ *
+ * Le backend pondère par le coefficient de chaque devoir — la convention d'un
+ * bulletin. C'est cette valeur que servent déjà les cartes KPI ci-dessus.
+ */
+const moyennesParCours = computed(
+  () => new Map((stats.value?.byCourse ?? []).map((c) => [c.courseId, c.average])),
+);
+
 const courseGroups = computed<CourseGroup[]>(() => {
   const map = new Map<string, CourseGroup>();
   for (const grade of grades.value) {
@@ -143,7 +153,13 @@ const courseGroups = computed<CourseGroup[]>(() => {
   const groups = [...map.values()];
   for (const group of groups) {
     group.grades.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    group.average = averageGradeValues(group.grades);
+    // La moyenne de l'API fait foi : elle pondère par coefficient, là où
+    // `averageGradeValues` fait une moyenne simple. Les deux coexistaient sur
+    // cet écran — une matière s'affichait à 10,3 sur sa carte KPI et à 11/20
+    // dans l'accordéon (#274). On ne retombe sur le calcul local que si les
+    // stats n'ont pas pu être chargées : `load()` les rend nulles sans bloquer
+    // la page, mieux vaut alors une moyenne approchée que pas de moyenne.
+    group.average = moyennesParCours.value.get(group.course.id) ?? averageGradeValues(group.grades);
   }
   groups.sort((a, b) => a.course.name.localeCompare(b.course.name));
   return groups;
@@ -153,19 +169,27 @@ async function load() {
   if (!userId.value) return;
   pending.value = true;
   fetchError.value = null;
-  try {
-    grades.value = await fetchGradesByUserId(userId.value);
-  } catch (e) {
-    fetchError.value = normalizeApiError(e);
-  } finally {
-    pending.value = false;
+
+  // Les deux appels partent ensemble et la page n'est revelee qu'une fois les
+  // deux retombes. Auparavant `pending` retombait des les notes recues, et les
+  // moyennes par matiere s'affichaient brievement en calcul local avant de
+  // basculer sur celles de l'API : un clignotement visible sur un ecran projete.
+  const [resultatNotes, resultatStats] = await Promise.allSettled([
+    fetchGradesByUserId(userId.value),
+    fetchUserStats(userId.value),
+  ]);
+
+  if (resultatNotes.status === 'fulfilled') {
+    grades.value = resultatNotes.value;
+  } else {
+    fetchError.value = normalizeApiError(resultatNotes.reason);
   }
-  try {
-    stats.value = await fetchUserStats(userId.value);
-  } catch {
-    // Non-bloquant : le header KPI ne s'affiche simplement pas si les stats échouent.
-    stats.value = null;
-  }
+
+  // Non-bloquant : sans les stats, les cartes KPI disparaissent et les moyennes
+  // par matiere retombent sur le calcul local, mais la page reste utilisable.
+  stats.value = resultatStats.status === 'fulfilled' ? resultatStats.value : null;
+
+  pending.value = false;
 }
 
 onMounted(() => {

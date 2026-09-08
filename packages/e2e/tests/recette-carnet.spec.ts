@@ -102,6 +102,29 @@ test('6. Léa — voit sa note et le commentaire dans son carnet', async ({ page
   const corps = await page.locator('body').innerText();
   expect(corps, 'la note 17 doit être visible').toMatch(/17/);
   expect(corps, 'le commentaire doit être visible').toContain(COMMENTAIRE);
+
+  // Une matiere ne doit porter qu'une moyenne (#274). L'accordeon recalculait
+  // la sienne cote client en moyenne simple, tandis que les cartes KPI
+  // affichaient celle de l'API, ponderee par coefficient : Mathematiques
+  // s'affichait a 10,3 sur sa carte et 11/20 dans le carnet.
+  //
+  // L'assertion vit ici, et pas dans une spec autonome, parce que la divergence
+  // exige que les notes d'une meme matiere different ET que les coefficients
+  // different. A l'etat seed, Lea a deux 8 en maths : moyenne simple et
+  // ponderee coincident, et un test pose la-bas passerait sans rien mordre.
+  // C'est le 17/20 saisi plus haut qui cree l'ecart (8, 8, 17 pour des
+  // coefficients 1, 2, 1 — soit 11,0 en simple contre 10,25 en pondere).
+  const carte = page.locator('.kpi-row > *').filter({ hasText: /MATHÉMATIQUES/i }).first();
+  await expect(carte).toBeVisible({ timeout: 20_000 });
+  const valeurCarte = (await carte.innerText()).match(/([\d.,]+)/)?.[1]?.replace(',', '.');
+
+  const panneau = page.locator('.course-groups').getByRole('button', { name: /math/i }).first();
+  const valeurCarnet = (await panneau.innerText()).match(/([\d.,]+)\s*\/\s*20/)?.[1]?.replace(',', '.');
+
+  expect(Number(valeurCarnet), `carte KPI ${valeurCarte} vs carnet ${valeurCarnet}`).toBeCloseTo(
+    Number(valeurCarte),
+    1,
+  );
 });
 
 test('7. Léa — une comparaison de période est affichée', async ({ page, request }) => {
