@@ -20,6 +20,11 @@ const DEV_ACCOUNTS = {
     password: 'dev-platform-123',
     role: 'PLATFORM_ADMIN',
   },
+  // Léa Martin : élève de CM2-A portant les notes et absences seedées, celle que
+  // décrivent les scénarios de recette (dev.student, lui, est un compte de démo).
+  lea: { email: 'eleve.01@skolr.local', password: 'dev-student-123', role: 'USER' },
+  // Sophie Martin : parent de Léa.
+  sophie: { email: 'parent.martin@skolr.local', password: 'dev-parent-123', role: 'PARENT' },
 } as const;
 
 type DevAccountKey = keyof typeof DEV_ACCOUNTS;
