@@ -80,7 +80,23 @@ function isActive(to: string) {
   flex-direction: column;
   background: var(--skolr-color-surface);
   border-right: 2px solid var(--skolr-color-divider);
-  height: 100%;
+  /*
+   * Reste visible pendant le défilement.
+   *
+   * En `height: 100%`, la barre remplissait la ligne de grille et défilait avec
+   * la page : sur un écran plus court que le contenu, elle disparaissait et il
+   * fallait remonter pour changer de section.
+   *
+   * `align-self: start` est indispensable : un élément de grille est étiré par
+   * défaut (`stretch`), sa boîte fait alors toute la hauteur de la ligne, et il
+   * ne reste rien à coller. Avec une hauteur d'une fenêtre et `top: 0`, la barre
+   * se fixe et son propre `overflow-y` prend le relais quand les liens sont plus
+   * nombreux que la hauteur disponible.
+   */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
   overflow-y: auto;
   transition: width 0.15s;
 }
