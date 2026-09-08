@@ -1,4 +1,5 @@
 import { test, expect, loginAs, loginApi } from '../fixtures/auth';
+import { dimanche } from '../fixtures/seed';
 
 /**
  * Scénario de recette « emploi du temps », joué de bout en bout par l'interface.
@@ -9,14 +10,6 @@ import { test, expect, loginAs, loginApi } from '../fixtures/auth';
  */
 
 const SALLE = `RECETTE-${Date.now() % 100000}`;
-
-/** Prochain dimanche, à l'heure UTC demandée. */
-function dimanche(heure: number, minute = 0): Date {
-  const d = new Date();
-  d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7 || 7));
-  d.setUTCHours(heure, minute, 0, 0);
-  return d;
-}
 
 test.describe.configure({ mode: 'serial' });
 
