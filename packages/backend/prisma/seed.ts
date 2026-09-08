@@ -7,7 +7,12 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Role } from '../src/generated/prisma/client';
 import { mapStripeStatus } from '../src/modules/billing/lib/stripeStatusMapping';
 import { LocalDiskStorageProvider } from '../src/modules/planning/lib/storage/localDiskStorageProvider';
-import { buildDemoCalendar } from '../src/shared/demoCalendar';
+import {
+  buildDemoCalendar,
+  REFERENCE_DEMO_WEEKS,
+  REFERENCE_DRAFT_ASSIGNMENT_AT,
+  WEEKLY_SLOT_DAYS,
+} from '../src/shared/demoCalendar';
 import {
   DEV_CLASSES,
   DEV_COURSES,
@@ -217,7 +222,7 @@ const devAssignments = [
   { id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict, title: 'Dictée n°3', classId: CLASS_CM2A, courseId: COURSE_FRANCAIS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-02-13T10:00:00Z'), maxScore: 10, coefficient: 1, status: 'PUBLISHED' as const },
   { id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1, title: 'TP — Observation au microscope', classId: CLASS_6EME, courseId: COURSE_SCIENCES, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2025-11-14T14:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
   { id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl, title: 'Contrôle — Préhistoire', classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-15T09:00:00Z'), maxScore: 20, coefficient: 1, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft, title: 'Contrôle chapitre 3 — Brouillon', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-20T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'DRAFT' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft, title: 'Contrôle chapitre 3 — Brouillon', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate(REFERENCE_DRAFT_ASSIGNMENT_AT), maxScore: 20, coefficient: 1, status: 'DRAFT' as const },
 ];
 
 /**
@@ -336,6 +341,18 @@ const WEEKLY_SLOTS: Slot[] = [
 
 const { schoolStart: SCHOOL_START, schoolEnd: SCHOOL_END, isSchoolDay } = demoCalendar;
 
+// Les tests du calendrier comptent les séances d'une semaine à partir de
+// `WEEKLY_SLOT_DAYS`. Si l'emploi du temps ci-dessus changeait de jours sans que
+// cette constante suive, ils continueraient à valider une semaine peuplée qui ne
+// l'est plus. Égalité stricte, donc : retirer un jour doit casser ici, bruyamment.
+const slotDays = [...new Set(WEEKLY_SLOTS.map((s) => s.day))].sort();
+if (slotDays.join(',') !== [...WEEKLY_SLOT_DAYS].sort().join(',')) {
+  throw new Error(
+    `WEEKLY_SLOTS utilise les jours [${slotDays}] alors que WEEKLY_SLOT_DAYS ` +
+      `déclare [${WEEKLY_SLOT_DAYS}] (src/shared/demoCalendar.ts). Alignez les deux.`,
+  );
+}
+
 function buildSessions() {
   const sessions: Array<{ classId: string; courseId: string; teacherId: string; room: string; startAt: Date; endAt: Date; recurrenceRule: string }> = [];
   const cursor = new Date(SCHOOL_START);
@@ -373,7 +390,12 @@ async function seedPlanning(prisma: PrismaClient) {
   console.log(`[planning] ${sessionData.length} sessions (${WEEKLY_SLOTS.length} créneaux/semaine).`);
 
   const demoWeekSessions = await prisma.session.findMany({
-    where: { startAt: { gte: shiftDate('2025-10-13T00:00:00Z'), lte: shiftDate('2025-10-17T23:59:59Z') } },
+    where: {
+      startAt: {
+        gte: shiftDate(`${REFERENCE_DEMO_WEEKS.absences[0]}T00:00:00Z`),
+        lte: shiftDate(`${REFERENCE_DEMO_WEEKS.absences[1]}T23:59:59Z`),
+      },
+    },
     orderBy: { startAt: 'asc' },
   });
   const studentsCm2a = DEV_STUDENTS.filter((s) => s.classId === CLASS_CM2A).slice(0, 3);
@@ -397,7 +419,12 @@ async function seedPlanning(prisma: PrismaClient) {
   }
 
   const justifWeekSessions = await prisma.session.findMany({
-    where: { startAt: { gte: shiftDate('2025-09-08T00:00:00Z'), lte: shiftDate('2025-09-12T23:59:59Z') } },
+    where: {
+      startAt: {
+        gte: shiftDate(`${REFERENCE_DEMO_WEEKS.justifications[0]}T00:00:00Z`),
+        lte: shiftDate(`${REFERENCE_DEMO_WEEKS.justifications[1]}T23:59:59Z`),
+      },
+    },
     orderBy: { startAt: 'asc' },
   });
   const justifCm2aSessions = justifWeekSessions.filter((s) => s.classId === CLASS_CM2A);
