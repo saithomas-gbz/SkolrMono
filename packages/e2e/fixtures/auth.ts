@@ -13,6 +13,13 @@ const DEV_ACCOUNTS = {
   // Parent de Léa Martin (issue #81 seed) — utilisé pour le rôle PARENT dans
   // les redirections par rôle du dashboard (issue #97).
   parent: { email: 'parent.martin@skolr.local', password: 'dev-parent-123', role: 'PARENT' },
+  // Administrateur de plateforme : n'appartient à aucun établissement, et n'a
+  // accès qu'à la vue plateforme (issue #258).
+  platformAdmin: {
+    email: 'platform.admin@skolr.local',
+    password: 'dev-platform-123',
+    role: 'PLATFORM_ADMIN',
+  },
 } as const;
 
 type DevAccountKey = keyof typeof DEV_ACCOUNTS;
@@ -40,7 +47,7 @@ export async function loginAs(page: Page, account: DevAccountKey): Promise<void>
   // ensuite sur /admin, /teacher, /student ou /parent selon le compte. Ces
   // pages chargent leurs propres chunks JS (widgets, i18n, ...) après la
   // redirection : prévoir plus large que le timeout d'assertion par défaut.
-  await expect(page).toHaveURL(/\/(admin|teacher|student|parent)(\/|$|\?)/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/(admin|teacher|student|parent|platform)(\/|$|\?)/, { timeout: 15_000 });
 }
 
 /**

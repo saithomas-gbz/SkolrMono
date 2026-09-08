@@ -16,7 +16,12 @@ definePageMeta({
 
 const { hasRole } = useAuth();
 
-if (hasRole('ADMIN')) {
+// Le rôle plateforme passe en premier : il n'appartient à aucun établissement,
+// et sans cette branche il restait bloqué sur le message d'attente ci-dessus —
+// un cul-de-sac définitif, pas un état transitoire (#258).
+if (hasRole('PLATFORM_ADMIN')) {
+  await navigateTo('/platform', { replace: true });
+} else if (hasRole('ADMIN')) {
   await navigateTo('/admin', { replace: true });
 } else if (hasRole('TEACHER', 'STAFF')) {
   await navigateTo('/teacher', { replace: true });
