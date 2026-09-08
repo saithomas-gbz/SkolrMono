@@ -7,6 +7,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, Role } from '../src/generated/prisma/client';
 import { mapStripeStatus } from '../src/modules/billing/lib/stripeStatusMapping';
 import { LocalDiskStorageProvider } from '../src/modules/planning/lib/storage/localDiskStorageProvider';
+import { buildDemoCalendar } from '../src/shared/demoCalendar';
 import {
   DEV_CLASSES,
   DEV_COURSES,
@@ -31,61 +32,14 @@ import {
 // ── calendrier de démonstration ──────────────────────────────────────────────
 
 /**
- * Le seed décrivait une année scolaire figée (2025-09-01 → 2026-06-30) pendant
- * que l'application, elle, tourne à la date du jour. L'écart grandissait d'une
- * semaine par semaine : au bout de quelques mois l'emploi du temps de la semaine
- * courante était vide, les bulletins ne montraient plus rien de récent, et la
- * spec e2e `planning-walkthrough` a fini par échouer faute de trouver une séance.
- *
- * Toutes les dates ci-dessous restent écrites en clair — elles se lisent comme
- * un vrai calendrier — mais sont décalées en bloc par `shiftDate` / `shiftDay`.
- * Le décalage est un nombre entier de SEMAINES : les jours de la semaine sont
- * donc préservés, ce dont dépendent `WEEKLY_SLOTS` (index de jour depuis lundi),
- * les bornes lundi→vendredi des semaines de démonstration, et les week-ends
- * exclus par `isSchoolDay`.
- *
- * L'ancrage vise la FIN de l'année scolaire plutôt que son début : « aujourd'hui »
- * tombe toujours quelques semaines avant les vacances d'été, ce qui donne à la
- * démonstration une année d'historique derrière elle (notes, absences, moyennes)
- * et des devoirs récents de part et d'autre de la date du jour — dont le DRAFT,
- * qui doit rester à venir. Ancrer sur la rentrée aurait donné un emploi du temps
- * peuplé mais des écrans de statistiques et de bulletins vides.
- *
- * Contrepartie assumée : le décalage étant un nombre quelconque de semaines, les
- * MOIS ne correspondent plus au calendrier scolaire français. Selon la date
- * d'exécution, l'année seedée peut courir de décembre à septembre, avec des
- * séances en août. Rien de tout cela n'est affiché : l'application ne montre
- * jamais « l'année scolaire » ni les libellés de vacances, seulement des dates de
- * séances et de devoirs — qui, elles, tombent naturellement autour d'aujourd'hui.
- * Aligner les mois aurait imposé un décalage d'années entières, donc une
- * démonstration sans historique dès qu'elle tourne en septembre.
+ * Le calendrier glissant vit dans `src/shared/demoCalendar.ts` : il y est
+ * paramétré par une date, ce qui permet de tester ses invariants à des dates
+ * d'exécution arbitraires (#251). Ici on le fige une seule fois au chargement,
+ * pour que toutes les dates du seed restent cohérentes entre elles même si le
+ * seed tourne à cheval sur minuit.
  */
-const REFERENCE_SCHOOL_END = new Date('2026-06-30T00:00:00Z');
-
-/** Nombre de semaines scolaires restantes après « aujourd'hui » dans le seed. */
-const WEEKS_LEFT_AFTER_TODAY = 3;
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const ONE_WEEK_MS = 7 * ONE_DAY_MS;
-
-/**
- * Décalage global, en semaines entières. Calculé une seule fois au chargement du
- * module pour que toutes les dates du seed restent cohérentes entre elles, même
- * si le seed tourne à cheval sur minuit.
- */
-const SHIFT_WEEKS = Math.round(
-  (Date.now() + WEEKS_LEFT_AFTER_TODAY * ONE_WEEK_MS - REFERENCE_SCHOOL_END.getTime()) / ONE_WEEK_MS,
-);
-
-/** Applique le décalage global à une date ISO du calendrier de référence. */
-function shiftDate(iso: string): Date {
-  return new Date(new Date(iso).getTime() + SHIFT_WEEKS * ONE_WEEK_MS);
-}
-
-/** Idem, pour les comparaisons de jours en `YYYY-MM-DD` (vacances, jours fériés). */
-function shiftDay(iso: string): string {
-  return shiftDate(iso).toISOString().slice(0, 10);
-}
+const demoCalendar = buildDemoCalendar();
+const { shiftDate } = demoCalendar;
 
 /**
  * Seed consolidé du monolithe modulaire (#114). Remplace les 7 seeds par service
@@ -380,34 +334,7 @@ const WEEKLY_SLOTS: Slot[] = [
   { day: 4, sh: 10, sm: 0, eh: 11, em: 30, classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: TEACHER_HISTOIRE, room: 'B201' },
 ];
 
-const SCHOOL_START = shiftDate('2025-09-01T00:00:00Z');
-const SCHOOL_END = shiftDate('2026-06-30T00:00:00Z');
-// Vacances et jours fériés : conservés pour leur FORME (des trous réguliers dans
-// l'emploi du temps), pas pour leur date réelle — le décalage global les déplace.
-const VACATIONS: Array<[string, string]> = (
-  [
-    ['2025-10-18', '2025-11-02'],
-    ['2025-12-20', '2026-01-04'],
-    ['2026-02-14', '2026-03-01'],
-    ['2026-04-11', '2026-04-26'],
-  ] as Array<[string, string]>
-).map(([from, to]) => [shiftDay(from), shiftDay(to)]);
-const BANK_HOLIDAYS = new Set(
-  ['2025-11-11', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25'].map(shiftDay),
-);
-
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function isSchoolDay(date: Date): boolean {
-  const str = toDateStr(date);
-  if (BANK_HOLIDAYS.has(str)) return false;
-  for (const [from, to] of VACATIONS) {
-    if (str >= from && str <= to) return false;
-  }
-  return true;
-}
+const { schoolStart: SCHOOL_START, schoolEnd: SCHOOL_END, isSchoolDay } = demoCalendar;
 
 function buildSessions() {
   const sessions: Array<{ classId: string; courseId: string; teacherId: string; room: string; startAt: Date; endAt: Date; recurrenceRule: string }> = [];

@@ -13,6 +13,16 @@ const sessionProperties = {
 
 const errorResponse = { type: 'object', properties: { error: { type: 'string' } } };
 
+/**
+ * Réponse de conflit : le `code` permet à l'interface de traduire le message.
+ * `fast-json-stringify` n'émet que les propriétés déclarées — l'omettre ici le
+ * ferait disparaître de la réponse sans la moindre erreur.
+ */
+const conflictResponse = {
+  type: 'object',
+  properties: { error: { type: 'string' }, code: { type: 'string' } },
+};
+
 export const sessionSchema = {
   list: {
     description:
@@ -56,7 +66,9 @@ export const sessionSchema = {
   },
   update: {
     description:
-      'Update a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne.',
+      'Update a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne. ' +
+      '400 si endAt <= startAt ; 409 si le nouveau créneau chevauche une autre séance du même ' +
+      'enseignant ou de la même classe (le créneau modifié est exclu de cette recherche).',
     params: {
       type: 'object',
       properties: { id: { type: 'string', format: 'uuid' } },
@@ -74,9 +86,11 @@ export const sessionSchema = {
     },
     response: {
       200: { type: 'object', properties: sessionProperties },
+      400: errorResponse,
       401: errorResponse,
       403: errorResponse,
       404: errorResponse,
+      409: conflictResponse,
     },
   },
   delete: {
@@ -98,7 +112,9 @@ export const sessionSchema = {
 
 export const createSessionSchema = {
   description:
-    'Create a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne.',
+    'Create a session — staff uniquement ; un enseignant est restreint aux classes où il enseigne. ' +
+    '400 si endAt <= startAt ; 409 si le créneau chevauche une autre séance du même enseignant ' +
+    'ou de la même classe (le chevauchement est strict : deux créneaux adjacents sont acceptés).',
   body: {
     type: 'object',
     required: ['classId', 'courseId', 'teacherId', 'startAt', 'endAt'],
@@ -114,7 +130,9 @@ export const createSessionSchema = {
   },
   response: {
     201: { type: 'object', properties: sessionProperties },
+    400: errorResponse,
     401: errorResponse,
     403: errorResponse,
+    409: conflictResponse,
   },
 };

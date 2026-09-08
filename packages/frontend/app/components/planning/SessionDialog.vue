@@ -56,23 +56,36 @@
       <div class="field-row">
         <div class="field">
           <label for="sd-start">{{ $t('planning.session_dialog.start') }}</label>
+          <!--
+            `manual-input` désactivé volontairement : avec `show-time` et
+            `hour-format="24"`, le parseur de PrimeVue (populateTime) ne garde
+            que le cas 12 h avant d'appeler `ampm.toLowerCase()`. En 24 h `ampm`
+            est `undefined`, l'exception est avalée par le `onInput` du
+            composant, et la saisie est perdue *sans message*. Le champ restait
+            éditable en apparence : on pouvait taper « 07/09/2026 10:00 »,
+            valider, et créer la séance à l'heure préremplie. Le sélecteur reste
+            pleinement utilisable via l'overlay.
+          -->
           <DatePicker
             id="sd-start"
             v-model="form.startAt"
             show-time
             hour-format="24"
             date-format="dd/mm/yy"
+            :manual-input="false"
             class="w-full"
           />
         </div>
         <div class="field">
           <label for="sd-end">{{ $t('planning.session_dialog.end') }}</label>
+          <!-- `manual-input` désactivé pour la même raison que « Début » ci-dessus. -->
           <DatePicker
             id="sd-end"
             v-model="form.endAt"
             show-time
             hour-format="24"
             date-format="dd/mm/yy"
+            :manual-input="false"
             class="w-full"
           />
         </div>
@@ -226,10 +239,23 @@ async function submit() {
     visible.value = false;
     emit('saved');
   } catch (e) {
-    error.value = normalizeApiError(e);
+    error.value = conflictMessage(e) ?? normalizeApiError(e);
   } finally {
     pending.value = false;
   }
+}
+
+/**
+ * Un chevauchement d'horaire est une erreur de saisie courante, pas un cas
+ * limite : `normalizeApiError` transmettrait tel quel le message anglais du
+ * backend dans une interface française. Le backend joint un code stable au 409,
+ * qu'on traduit ici. Tout autre code d'erreur retombe sur le message brut.
+ */
+function conflictMessage(e: unknown): string | null {
+  const code = (e as { data?: { code?: string } } | null)?.data?.code;
+  if (code === 'SESSION_CONFLICT_TEACHER') return t('planning.session_dialog.conflict_teacher');
+  if (code === 'SESSION_CONFLICT_CLASS') return t('planning.session_dialog.conflict_class');
+  return null;
 }
 </script>
 
