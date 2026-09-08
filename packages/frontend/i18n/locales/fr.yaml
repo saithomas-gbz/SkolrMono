@@ -278,7 +278,6 @@ planning:
   today_summary_none: "{date} — aucun cours aujourd'hui"
   absences:
     title: Gestion des absences
-    restricted: "Cette page est réservée aux enseignants et administrateurs."
     students_tab: Élèves
     teachers_tab: Professeurs
     session: Session
@@ -427,7 +426,6 @@ grades:
     publish: Publier
   my_grades:
     title: Mes notes
-    restricted: "Cette page est réservée aux élèves."
     loading: "Chargement de vos notes…"
     empty: Aucune note enregistrée pour le moment.
     average: Moyenne
