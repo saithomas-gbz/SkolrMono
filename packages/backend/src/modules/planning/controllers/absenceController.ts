@@ -33,9 +33,23 @@ export async function getAbsences(
   const { sessionId, userId, role, justified, teacherId } = req.query;
   const planningUser = req.planningUser;
 
+  /**
+   * Une absence d'enseignant n'est pas une donnée personnelle d'élève : c'est
+   * une information d'organisation, que toute la classe doit pouvoir lire pour
+   * savoir qu'un cours n'aura pas lieu. Elle échappe donc au cloisonnement
+   * ci-dessous, qui protège les absences d'élèves les unes des autres.
+   *
+   * Le filtre reste strict par ailleurs : sans `role=TEACHER` explicite, un
+   * élève ne voit que les siennes, et il ne peut pas atteindre celles d'un
+   * camarade en passant un `userId`.
+   */
+  const absencesEnseignants = role === 'TEACHER';
+
   /** Un élève (`USER`) ne voit que ses propres absences, quel que soit le `userId` demandé (issue #80). */
   let userIdFilter: string | { in: string[] } | undefined = userId;
-  if (planningUser?.role === 'USER') {
+  if (absencesEnseignants) {
+    userIdFilter = userId;
+  } else if (planningUser?.role === 'USER') {
     userIdFilter = planningUser.userId;
   } else if (planningUser?.role === 'PARENT') {
     const childIds = await getChildIds(planningUser.userId);

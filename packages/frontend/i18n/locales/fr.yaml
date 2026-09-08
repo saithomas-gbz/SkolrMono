@@ -326,6 +326,7 @@ planning:
   add: Ajouter
   loading: "Chargement…"
   today: "Aujourd'hui"
+  teacher_absent: Enseignant absent
   greeting_morning: "Bonjour, {name}"
   greeting_afternoon: "Bon après-midi, {name}"
   greeting_evening: "Bonsoir, {name}"

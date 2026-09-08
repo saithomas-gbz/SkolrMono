@@ -52,6 +52,7 @@
           :teacher-names="teacherNames"
           :can-create="canCreateSession"
           :current-user-id="userId"
+          :absent-teacher-session-ids="seancesSansProf"
           @session-click="openEditDialog"
           @slot-click="openCreateDialog"
         />
@@ -88,7 +89,7 @@ const route = useRoute();
 const router = useRouter();
 const api = useApi();
 const { hasRole, userId, user } = useAuth();
-const { fetchSessions, deleteSession } = usePlanning();
+const { fetchSessions, deleteSession, fetchAbsences } = usePlanning();
 const { fetchUsersByIds, fetchAllUsers } = useUser();
 const { fetchClassesByTeacherId } = useClass();
 
@@ -224,6 +225,17 @@ const sessions = ref<Session[]>([]);
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 
+/**
+ * Séances dont l'enseignant est déclaré absent.
+ *
+ * Chargées séparément plutôt que portées par la séance : l'API des séances ne
+ * connaît pas les absences, et lui ajouter ce champ dérivé toucherait un contrat
+ * consommé par quatre écrans. Un second appel suffit ici, et son échec ne doit
+ * pas empêcher l'emploi du temps de s'afficher — d'où le repli sur un ensemble
+ * vide plutôt qu'une erreur.
+ */
+const seancesSansProf = ref<Set<string>>(new Set());
+
 async function refresh() {
   pending.value = true;
   fetchError.value = null;
@@ -233,6 +245,13 @@ async function refresh() {
     fetchError.value = normalizeApiError(e);
   } finally {
     pending.value = false;
+  }
+
+  try {
+    const absences = await fetchAbsences({ role: 'TEACHER' });
+    seancesSansProf.value = new Set(absences.map((a) => a.sessionId));
+  } catch {
+    seancesSansProf.value = new Set();
   }
 }
 
