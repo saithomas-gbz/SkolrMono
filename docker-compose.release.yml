@@ -9,7 +9,7 @@
 # connu du dépôt.
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: skolr_postgres
     restart: unless-stopped
     environment:
@@ -32,7 +32,7 @@ services:
   # hôte que `postgres_data` : la copie hors site est une étape à part entière
   # du runbook, voir docs/ops/backup-restore.md.
   db-backup:
-    image: postgres:15
+    image: postgres:18
     container_name: skolr_db_backup
     restart: unless-stopped
     entrypoint: ["/opt/backup/backup-loop.sh"]
