@@ -67,6 +67,14 @@
 }
 
 body {
+  /*
+   * La marge de 8px que les navigateurs appliquent par défaut n'avait jamais été
+   * retirée. La coquille, prévue pour occuper l'écran entier — grille en
+   * `min-height: 100dvh`, barre latérale bordée — s'en trouvait décalée de 8px
+   * sur chaque bord, et débordait de 16px en hauteur : d'où une barre de
+   * défilement sur des pages qui tiennent pourtant dans la fenêtre.
+   */
+  margin: 0;
   background: var(--skolr-color-page-bg);
   font-family: var(--skolr-font-family);
 }
