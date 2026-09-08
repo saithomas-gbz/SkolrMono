@@ -99,9 +99,21 @@ export default {
         const sub = event.data.object as Stripe.Subscription;
         const establishment = await findEstablishmentByCustomerId(sub.customer as string);
         if (establishment) {
+          // Les références Stripe et les dates de période ne veulent plus rien dire
+          // une fois l'abonnement supprimé : les laisser en base ferait afficher une
+          // échéance à venir sur un abonnement mort. `planTier` est conservé comme
+          // trace du dernier plan souscrit — l'interface ne le présente comme « plan
+          // actuel » que si le statut est encore actif.
           await db.subscription.updateMany({
             where: { establishmentId: establishment.id },
-            data: { status: 'CANCELED' },
+            data: {
+              status: 'CANCELED',
+              stripeSubscriptionId: null,
+              stripePriceId: null,
+              cancelAtPeriodEnd: false,
+              currentPeriodStart: null,
+              currentPeriodEnd: null,
+            },
           });
           await publishBillingEvent(
             'billing.subscription.canceled',

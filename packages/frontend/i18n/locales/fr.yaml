@@ -295,6 +295,8 @@ billing:
     INCOMPLETE: Incomplet
   current_plan: "Plan actuel : {plan}"
   renews_on: "renouvellement le {date}"
+  cancel_ends_on: "fin de l'abonnement le {date}"
+  cancel_notice: "Annulation programmée : l'abonnement reste actif jusqu'à la fin de la période en cours, puis prend fin. Aucun nouveau prélèvement ne sera effectué."
   no_subscription: "Aucun abonnement actif pour le moment."
   inactive_warning: "Abonnement inactif — choisissez un plan ci-dessous ou contactez le support pour réactiver votre accès."
   manage_billing: Gérer la facturation
