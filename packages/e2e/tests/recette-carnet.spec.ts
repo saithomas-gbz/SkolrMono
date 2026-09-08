@@ -1,4 +1,4 @@
-import { test, expect, loginAs } from '../fixtures/auth';
+import { test, expect, loginAs, loginApi } from '../fixtures/auth';
 
 /**
  * Scénario de recette « carnet de notes », joué de bout en bout par l'interface
@@ -8,7 +8,8 @@ import { test, expect, loginAs } from '../fixtures/auth';
 
 const CM2A = '22222222-2222-2222-2222-222222222201';
 const COMMENTAIRE = 'Très nette progression';
-const TITRE = `Recette carnet ${Date.now()}`;
+const PREFIXE_TITRE = 'Recette carnet ';
+const TITRE = `${PREFIXE_TITRE}${Date.now()}`;
 
 const partage: { colonnesAvant: number; urlDevoir: string } = { colonnesAvant: 0, urlDevoir: '' };
 
@@ -104,7 +105,7 @@ test('6. Léa — voit sa note et le commentaire dans son carnet', async ({ page
 });
 
 test('7. Léa — une comparaison de période est affichée', async ({ page, request }) => {
-  const { token } = await (await import('../fixtures/auth')).loginApi(request, 'lea');
+  const { token } = await loginApi(request, 'lea');
   const res = await request.get('/api/grade/stats/user/44444444-4444-4444-4444-000000000001', {
     headers: { authorization: `Bearer ${token}` },
   });
@@ -139,7 +140,37 @@ test('9. Sophie — les absences justifiées de Léa sont affichées', async ({ 
   await page.waitForLoadState('networkidle');
 
   await expect(page).not.toHaveURL(/\/auth\/login/);
-  const corps = await page.locator('body').innerText();
-  console.log(`  page absences parent : ${corps.replace(/\n{2,}/g, ' | ').slice(0, 200)}`);
-  expect(corps.length, 'la page doit afficher du contenu').toBeGreaterThan(0);
+
+  // L'assertion ne portait que sur la longueur du texte : la page pouvait
+  // n'afficher aucune absence sans que le test s'en apercoive. Le scenario de
+  // recette annonce deux absences justifiees pour Lea.
+  //
+  // La colonne « Justifiée » rend « Oui » / « Non » ; le libelle lui-meme est
+  // l'en-tete, present une seule fois. On compte donc les lignes, pas le mot.
+  await expect(page.getByText('Léa Martin').first()).toBeVisible({ timeout: 20_000 });
+  const lignes = page.locator('tbody tr');
+  await expect(lignes).toHaveCount(2);
+  await expect(lignes.filter({ hasText: 'Oui' })).toHaveCount(2);
+});
+
+/**
+ * Le scenario cree un devoir par execution. Sans ce nettoyage ils s'accumulent :
+ * la classe CM2-A avait fini avec 17 devoirs pour 4 seedes, et la moyenne de Lea
+ * s'en trouvait faussee au point de rendre la base inutilisable pour une
+ * demonstration (#271). `recette-planning.spec.ts` faisait deja de meme pour ses
+ * creneaux ; on reprend le meme principe, en filtrant sur le prefixe de titre.
+ */
+test.afterAll(async ({ request }) => {
+  const { token } = await loginApi(request, 'teacher');
+  const headers = { authorization: `Bearer ${token}` };
+
+  const res = await request.get(`/api/grade/assignments?classId=${CM2A}`, { headers });
+  if (!res.ok()) return;
+
+  const devoirs = (await res.json()) as { data?: { id: string; title: string }[] } | { id: string; title: string }[];
+  const liste = Array.isArray(devoirs) ? devoirs : (devoirs.data ?? []);
+
+  for (const devoir of liste.filter((d) => d.title.startsWith(PREFIXE_TITRE))) {
+    await request.delete(`/api/grade/assignments/${devoir.id}`, { headers });
+  }
 });
