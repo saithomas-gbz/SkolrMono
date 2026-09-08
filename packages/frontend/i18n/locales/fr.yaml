@@ -344,6 +344,21 @@ planning:
     justified: Justifiée
     reason: Motif
     no_absences: Aucune absence enregistrée.
+    course: Cours
+    teacher_dialog:
+      open: Déclarer une absence
+      title: Déclarer l'absence d'un enseignant
+      intro: >-
+        Un enseignant absent manque en général tous ses cours de la journée.
+        Ses séances du jour sont présélectionnées : décochez celles qui restent
+        assurées.
+      teacher: Enseignant
+      choose_teacher: Choisir un enseignant
+      day: Jour
+      no_session: Aucune séance ce jour-là pour cet enseignant.
+      session_count: "{count} séance(s) ce jour-là"
+      already: déjà déclarée
+      submit: "Déclarer {count} absence(s)"
     justify: Justifier
     delete: Supprimer
   justifications:
