@@ -114,9 +114,15 @@ const selectedTeacherId = ref<string | null>(
   typeof route.query.teacherId === 'string' ? route.query.teacherId : null,
 );
 
-// Charger les classes (pour le select admin + le dialog)
+// Charger les classes (pour le select admin + le dialog).
+// `/class/classes` est réservé au staff : un élève reçoit un 403, que `useApi`
+// interprète comme une invalidation de session et qui le déconnecte alors qu'il
+// ouvre simplement son emploi du temps (lien présent dans sa barre de
+// navigation). Ces classes n'alimentent que le filtre admin et le dialog
+// d'édition : on ne les charge donc que pour les rôles qui peuvent éditer.
 const { data: classesResponse } = await useFetch<ClassesApiResponse>('/class/classes', {
   $fetch: api,
+  immediate: canEdit.value,
   default: () => ({ data: [] as SkolrClass[], message: '' }),
 });
 const classes = computed(() => classesResponse.value?.data ?? []);

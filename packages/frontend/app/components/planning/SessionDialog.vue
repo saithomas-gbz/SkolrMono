@@ -56,23 +56,36 @@
       <div class="field-row">
         <div class="field">
           <label for="sd-start">{{ $t('planning.session_dialog.start') }}</label>
+          <!--
+            `manual-input` désactivé volontairement : avec `show-time` et
+            `hour-format="24"`, le parseur de PrimeVue (populateTime) ne garde
+            que le cas 12 h avant d'appeler `ampm.toLowerCase()`. En 24 h `ampm`
+            est `undefined`, l'exception est avalée par le `onInput` du
+            composant, et la saisie est perdue *sans message*. Le champ restait
+            éditable en apparence : on pouvait taper « 07/09/2026 10:00 »,
+            valider, et créer la séance à l'heure préremplie. Le sélecteur reste
+            pleinement utilisable via l'overlay.
+          -->
           <DatePicker
             id="sd-start"
             v-model="form.startAt"
             show-time
             hour-format="24"
             date-format="dd/mm/yy"
+            :manual-input="false"
             class="w-full"
           />
         </div>
         <div class="field">
           <label for="sd-end">{{ $t('planning.session_dialog.end') }}</label>
+          <!-- `manual-input` désactivé pour la même raison que « Début » ci-dessus. -->
           <DatePicker
             id="sd-end"
             v-model="form.endAt"
             show-time
             hour-format="24"
             date-format="dd/mm/yy"
+            :manual-input="false"
             class="w-full"
           />
         </div>
