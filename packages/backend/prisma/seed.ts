@@ -195,6 +195,13 @@ const COURSE_SCIENCES = DEV_COURSES[1]!.id;
 const COURSE_FRANCAIS = DEV_COURSES[2]!.id;
 const COURSE_HISTOIRE = DEV_COURSES[3]!.id;
 
+/**
+ * Les devoirs sont répartis sur les trois périodes de l'année scolaire (#254) :
+ * deux par période. Concentrés sur les dernières semaines, ils tombaient tous
+ * dans le troisième trimestre — la comparaison de moyenne entre périodes n'avait
+ * alors rien à comparer, et la courbe d'évolution se réduisait à un point. Le
+ * DRAFT reste volontairement après la date du jour : c'est un devoir à venir.
+ */
 const DEV_ASSIGNMENT_IDS = {
   cm2a_maths_ctrl1: 'EEEE0001-EEEE-EEEE-EEEE-000000000001',
   cm2a_maths_ctrl2: 'EEEE0001-EEEE-EEEE-EEEE-000000000002',
@@ -205,17 +212,26 @@ const DEV_ASSIGNMENT_IDS = {
 } as const;
 
 const devAssignments = [
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl1, title: 'Contrôle chapitre 1 — Fractions', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-15T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl2, title: 'Contrôle chapitre 2 — Géométrie', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-01T08:00:00Z'), maxScore: 20, coefficient: 2, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict, title: 'Dictée n°3', classId: CLASS_CM2A, courseId: COURSE_FRANCAIS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-05T10:00:00Z'), maxScore: 10, coefficient: 1, status: 'PUBLISHED' as const },
-  { id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1, title: 'TP — Observation au microscope', classId: CLASS_6EME, courseId: COURSE_SCIENCES, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-20T14:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
-  { id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl, title: 'Contrôle — Préhistoire', classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-08T09:00:00Z'), maxScore: 20, coefficient: 1, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl1, title: 'Contrôle chapitre 1 — Fractions', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2025-10-10T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_maths_ctrl2, title: 'Contrôle chapitre 2 — Géométrie', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-01-16T08:00:00Z'), maxScore: 20, coefficient: 2, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.cm2a_francais_dict, title: 'Dictée n°3', classId: CLASS_CM2A, courseId: COURSE_FRANCAIS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-02-13T10:00:00Z'), maxScore: 10, coefficient: 1, status: 'PUBLISHED' as const },
+  { id: DEV_ASSIGNMENT_IDS.sci6_sciences_tp1, title: 'TP — Observation au microscope', classId: CLASS_6EME, courseId: COURSE_SCIENCES, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2025-11-14T14:00:00Z'), maxScore: 20, coefficient: 1, status: 'CLOSED' as const },
+  { id: DEV_ASSIGNMENT_IDS.sci6_histoire_ctrl, title: 'Contrôle — Préhistoire', classId: CLASS_6EME, courseId: COURSE_HISTOIRE, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-05-15T09:00:00Z'), maxScore: 20, coefficient: 1, status: 'PUBLISHED' as const },
   { id: DEV_ASSIGNMENT_IDS.cm2a_maths_draft, title: 'Contrôle chapitre 3 — Brouillon', classId: CLASS_CM2A, courseId: COURSE_MATHS, teacherId: DEV_USER_IDS.teacher, assignedAt: shiftDate('2026-06-20T08:00:00Z'), maxScore: 20, coefficient: 1, status: 'DRAFT' as const },
 ];
 
-function gradeStatusForIndex(i: number): 'GRADED' | 'ABSENT' | 'PENDING' {
-  if (i % 7 === 0) return 'ABSENT';
-  if (i % 5 === 0) return 'PENDING';
+/**
+ * Statut d'une note, dérivé du couple (élève, devoir) et non du seul rang de
+ * l'élève. Auparavant `i % 7 === 0` rendait l'élève d'index 0 absent à TOUS les
+ * devoirs — or c'est `dev.student`, le compte qui sert à montrer la vue élève :
+ * son carnet n'affichait que des « Absent », et la comparaison de moyenne entre
+ * périodes n'avait rien à comparer. Croiser les deux index donne à chacun un
+ * historique majoritairement noté, avec quelques trous répartis.
+ */
+function gradeStatusFor(studentIndex: number, assignmentIndex: number): 'GRADED' | 'ABSENT' | 'PENDING' {
+  const n = studentIndex + assignmentIndex * 3;
+  if (n % 11 === 0 && n !== 0) return 'ABSENT';
+  if (n % 7 === 0 && n !== 0) return 'PENDING';
   return 'GRADED';
 }
 
@@ -268,11 +284,11 @@ async function seedGrade(prisma: PrismaClient) {
 
   const publishedAssignments = devAssignments.filter((a) => a.status !== 'DRAFT');
   let gradeCount = 0;
-  for (const assignment of publishedAssignments) {
+  for (const [assignmentIndex, assignment] of publishedAssignments.entries()) {
     const students = devGradeUsers.filter((u) => u.classId === assignment.classId);
     for (let i = 0; i < students.length; i++) {
       const student = students[i]!;
-      const gStatus = gradeStatusForIndex(i);
+      const gStatus = gradeStatusFor(i, assignmentIndex);
       const value = gStatus === 'GRADED' ? gradeValueForIndex(i, assignment.maxScore) : null;
       await prisma.grade.upsert({
         where: { assignmentId_userId: { assignmentId: assignment.id, userId: student.id } },

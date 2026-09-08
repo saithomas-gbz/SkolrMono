@@ -124,16 +124,12 @@ const worstSubject = computed(() => {
     : withAverage.reduce((worst, c) => (c.average! < worst.average! ? c : worst));
 });
 
-// `trend` (GET /grade/stats/user/:userId) est la moyenne pondérée CUMULATIVE de l'élève,
-// recalculée après chaque devoir noté et rangée par ordre chronologique — il n'y a pas de
-// notion de trimestre côté backend (ni en base, ni dans l'API). L'écart entre les deux
-// derniers points mesure donc uniquement de combien la moyenne générale a bougé au dernier
-// devoir noté. Garder le libellé `kpi_trend` cohérent avec cette définition si elle change.
-const trendDelta = computed(() => {
-  const trend = stats.value?.trend ?? [];
-  if (trend.length < 2) return null;
-  return trend[trend.length - 1]!.average - trend[trend.length - 2]!.average;
-});
+/**
+ * Écart de moyenne entre les deux dernières périodes RENSEIGNÉES de l'année
+ * scolaire, calculé côté backend (#254). Nul tant qu'une seule période porte une
+ * moyenne : la carte est alors masquée plutôt que d'afficher un zéro trompeur.
+ */
+const trendDelta = computed(() => stats.value?.periodDelta ?? null);
 
 type CourseGroup = {
   course: GradeCourse;

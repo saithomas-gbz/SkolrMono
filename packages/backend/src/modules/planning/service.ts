@@ -42,3 +42,24 @@ export async function collectRgpdData(userId: string) {
 
   return { sessions, absences, justifications };
 }
+
+/**
+ * Bornes de l'année scolaire, dérivées des séances réellement planifiées.
+ *
+ * Volontairement calculées depuis les données plutôt que codées sur des mois :
+ * le calendrier de démonstration glisse avec la date du jour (#240), si bien
+ * qu'un découpage en dur (« septembre-décembre ») tomberait à côté. Dériver
+ * garde le découpage juste quelle que soit la période couverte.
+ *
+ * Renvoie `null` quand aucune séance n'est planifiée — l'appelant doit alors
+ * renoncer au découpage plutôt que d'inventer des bornes.
+ */
+export async function schoolYearBounds(): Promise<{ start: Date; end: Date } | null> {
+  const [first, last] = await Promise.all([
+    db.session.findFirst({ orderBy: { startAt: 'asc' }, select: { startAt: true } }),
+    db.session.findFirst({ orderBy: { startAt: 'desc' }, select: { startAt: true } }),
+  ]);
+  if (!first || !last) return null;
+  if (last.startAt <= first.startAt) return null;
+  return { start: first.startAt, end: last.startAt };
+}

@@ -435,7 +435,7 @@ grades:
     kpi_overall: Moyenne générale
     kpi_best: Meilleure matière
     kpi_worst: À travailler
-    kpi_trend: Depuis le dernier devoir noté
+    kpi_trend: Vs. période précédente
     download_bulletin: Télécharger le bulletin PDF
     downloading: Téléchargement…
     download_error: "Impossible de générer le bulletin. Veuillez réessayer."
