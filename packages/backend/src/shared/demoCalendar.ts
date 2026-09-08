@@ -45,6 +45,32 @@ export const REFERENCE_SCHOOL_START = '2025-09-01T00:00:00Z';
 /** Nombre de semaines scolaires restantes après « aujourd'hui » dans le seed. */
 export const WEEKS_LEFT_AFTER_TODAY = 3;
 
+/**
+ * Date de référence du devoir en brouillon. Elle vit ici, et non dans `seed.ts`,
+ * pour que le seed et le test qui vérifie « le DRAFT reste à venir » lisent la
+ * MÊME valeur. Avec une copie privée côté test, déplacer la date dans le seed
+ * faisait passer le devoir dans le passé sans qu'aucun test ne tombe.
+ */
+export const REFERENCE_DRAFT_ASSIGNMENT_AT = '2026-06-20T08:00:00Z';
+
+/**
+ * Jours de la semaine (0 = lundi) sur lesquels le seed pose des créneaux.
+ * Partagé pour la même raison : le test qui compte les séances de la semaine
+ * courante doit raisonner sur les jours réellement utilisés par `WEEKLY_SLOTS`.
+ */
+export const WEEKLY_SLOT_DAYS: readonly number[] = [0, 1, 2, 3, 4];
+
+/**
+ * Semaines de démonstration où `seedPlanning` va chercher les séances qui
+ * porteront les absences et les justificatifs. Chaque écriture y est derrière un
+ * garde de vérité : si l'une de ces semaines tombait en vacances, le seed
+ * créerait zéro absence et zéro justificatif, sans erreur ni log.
+ */
+export const REFERENCE_DEMO_WEEKS = {
+  absences: ['2025-10-13', '2025-10-17'],
+  justifications: ['2025-09-08', '2025-09-12'],
+} as const;
+
 export const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 export const ONE_WEEK_MS = 7 * ONE_DAY_MS;
 
@@ -70,8 +96,6 @@ interface DemoCalendar {
   shiftWeeks: number;
   schoolStart: Date;
   schoolEnd: Date;
-  vacations: Array<[string, string]>;
-  bankHolidays: Set<string>;
   /** Applique le décalage à une date ISO du calendrier de référence. */
   shiftDate: (iso: string) => Date;
   /** Idem, en `YYYY-MM-DD`, pour les comparaisons de jours. */
@@ -123,8 +147,6 @@ export function buildDemoCalendar(now: Date = new Date()): DemoCalendar {
     shiftWeeks,
     schoolStart: shiftDate(REFERENCE_SCHOOL_START),
     schoolEnd: shiftDate(REFERENCE_SCHOOL_END),
-    vacations,
-    bankHolidays,
     shiftDate,
     shiftDay,
     isSchoolDay,

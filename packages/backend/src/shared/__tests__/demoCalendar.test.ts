@@ -4,9 +4,12 @@ import {
   ONE_DAY_MS,
   ONE_WEEK_MS,
   REFERENCE_BANK_HOLIDAYS,
+  REFERENCE_DEMO_WEEKS,
+  REFERENCE_DRAFT_ASSIGNMENT_AT,
   REFERENCE_SCHOOL_END,
   REFERENCE_SCHOOL_START,
   REFERENCE_VACATIONS,
+  WEEKLY_SLOT_DAYS,
   WEEKS_LEFT_AFTER_TODAY,
 } from '../demoCalendar';
 
@@ -17,12 +20,6 @@ import {
  * ne se voyait ni à la relecture ni au merge, seulement une fois qu'assez de
  * temps s'était écoulé. Un test à une seule date ne l'aurait pas attrapé.
  */
-
-/** Créneaux hebdomadaires du seed : `WEEKLY_SLOTS` n'utilise que lundi→vendredi. */
-const WEEKLY_SLOT_DAYS = [0, 1, 2, 3, 4];
-
-/** Devoir en brouillon du seed — doit rester postérieur à la date du jour. */
-const DRAFT_ASSIGNMENT_AT = '2026-06-20T08:00:00Z';
 
 /** Date d'exécution arbitraire mais fixe, pour les assertions ponctuelles. */
 const FIXED_TODAY = new Date('2026-09-08T12:00:00Z');
@@ -48,7 +45,17 @@ function sessionsInWeekOf(today: Date): number {
   return count;
 }
 
-/** Deux ans de dates d'exécution, un jour sur un. */
+/**
+ * Dates d'exécution, un jour sur un.
+ *
+ * Attention à ne pas surestimer ce que ce balayage couvre : `shiftWeeks` suit
+ * `now`, si bien que la seule variable libre est `(now − fin de référence) mod
+ * 1 semaine`. Les itérations retombent donc sur 7 états distincts seulement,
+ * répétés — ce qui suffit à couvrir tous les résidus de l'arrondi, mais ne
+ * couvre PAS les autres semaines de l'année scolaire. Le test
+ * « couverture réelle » plus bas verrouille ce constat pour qu'il ne se reperde
+ * pas à la relecture.
+ */
 function* executionDates(days = 730): Generator<Date> {
   const cursor = new Date('2026-01-01T12:00:00Z');
   for (let i = 0; i < days; i++) {
@@ -72,7 +79,7 @@ describe('buildDemoCalendar — alignement', () => {
     const references = [
       REFERENCE_SCHOOL_START,
       REFERENCE_SCHOOL_END,
-      DRAFT_ASSIGNMENT_AT,
+      REFERENCE_DRAFT_ASSIGNMENT_AT,
       ...REFERENCE_VACATIONS.flat(),
       ...REFERENCE_BANK_HOLIDAYS,
     ];
@@ -117,7 +124,7 @@ describe('buildDemoCalendar — invariants de démonstration', () => {
     // écrans « à venir » et doit rester postérieur à la date du jour.
     for (const today of executionDates()) {
       const { shiftDate } = buildDemoCalendar(today);
-      expect(shiftDate(DRAFT_ASSIGNMENT_AT).getTime()).toBeGreaterThan(today.getTime());
+      expect(shiftDate(REFERENCE_DRAFT_ASSIGNMENT_AT).getTime()).toBeGreaterThan(today.getTime());
     }
   });
 
@@ -126,8 +133,11 @@ describe('buildDemoCalendar — invariants de démonstration', () => {
     // bulletins aient de la matière. Sans historique, ces écrans sont vides.
     for (const today of executionDates()) {
       const { schoolStart } = buildDemoCalendar(today);
+      // L'ancrage garantit ~9,3 mois. Un seuil à 6 aurait laissé passer un
+      // changement divisant l'historique par deux, ce qui vide statistiques et
+      // bulletins — précisément ce que le nom de ce test prétend protéger.
       const monthsOfHistory = (today.getTime() - schoolStart.getTime()) / (30 * ONE_DAY_MS);
-      expect(monthsOfHistory).toBeGreaterThan(6);
+      expect(monthsOfHistory).toBeGreaterThan(9);
     }
   });
 
@@ -144,8 +154,17 @@ describe('buildDemoCalendar — isSchoolDay', () => {
   it('exclut les vacances et jours fériés décalés', () => {
     const cal = buildDemoCalendar(FIXED_TODAY);
 
-    for (const [from] of REFERENCE_VACATIONS) {
+    for (const [from, to] of REFERENCE_VACATIONS) {
+      // Les deux bornes ET un jour au milieu : `isSchoolDay` compare avec `>=`
+      // et `<=`, une régression vers `<` laisserait le dernier jour de chaque
+      // vacance ouvert et sèmerait des séances fantômes.
       expect(cal.isSchoolDay(cal.shiftDate(`${from}T00:00:00Z`))).toBe(false);
+      expect(cal.isSchoolDay(cal.shiftDate(`${to}T00:00:00Z`))).toBe(false);
+
+      const middle = new Date(
+        (new Date(`${from}T00:00:00Z`).getTime() + new Date(`${to}T00:00:00Z`).getTime()) / 2,
+      );
+      expect(cal.isSchoolDay(cal.shiftDate(middle.toISOString()))).toBe(false);
     }
     for (const holiday of REFERENCE_BANK_HOLIDAYS) {
       expect(cal.isSchoolDay(cal.shiftDate(`${holiday}T00:00:00Z`))).toBe(false);
@@ -167,4 +186,56 @@ describe('buildDemoCalendar — isSchoolDay', () => {
     expect(saturday.getUTCDay()).toBe(6);
     expect(cal.isSchoolDay(saturday)).toBe(true);
   });
+});
+
+describe('buildDemoCalendar — couverture réelle du balayage', () => {
+  it('ne parcourt que 7 positions distinctes dans le repère de référence', () => {
+    // Verrouille un constat contre-intuitif relevé en review : `shiftWeeks` suit
+    // `now`, donc « aujourd'hui » retombe toujours au même endroit de l'année de
+    // référence, à un résidu de semaine près. Les 730 itérations des tests
+    // ci-dessus ne valent pas 730 cas : elles valent 7 cas répétés 104 fois.
+    //
+    // Ce test existe pour que personne ne relise le balayage en croyant qu'il
+    // couvre toute l'année scolaire. Il couvre tous les arrondis, rien de plus.
+    const positions = new Set<string>();
+    for (const today of executionDates()) {
+      const { shiftWeeks } = buildDemoCalendar(today);
+      positions.add(new Date(today.getTime() - shiftWeeks * ONE_WEEK_MS).toISOString().slice(0, 10));
+    }
+    expect(positions.size).toBe(7);
+  });
+});
+
+describe('semaines de démonstration', () => {
+  // `seedPlanning` va chercher les séances de ces deux semaines pour y accrocher
+  // absences et justificatifs, derrière des gardes de vérité. Si l'une tombait en
+  // vacances, le seed créerait zéro absence et zéro justificatif — sans erreur,
+  // sans log, et les parcours e2e correspondants casseraient avec une suite
+  // unitaire verte. C'est le trou que ces deux tests ferment.
+  const weeks = [
+    ['absences', REFERENCE_DEMO_WEEKS.absences] as const,
+    ['justificatifs', REFERENCE_DEMO_WEEKS.justifications] as const,
+  ];
+
+  for (const [label, [from, to]] of weeks) {
+    it(`la semaine ${label} reste ouverte du lundi au vendredi`, () => {
+      const cal = buildDemoCalendar(FIXED_TODAY);
+
+      const monday = cal.shiftDate(`${from}T00:00:00Z`);
+      expect(monday.getUTCDay()).toBe(1);
+      expect(cal.shiftDate(`${to}T00:00:00Z`).getUTCDay()).toBe(5);
+
+      for (const offset of WEEKLY_SLOT_DAYS) {
+        const day = new Date(monday);
+        day.setUTCDate(monday.getUTCDate() + offset);
+        expect(cal.isSchoolDay(day)).toBe(true);
+      }
+    });
+
+    it(`la semaine ${label} tombe dans l'année scolaire`, () => {
+      const cal = buildDemoCalendar(FIXED_TODAY);
+      const monday = cal.shiftDate(`${from}T00:00:00Z`);
+      expect(monday >= cal.schoolStart && monday <= cal.schoolEnd).toBe(true);
+    });
+  }
 });
