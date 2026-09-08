@@ -91,19 +91,6 @@
         </div>
       </div>
 
-      <div class="field">
-        <label for="sd-recurrence">{{ $t('planning.session_dialog.recurrence') }}</label>
-        <Select
-          id="sd-recurrence"
-          v-model="form.recurrenceRule"
-          :options="recurrenceOptions"
-          option-label="label"
-          option-value="value"
-          :placeholder="$t('planning.session_dialog.recurrence_none')"
-          class="w-full"
-        />
-      </div>
-
       <Message v-if="error" severity="error" :closable="false">{{ error }}</Message>
     </div>
 
@@ -166,12 +153,6 @@ const courseOptions = computed(() =>
   courses.value.map((c) => ({ label: c.name, value: c.id })),
 );
 
-const recurrenceOptions = computed(() => [
-  { label: t('planning.session_dialog.recurrence_none'), value: '' },
-  { label: t('planning.session_dialog.recurrence_weekly'), value: 'WEEKLY' },
-  { label: t('planning.session_dialog.recurrence_biweekly'), value: 'BIWEEKLY' },
-]);
-
 const classOptions = computed(() =>
   props.classes.map((c) => ({ label: c.name, value: c.id })),
 );
@@ -185,6 +166,12 @@ const defaultForm = () => ({
   endAt: props.initialDate
     ? new Date(props.initialDate.getTime() + 60 * 60 * 1000)
     : new Date(Date.now() + 60 * 60 * 1000),
+  // Champ conservé dans le formulaire mais retiré de l'interface : la récurrence
+  // n'est implémentée nulle part (ni expansion des occurrences à la création côté
+  // `sessionController.createSession`, ni à la lecture, ni dans le calendrier).
+  // Proposer « Hebdomadaire » créait donc une seule séance. On garde la valeur
+  // pour la réémettre telle quelle en modification, sinon éditer la salle d'une
+  // séance seedée effacerait son `recurrenceRule`.
   recurrenceRule: '',
 });
 
