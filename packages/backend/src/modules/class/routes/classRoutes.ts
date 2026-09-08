@@ -10,6 +10,8 @@ import {
   getClassesByStudentIdSchema,
   getClassesByTeacherIdSchema,
   getTeacherCoursesInClassSchema,
+  setTeacherCoursesInClassSchema,
+  getAllCoursesSchema,
   updateClassNameOrDescriptionSchema,
   updateClassStudentListSchema,
   updateClassTeacherListSchema,
@@ -47,6 +49,16 @@ export default async function classRoutes(fastify: FastifyInstance) {
     classController.getClassById,
   );
 
+  fastify.get(
+    '/courses',
+    { schema: getAllCoursesSchema, preHandler: requireAuth },
+    classController.getAllCourses,
+  );
+  fastify.put(
+    '/classes/:classId/teachers/:teacherId/courses',
+    { schema: setTeacherCoursesInClassSchema, preHandler: requireStaff },
+    classController.setTeacherCoursesInClass,
+  );
   fastify.post('/classes', { schema: createClassSchema, preHandler: requireStaff }, classController.createClass);
 
   fastify.patch(

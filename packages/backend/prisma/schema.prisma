@@ -31,6 +31,11 @@ model User {
   role            Role     @default(USER)
   establishmentId String?
   deletedAt       DateTime? // RGPD : compte anonymisé (droit à l'effacement) — la ligne est conservée pour l'intégrité référentielle
+  // Compte créé par un administrateur avec un mot de passe provisoire : tant que
+  // ce drapeau est vrai, la session est cantonnée à l'écran de changement de mot
+  // de passe. Le mot de passe transite par un canal hors application (oral, SMS),
+  // il ne doit pas rester en usage.
+  mustChangePassword Boolean @default(false)
 
   accounts Account[]
 

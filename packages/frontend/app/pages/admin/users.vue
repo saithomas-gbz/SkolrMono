@@ -6,7 +6,20 @@
           <span>{{ $t('admin.users_title') }}</span>
           <div class="card-header-actions">
             <Button icon="pi pi-refresh" severity="secondary" outlined size="small" :loading="pending" @click="load" />
-            <Button :label="$t('admin.invite_user')" icon="pi pi-user-plus" size="small" @click="dialogVisible = true" />
+            <Button
+              :label="$t('admin.invite_user')"
+              icon="pi pi-envelope"
+              severity="secondary"
+              outlined
+              size="small"
+              @click="dialogVisible = true"
+            />
+            <Button
+              :label="$t('admin.create_user')"
+              icon="pi pi-user-plus"
+              size="small"
+              @click="creationVisible = true"
+            />
           </div>
         </div>
       </template>
@@ -50,6 +63,7 @@
     </Card>
 
     <AdminInviteUserDialog v-model:visible="dialogVisible" @invited="onInvited" />
+    <AdminCreateUserDialog v-model:visible="creationVisible" @created="onCreated" />
   </div>
 </template>
 
@@ -66,6 +80,7 @@ const users = ref<UserProfile[]>([]);
 const pending = ref(true);
 const fetchError = ref<string | null>(null);
 const dialogVisible = ref(false);
+const creationVisible = ref(false);
 const successMessage = ref<string | null>(null);
 
 async function load() {
@@ -81,6 +96,11 @@ async function load() {
 }
 
 onMounted(load);
+
+function onCreated(email: string) {
+  successMessage.value = t('admin.user_created', { email });
+  void load();
+}
 
 function onInvited(email: string) {
   successMessage.value = t('admin.invite_sent', { email });

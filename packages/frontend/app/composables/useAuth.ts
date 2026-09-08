@@ -17,6 +17,12 @@ export type AuthUser = {
   email: string;
   name?: string;
   role: string;
+  /**
+   * Mot de passe provisoire, posé à la création du compte par un administrateur.
+   * Tant qu'il est vrai, `middleware/password.ts` cantonne la navigation à
+   * l'écran de changement de mot de passe.
+   */
+  mustChangePassword?: boolean;
 };
 
 export type AuthSuccess = {
@@ -96,6 +102,7 @@ export function useAuth() {
   const user = computed(() => authUser.value);
   const userId = computed(() => authUser.value?.id ?? null);
   const role = computed(() => authUser.value?.role ?? null);
+  const mustChangePassword = computed(() => authUser.value?.mustChangePassword === true);
 
   /**
    * `refreshToken` est optionnel : un `undefined` explicite préserve celui déjà
@@ -183,6 +190,7 @@ export function useAuth() {
     user,
     userId,
     role,
+    mustChangePassword,
     hasRole,
   };
 }

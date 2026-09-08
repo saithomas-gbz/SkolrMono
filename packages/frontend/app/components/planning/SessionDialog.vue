@@ -142,19 +142,35 @@ const { t } = useI18n();
 const { createSession, updateSession } = usePlanning();
 const { fetchAllUsers } = useUser();
 const { fetchCourses } = useCourse();
+const { fetchTeacherCourses } = useClass();
+const { user, hasRole } = useAuth();
 
 const teachers = ref<UserProfile[]>([]);
 const courses = ref<CourseEntity[]>([]);
+
+/**
+ * Un enseignant ne pose de créneau que pour les matières que l'administration
+ * lui a attribuées dans la classe choisie.
+ *
+ * La liste complète (`/grade/courses`) reste servie à l'administration et à la
+ * vie scolaire, qui arbitrent la répartition. Le dialogue proposait auparavant
+ * cette liste à tout le monde : un enseignant y voyait, et pouvait y planifier,
+ * des matières qu'il n'enseigne pas.
+ */
+const restreintAuxSiennes = computed(() => hasRole('TEACHER') && !hasRole('ADMIN', 'STAFF'));
+
 onMounted(async () => {
   try {
     teachers.value = (await fetchAllUsers()).filter((u) => u.role === 'TEACHER');
   } catch {
     teachers.value = [];
   }
-  try {
-    courses.value = await fetchCourses();
-  } catch {
-    courses.value = [];
+  if (!restreintAuxSiennes.value) {
+    try {
+      courses.value = await fetchCourses();
+    } catch {
+      courses.value = [];
+    }
   }
 });
 
@@ -189,6 +205,27 @@ const defaultForm = () => ({
 });
 
 const form = reactive(defaultForm());
+
+/**
+ * Les matières d'un enseignant dépendent de la classe : on les recharge à chaque
+ * changement, et on vide une sélection devenue invalide plutôt que de la laisser
+ * partir vers un créneau que le backend refuserait.
+ */
+watch(
+  () => form.classId,
+  async (classId) => {
+    if (!restreintAuxSiennes.value || !classId || !user.value) return;
+    try {
+      courses.value = await fetchTeacherCourses(classId, user.value.id);
+    } catch {
+      courses.value = [];
+    }
+    if (form.courseId && !courses.value.some((c) => c.id === form.courseId)) {
+      form.courseId = '';
+    }
+  },
+  { immediate: true },
+);
 const pending = ref(false);
 const error = ref<string | null>(null);
 

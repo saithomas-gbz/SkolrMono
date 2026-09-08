@@ -95,9 +95,26 @@ export function useUser() {
     });
   }
 
+  /**
+   * Création directe d'un compte par un administrateur (`POST /auth/users`).
+   *
+   * Le mot de passe fourni est provisoire : le backend pose `mustChangePassword`
+   * par défaut sur cette route, et la personne devra le remplacer à sa première
+   * connexion.
+   */
+  async function createUser(payload: {
+    email: string;
+    password: string;
+    name?: string;
+    role?: UserProfile['role'];
+  }) {
+    return api<UserProfile>('/auth/users', { method: 'POST', body: payload });
+  }
+
   return {
     fetchUsersByIds,
     fetchAllUsers,
+    createUser,
     updateProfile,
     changePassword,
     exportMyData,

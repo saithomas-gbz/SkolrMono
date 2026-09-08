@@ -42,8 +42,16 @@ const authController = {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
+      // Le drapeau voyage dans le jeton : `/me` renvoie les claims telles quelles,
+      // et le front peut donc cantonner la session sans requete supplementaire.
       const token = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
+        {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          establishmentId: user.establishmentId,
+          mustChangePassword: user.mustChangePassword,
+        },
         { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
       );
       const { token: refreshToken } = await issueRefreshToken(user.id);
@@ -53,7 +61,14 @@ const authController = {
         return reply.send({
         token,
         refreshToken,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role, establishmentId: user.establishmentId }
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          establishmentId: user.establishmentId,
+          mustChangePassword: user.mustChangePassword,
+        }
       });
     } catch (error) {
       request.log.error(error);
@@ -174,8 +189,18 @@ const authController = {
         return reply.status(401).send({ error: 'Invalid refresh token' });
       }
 
+      // Le drapeau doit etre reporte : sans lui, un simple rafraichissement
+      // libererait une session a mot de passe provisoire sans que le mot de passe
+      // ait change. C'est aussi par ce chemin que la contrainte se leve une fois
+      // le changement effectue, l'utilisateur relisant alors son etat en base.
       const token = request.server.jwt.sign(
-        { userId: user.id, email: user.email, role: user.role, establishmentId: user.establishmentId },
+        {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          establishmentId: user.establishmentId,
+          mustChangePassword: user.mustChangePassword,
+        },
         { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
       );
 
@@ -184,7 +209,14 @@ const authController = {
       return reply.send({
         token,
         refreshToken: result.token,
-        user: { id: user.id, email: user.email, name: user.name, role: user.role, establishmentId: user.establishmentId },
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          establishmentId: user.establishmentId,
+          mustChangePassword: user.mustChangePassword,
+        },
       });
     } catch (error) {
       request.log.error(error);
