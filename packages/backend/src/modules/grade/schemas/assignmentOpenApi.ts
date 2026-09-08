@@ -249,7 +249,12 @@ export const getGradebookSchema = {
                 required: ['userId', 'name'],
               },
             },
-            grades: { type: 'object' },
+            // Map dynamique userId → assignmentId → note. `fast-json-stringify`
+            // n'émet que les propriétés déclarées : sans `additionalProperties`,
+            // toute la map est supprimée à la sérialisation, et le carnet
+            // s'affiche vide côté enseignant alors que les notes sont bien en
+            // base et que la grille de saisie, elle, les montre.
+            grades: { type: 'object', additionalProperties: true },
           },
           required: ['classId', 'assignments', 'students', 'grades'],
         },

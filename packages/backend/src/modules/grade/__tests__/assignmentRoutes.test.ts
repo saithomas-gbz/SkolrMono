@@ -385,4 +385,33 @@ describe('Périmètre enseignant sur les devoirs', () => {
       await app.close();
     });
   });
+  describe('serialisation du carnet (#262)', () => {
+    it('GET /classes/:classId/gradebook conserve la map des notes', async () => {
+      // `grades` est une map dynamique userId -> assignmentId -> note.
+      // `fast-json-stringify` n'emet que les proprietes declarees dans le
+      // schema : sans `additionalProperties`, la map arrive VIDE au client sans
+      // la moindre erreur, et le carnet s'affiche sans aucune note. Les tests
+      // unitaires de controleur ne peuvent pas le voir — ils n'exercent pas la
+      // serialisation.
+      db.class.findUnique.mockResolvedValue({ id: 'class-1' });
+      db.assignment.findMany.mockResolvedValue([sampleAssignment]);
+      db.user.findMany.mockResolvedValue([{ id: 'user-1', name: 'Léa Martin' }]);
+      db.grade.findMany.mockResolvedValue([
+        { assignmentId: 'assignment-1', userId: 'user-1', value: 17, status: 'GRADED', comment: null },
+      ]);
+
+      const app = await buildTestApp();
+      const res = await app.inject({
+        method: 'GET',
+        url: '/classes/class-1/gradebook',
+        headers: authHeader(app, admin),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const { data } = res.json() as { data: { grades: Record<string, unknown> } };
+      expect(Object.keys(data.grades), 'la map des notes ne doit pas etre vidée').toHaveLength(1);
+      expect(data.grades['user-1']).toBeDefined();
+      await app.close();
+    });
+  });
 });
