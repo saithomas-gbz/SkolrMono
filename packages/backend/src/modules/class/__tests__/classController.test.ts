@@ -29,6 +29,14 @@ mock.module('../../../shared/db', () => ({
     },
     classTeacher: {
       findUnique: mock(),
+      findMany: mock(),
+      update: mock(),
+    },
+    classStudent: {
+      findMany: mock(),
+    },
+    course: {
+      findMany: mock(),
     },
   }
 }));
@@ -44,6 +52,14 @@ const prismaMock = db as {
   };
   classTeacher: {
     findUnique: ReturnType<typeof mock>;
+    findMany: ReturnType<typeof mock>;
+    update: ReturnType<typeof mock>;
+  };
+  classStudent: {
+    findMany: ReturnType<typeof mock>;
+  };
+  course: {
+    findMany: ReturnType<typeof mock>;
   };
 };
 
@@ -71,6 +87,86 @@ describe('ClassController', () => {
     prismaMock.class.update.mockReset();
     prismaMock.class.delete.mockReset();
     prismaMock.classTeacher.findUnique.mockReset();
+    prismaMock.classTeacher.findMany.mockReset();
+    prismaMock.classTeacher.update.mockReset();
+    prismaMock.course.findMany.mockReset();
+    prismaMock.classStudent.findMany.mockReset();
+  });
+
+  describe('updateClassStudentList', () => {
+    it("n'annonce que les inscriptions reelles", async () => {
+      // La liste etait reconstruite entierement : chaque modification emettait un
+      // `student.enrolled` pour toute la classe, donc une notification par eleve
+      // deja inscrit, et repartait la date d'inscription de chacun.
+      prismaMock.classStudent.findMany.mockResolvedValue([
+        { id: 'cs-1', classId: 'c-1', studentId: 'e-1' },
+        { id: 'cs-2', classId: 'c-1', studentId: 'e-2' },
+      ]);
+      prismaMock.class.update.mockResolvedValue({ id: 'c-1', classTeachers: [], students: [] });
+
+      const request = createMockRequest({
+        params: { id: 'c-1' },
+        body: { studentIds: ['e-1', 'e-2', 'e-3'] },
+      });
+      await classController.updateClassStudentList(request as never, mockReply);
+
+      const donnees = prismaMock.class.update.mock.calls[0]![0].data.students;
+      expect(donnees.deleteMany).toBeUndefined();
+      expect(donnees.create).toHaveLength(1);
+      expect(donnees.create[0].studentId).toBe('e-3');
+    });
+  });
+
+  describe('updateClassTeacherList', () => {
+    it("conserve l'affectation de cours d'un enseignant reconduit", async () => {
+      // Le code reconstruisait la liste par deleteMany + create. La ligne
+      // ClassTeacher portant la relation `courses`, reaffecter les enseignants
+      // effacait qui enseignait quoi — y compris pour ceux simplement reconduits.
+      prismaMock.classTeacher.findMany.mockResolvedValue([
+        { id: 'ct-1', classId: 'c-1', teacherId: 't-1', isPrincipal: true },
+        { id: 'ct-2', classId: 'c-1', teacherId: 't-2', isPrincipal: false },
+      ]);
+      prismaMock.class.update.mockResolvedValue({ id: 'c-1', classTeachers: [], students: [] });
+
+      const request = createMockRequest({ params: { id: 'c-1' }, body: { teacherIds: ['t-1', 't-3'] } });
+      await classController.updateClassTeacherList(request as never, mockReply);
+
+      const donnees = prismaMock.class.update.mock.calls[0]![0].data.classTeachers;
+      // t-2 part, t-3 arrive, t-1 est reconduit sans etre recree.
+      expect(donnees.deleteMany).toEqual({ id: { in: ['ct-2'] } });
+      expect(donnees.create).toHaveLength(1);
+      expect(donnees.create[0].teacherId).toBe('t-3');
+    });
+  });
+
+  describe('setTeacherCoursesInClass', () => {
+    it("refuse un cours inconnu plutot que de l'ignorer", async () => {
+      // `connect` sur un identifiant inexistant echouerait ou passerait en
+      // silence : l'administrateur croirait l'affectation faite.
+      prismaMock.classTeacher.findUnique.mockResolvedValue({ id: 'ct-1' });
+      prismaMock.course.findMany.mockResolvedValue([{ id: 'co-1' }]);
+
+      const request = createMockRequest({
+        params: { classId: 'c-1', teacherId: 't-1' },
+        body: { courseIds: ['co-1', 'co-inconnu'] },
+      });
+      await classController.setTeacherCoursesInClass(request as never, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.classTeacher.update).not.toHaveBeenCalled();
+    });
+
+    it("404 si l'enseignant n'est pas affecte a la classe", async () => {
+      prismaMock.classTeacher.findUnique.mockResolvedValue(null);
+
+      const request = createMockRequest({
+        params: { classId: 'c-1', teacherId: 't-inconnu' },
+        body: { courseIds: [] },
+      });
+      await classController.setTeacherCoursesInClass(request as never, mockReply);
+
+      expect(mockReply.status).toHaveBeenCalledWith(404);
+    });
   });
 
   describe('getClassesSummary', () => {

@@ -187,6 +187,43 @@ export const getTeacherCoursesInClassSchema = {
   },
 } as const;
 
+export const getAllCoursesSchema = {
+  description: 'List every course known to the class module (assignable to a teacher)',
+  tags: [classTag],
+  response: {
+    200: classCourseListResponse,
+    500: errorBody,
+  },
+} as const;
+
+export const setTeacherCoursesInClassSchema = {
+  description: 'Replace the list of courses a teacher teaches in a given class',
+  tags: [classTag],
+  params: {
+    type: 'object',
+    properties: {
+      classId: { type: 'string' },
+      teacherId: { type: 'string' },
+    },
+    required: ['classId', 'teacherId'],
+  },
+  body: {
+    type: 'object',
+    properties: {
+      // Liste complete : l'appel remplace l'affectation plutot que de la
+      // completer, ce qui le rend idempotent.
+      courseIds: { type: 'array', items: { type: 'string' } },
+    },
+    required: ['courseIds'],
+  },
+  response: {
+    200: classCourseListResponse,
+    400: errorBody,
+    404: errorBody,
+    500: errorBody,
+  },
+} as const;
+
 export const createClassSchema = {
   description: 'Create a class with teachers and students',
   tags: [classTag],

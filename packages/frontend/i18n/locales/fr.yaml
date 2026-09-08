@@ -59,6 +59,20 @@ auth:
     no_account: Pas encore de compte ?
     create_account: Créer un compte
     forgot_password: Mot de passe oublié ?
+  change_password:
+    title: Choisissez votre mot de passe
+    intro: >-
+      Votre compte a été créé avec un mot de passe provisoire, transmis par
+      votre établissement. Choisissez-en un nouveau pour accéder à Skolr.
+    current: Mot de passe provisoire
+    new: Nouveau mot de passe
+    confirm: Confirmer le nouveau mot de passe
+    submit: Enregistrer et continuer
+    mismatch: Les deux mots de passe ne correspondent pas.
+    too_short: "Le mot de passe doit contenir au moins {min} caractères."
+    same_as_current: Le nouveau mot de passe doit être différent du provisoire.
+    success: Mot de passe enregistré. Bienvenue sur Skolr.
+    logout: Se déconnecter
   register:
     title: Inscription
     submit: "S'inscrire"
@@ -141,6 +155,8 @@ admin:
   users_title: Utilisateurs
   invite_user: Inviter un utilisateur
   invite_sent: "Invitation envoyée à {email}."
+  create_user: Créer un compte
+  user_created: "Compte créé pour {email}."
   users_table:
     role: Rôle
     empty: Aucun utilisateur.
@@ -155,6 +171,32 @@ admin:
     role_parent: Parent
     role_admin: Administrateur
     submit: Envoyer l'invitation
+  create_dialog:
+    title: Créer un compte
+    intro: >-
+      Le compte est actif immédiatement, sans email de confirmation. Communiquez
+      le mot de passe provisoire à la personne : elle devra le remplacer à sa
+      première connexion.
+    email: Email
+    name: Nom
+    name_hint: Facultatif — déduit de l'email si laissé vide.
+    role: Rôle
+    choose_role: Choisir un rôle
+    password: Mot de passe provisoire
+    generate: Générer
+    copy: Copier
+    copied: Mot de passe copié.
+    password_too_short: "Au moins {min} caractères."
+    class: Classe
+    class_none: Aucune pour l'instant
+    class_hint_student: "L'élève sera inscrit dans cette classe."
+    class_hint_teacher: "L'enseignant sera rattaché à cette classe."
+    courses: Cours enseignés
+    courses_hint: Dans la classe choisie. Modifiable ensuite.
+    submit: Créer le compte
+    linked_error: >-
+      Le compte a bien été créé, mais le rattachement à la classe a échoué.
+      Reprenez-le depuis la fiche de la classe.
   students_title: "Élèves de l'établissement"
   subjects_title: "Matières & Programmes"
   new_subject: Nouvelle matière

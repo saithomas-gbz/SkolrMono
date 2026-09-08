@@ -8,6 +8,9 @@ const userPublic = {
     name: { type: 'string' },
     role: { type: 'string', enum: ['USER', 'TEACHER', 'STAFF', 'ADMIN', 'PLATFORM_ADMIN', 'PARENT'] },
     establishmentId: { type: 'string', nullable: true },
+    // A declarer explicitement : fast-json-stringify retire de la reponse toute
+    // propriete absente du schema, sans le signaler.
+    mustChangePassword: { type: 'boolean' },
   },
   required: ['id', 'email', 'role'],
 } as const;

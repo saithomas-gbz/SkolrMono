@@ -9,6 +9,7 @@ type JwtPayload = {
   email?: string;
   role?: string;
   exp?: number;
+  mustChangePassword?: boolean;
 };
 
 function decodeBase64Url(segment: string): string {
@@ -31,7 +32,13 @@ function decodeJwtPayload(token: string): JwtPayload | null {
   }
 }
 
-/** Dérive `AuthUser` depuis le JWT auth-service (`userId`, `email`, `role`). */
+/**
+ * Dérive `AuthUser` depuis le JWT auth-service (`userId`, `email`, `role`).
+ *
+ * `mustChangePassword` voyage dans le jeton plutôt que d'exiger un appel
+ * supplémentaire : le middleware qui cantonne la session doit pouvoir trancher
+ * avant même le premier rendu.
+ */
 export function authUserFromToken(token: string): AuthUser | null {
   const payload = decodeJwtPayload(token);
   if (!payload?.userId || !payload.email || !payload.role) {
@@ -41,6 +48,7 @@ export function authUserFromToken(token: string): AuthUser | null {
     id: payload.userId,
     email: payload.email,
     role: payload.role,
+    mustChangePassword: payload.mustChangePassword === true,
   };
 }
 

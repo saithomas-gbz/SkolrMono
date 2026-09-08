@@ -105,13 +105,15 @@ const userController = {
 
   createUser: async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { email, password, name, role, establishmentId } = request.body as {
-        email: string;
-        password: string;
-        name?: string;
-        role?: Role;
-        establishmentId?: string;
-      };
+      const { email, password, name, role, establishmentId, mustChangePassword } =
+        request.body as {
+          email: string;
+          password: string;
+          name?: string;
+          role?: Role;
+          establishmentId?: string;
+          mustChangePassword?: boolean;
+        };
 
       const existing = await db.user.findUnique({ where: { email } });
       if (existing) {
@@ -120,6 +122,10 @@ const userController = {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
+      // Un compte cree par un administrateur porte un mot de passe provisoire,
+      // transmis hors application. Le drapeau cantonne la session a l'ecran de
+      // changement tant qu'il n'a pas ete remplace. Vrai par defaut : c'est le
+      // cas d'usage de cette route, et l'oubli doit pencher du cote sur.
       const user = await db.user.create({
         data: {
           email,
@@ -127,6 +133,7 @@ const userController = {
           name: name ?? email.split('@')[0],
           role: role ?? 'USER',
           establishmentId,
+          mustChangePassword: mustChangePassword ?? true,
         },
         omit: { password: true },
       });
@@ -203,10 +210,18 @@ const userController = {
         return reply.status(401).send({ error: 'Current password is incorrect' });
       }
 
+      // Interdire de « changer » pour le meme mot de passe : sur un compte a
+      // mot de passe provisoire, cela contournerait entierement l'obligation.
+      if (await bcrypt.compare(newPassword, existing.password)) {
+        return reply
+          .status(400)
+          .send({ error: 'New password must be different from the current one' });
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await db.user.update({
         where: { id: userId },
-        data: { password: hashedPassword },
+        data: { password: hashedPassword, mustChangePassword: false },
       });
 
       return reply.send({ message: 'Password updated successfully' });

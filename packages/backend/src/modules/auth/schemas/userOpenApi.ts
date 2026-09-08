@@ -11,6 +11,9 @@ const userPublic = {
     establishmentId: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
     updatedAt: { type: 'string', format: 'date-time' },
+    // Sans cette declaration, fast-json-stringify retirerait le drapeau de la
+    // reponse de creation sans rien signaler.
+    mustChangePassword: { type: 'boolean' },
   },
   required: ['id', 'email', 'role'],
 } as const;
@@ -122,6 +125,9 @@ export const createUserRouteSchema = {
       name: { type: 'string' },
       role: { type: 'string', enum: ['USER', 'TEACHER', 'STAFF', 'ADMIN', 'PLATFORM_ADMIN', 'PARENT'] },
       establishmentId: { type: 'string' },
+      // Defaut cote controleur : true. Un compte cree par un administrateur
+      // porte un mot de passe provisoire qu'il faudra remplacer a la connexion.
+      mustChangePassword: { type: 'boolean' },
     },
     required: ['email', 'password'],
   },

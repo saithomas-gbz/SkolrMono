@@ -90,6 +90,66 @@ export function useClass() {
     return response.data;
   }
 
+  /**
+   * Cours affectables à un enseignant.
+   *
+   * Sert `/class/courses` et non `/grade/courses` : les deux modules portent
+   * leur propre table, alimentées par le seed avec les mêmes identifiants mais
+   * sans synchronisation. Un cours créé côté notes n'existe pas côté classe et
+   * son affectation échouerait — la liste doit venir du module qui la valide.
+   */
+  async function fetchAssignableCourses() {
+    const response = await api<ClassCoursesApiResponse>('/class/courses');
+    return response.data;
+  }
+
+  /**
+   * Inscrit un élève dans une classe, sans toucher aux autres.
+   *
+   * L'API attend la liste complète : elle remplace l'inscription plutôt que de
+   * la compléter. On lit donc l'existant avant d'y ajouter l'élève — envoyer le
+   * seul nouvel identifiant viderait la classe.
+   */
+  async function enrollStudent(classId: string, studentId: string) {
+    const classe = await fetchClassById(classId);
+    const actuels = (classe?.students ?? []).map((e) => e.studentId);
+    if (actuels.includes(studentId)) {
+      return classe;
+    }
+    const response = await api<ClassApiResponse>(`/class/classes/${classId}/students`, {
+      method: 'PUT',
+      body: { studentIds: [...actuels, studentId] },
+    });
+    return response.data;
+  }
+
+  /** Rattache un enseignant à une classe, en préservant l'équipe en place. */
+  async function assignTeacher(classId: string, teacherId: string) {
+    const classe = await fetchClassById(classId);
+    const actuels = (classe?.classTeachers ?? []).map((t) => t.teacherId);
+    if (actuels.includes(teacherId)) {
+      return classe;
+    }
+    const response = await api<ClassApiResponse>(`/class/classes/${classId}/teachers`, {
+      method: 'PUT',
+      body: { teacherIds: [...actuels, teacherId] },
+    });
+    return response.data;
+  }
+
+  /**
+   * Remplace la liste des cours qu'un enseignant assure dans une classe.
+   *
+   * L'appel est idempotent : il porte la liste voulue, pas un delta.
+   */
+  async function setTeacherCourses(classId: string, teacherId: string, courseIds: string[]) {
+    const response = await api<ClassCoursesApiResponse>(
+      `/class/classes/${classId}/teachers/${teacherId}/courses`,
+      { method: 'PUT', body: { courseIds } },
+    );
+    return response.data;
+  }
+
   return {
     fetchClassesSummary,
     fetchClassById,
@@ -97,5 +157,9 @@ export function useClass() {
     fetchClassesByStudentId,
     fetchClassesByTeacherId,
     fetchTeacherCourses,
+    fetchAssignableCourses,
+    enrollStudent,
+    assignTeacher,
+    setTeacherCourses,
   };
 }

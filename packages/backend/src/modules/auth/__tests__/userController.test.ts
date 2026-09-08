@@ -223,6 +223,49 @@ describe('UserController', () => {
   // createUser
   // ---------------------------------------------------------------------------
   describe('createUser', () => {
+    it('marque le mot de passe comme provisoire par defaut', async () => {
+      // Un compte cree par un administrateur porte un mot de passe transmis hors
+      // application ; il ne doit pas rester en usage. Le defaut penche du cote
+      // sur : ne rien preciser revient a exiger le changement.
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue(userWithoutPassword(mockUser));
+      spyOn(bcrypt, 'hash').mockResolvedValue('hashed-pw' as never);
+
+      const request = makeRequest({
+        body: { email: 'nouveau@skolr.local', password: 'provisoire-123' },
+      } as Partial<FastifyRequest>);
+
+      await userController.createUser(request, reply);
+
+      expect(prismaMock.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ mustChangePassword: true }),
+        }),
+      );
+    });
+
+    it('permet de creer un compte sans mot de passe provisoire', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue(userWithoutPassword(mockUser));
+      spyOn(bcrypt, 'hash').mockResolvedValue('hashed-pw' as never);
+
+      const request = makeRequest({
+        body: {
+          email: 'nouveau@skolr.local',
+          password: 'choisi-par-lutilisateur',
+          mustChangePassword: false,
+        },
+      } as Partial<FastifyRequest>);
+
+      await userController.createUser(request, reply);
+
+      expect(prismaMock.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ mustChangePassword: false }),
+        }),
+      );
+    });
+
     it('should create and return 201 with user', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
       prismaMock.user.create.mockResolvedValue(userWithoutPassword(mockUser));
@@ -410,7 +453,12 @@ describe('UserController', () => {
     it('should update the password when the current password matches', async () => {
       prismaMock.user.findUnique.mockResolvedValue(mockUser);
       prismaMock.user.update.mockResolvedValue(userWithoutPassword(mockUser));
-      spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+      // Deux comparaisons distinctes : l'ancien mot de passe doit correspondre,
+      // le nouveau doit differer. Un mock uniformement vrai ferait echouer la
+      // seconde garde.
+      spyOn(bcrypt, 'compare')
+        .mockResolvedValueOnce(true as never)
+        .mockResolvedValueOnce(false as never);
       spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-pw' as never);
 
       const request = makeRequest({
@@ -422,11 +470,31 @@ describe('UserController', () => {
 
       expect(bcrypt.compare).toHaveBeenCalledWith('old-pw', mockUser.password);
       expect(bcrypt.hash).toHaveBeenCalledWith('new-secret', 10);
+      // Le changement leve le drapeau : c'est ce qui libere la session d'un
+      // compte cree avec un mot de passe provisoire.
       expect(prismaMock.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { password: 'new-hashed-pw' },
+        data: { password: 'new-hashed-pw', mustChangePassword: false },
       });
       expect(reply.send).toHaveBeenCalledWith({ message: 'Password updated successfully' });
+    });
+
+    it('refuse un nouveau mot de passe identique a l ancien', async () => {
+      // Sans cette garde, un compte a mot de passe provisoire pourrait lever son
+      // drapeau en resoumettant le meme mot de passe, ce qui viderait
+      // l'obligation de tout contenu.
+      prismaMock.user.findUnique.mockResolvedValue(mockUser);
+      spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+      const request = makeRequest({
+        body: { currentPassword: 'old-pw', newPassword: 'old-pw' },
+        authUser: { userId: 'user-1', email: mockUser.email, role: 'USER' },
+      } as Partial<FastifyRequest>);
+
+      await userController.changePassword(request, reply);
+
+      expect(reply.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
 
     it('should return 401 when the current password is incorrect', async () => {
