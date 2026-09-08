@@ -26,11 +26,26 @@ describe('authUserFromToken', () => {
       exp: nowSeconds() + 3600,
     });
 
+    // `mustChangePassword` est toujours present, faux par defaut : un jeton
+    // ancien, emis avant l'ajout du claim, ne doit pas cantonner sa session.
     expect(authUserFromToken(token)).toEqual({
       id: 'u1',
       email: 'dev.user@skolr.local',
       role: 'USER',
+      mustChangePassword: false,
     });
+  });
+
+  test('reporte le drapeau de mot de passe provisoire porte par le jeton', () => {
+    const token = makeJwt({
+      userId: 'u2',
+      email: 'recrue@skolr.local',
+      role: 'TEACHER',
+      mustChangePassword: true,
+      exp: nowSeconds() + 3600,
+    });
+
+    expect(authUserFromToken(token)?.mustChangePassword).toBe(true);
   });
 
   test('retourne null si un claim requis manque (userId)', () => {
