@@ -17,6 +17,9 @@ declare module 'fastify' {
 
 const STAFF_ROLES = ['TEACHER', 'STAFF', 'ADMIN'];
 
+/** Le staff privé des enseignants — voir `requireAdministration`. */
+const ADMINISTRATION_ROLES = ['STAFF', 'ADMIN'];
+
 function verifyToken(request: FastifyRequest): GradeJwtPayload | null {
   try {
     return request.server.jwt.verify(
@@ -43,6 +46,25 @@ export async function requireStaff(request: FastifyRequest, reply: FastifyReply)
     return deny(reply, 401, 'Unauthorized');
   }
   if (!STAFF_ROLES.includes(payload.role)) {
+    return deny(reply, 403, 'Forbidden');
+  }
+  request.gradeUser = payload;
+}
+
+/**
+ * Réservé à l'administration — enseignants exclus.
+ *
+ * Supprimer une note efface une trace d'évaluation, ce qui n'est pas le pendant
+ * de sa saisie : un enseignant qui s'est trompé corrige la valeur, l'effacement
+ * relève de l'administration. `requireStaff` reste le garde des autres écritures
+ * de notes, que les enseignants doivent pouvoir faire.
+ */
+export async function requireAdministration(request: FastifyRequest, reply: FastifyReply) {
+  const payload = verifyToken(request);
+  if (!payload) {
+    return deny(reply, 401, 'Unauthorized');
+  }
+  if (!ADMINISTRATION_ROLES.includes(payload.role)) {
     return deny(reply, 403, 'Forbidden');
   }
   request.gradeUser = payload;

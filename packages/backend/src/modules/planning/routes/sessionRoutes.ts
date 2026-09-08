@@ -7,12 +7,14 @@ import {
   deleteSession,
 } from '../controllers/sessionController';
 import { sessionSchema, createSessionSchema } from '../schemas/sessionOpenApi';
-import { requireAuth, requireStaff } from '../lib/authGuard';
+import { requireAdmin, requireAuth, requireStaff } from '../lib/authGuard';
 
 export default async function sessionRoutes(app: FastifyInstance) {
   // Lectures : tous les rôles, `getSessions` restreint déjà le périmètre par rôle.
   // Écritures : staff uniquement — elles étaient en `requireAuth`, ce qui laissait
-  // un élève créer, déplacer ou supprimer n'importe quelle séance (#233).
+  // un élève créer, déplacer ou supprimer n'importe quelle séance (#233). La
+  // création est en outre réservée à l'administration : composer l'emploi du
+  // temps est une décision d'organisation, pas un acte d'enseignement.
   app.get(
     '/sessions',
     { schema: { ...sessionSchema.list, tags: ['session'] }, preHandler: requireAuth },
@@ -25,7 +27,7 @@ export default async function sessionRoutes(app: FastifyInstance) {
   );
   app.post(
     '/sessions',
-    { schema: { ...createSessionSchema, tags: ['session'] }, preHandler: requireStaff },
+    { schema: { ...createSessionSchema, tags: ['session'] }, preHandler: requireAdmin },
     createSession,
   );
   app.patch(

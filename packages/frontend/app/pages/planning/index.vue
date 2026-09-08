@@ -28,7 +28,7 @@
               class="filter-select"
             />
             <Button
-              v-if="canEdit"
+              v-if="canCreateSession"
               :label="$t('planning.add')"
               icon="pi pi-plus"
               size="small"
@@ -50,7 +50,7 @@
           :sessions="sessions"
           :course-names="courseNames"
           :teacher-names="teacherNames"
-          :can-edit="canEdit"
+          :can-create="canCreateSession"
           :current-user-id="userId"
           @session-click="openEditDialog"
           @slot-click="openCreateDialog"
@@ -96,6 +96,13 @@ const isAdmin = computed(() => hasRole('ADMIN'));
 const isTeacher = computed(() => hasRole('TEACHER', 'STAFF'));
 const isStudent = computed(() => hasRole('USER'));
 const canEdit = computed(() => isAdmin.value || isTeacher.value);
+
+/**
+ * Poser une séance écrit dans l'emploi du temps de l'établissement, pas
+ * seulement dans son propre cours : réservé à l'administration. Les enseignants
+ * gardent l'édition de leurs séances existantes, portée par `canEdit`.
+ */
+const canCreateSession = computed(() => isAdmin.value);
 
 // Sentinelle pour l'option « Mes matières » du dropdown prof — un modelValue
 // PrimeVue à `null` est traité comme « aucune sélection » et n'afficherait pas
@@ -316,6 +323,9 @@ function openEditDialog(session: Session) {
 }
 
 function openCreateDialog(date: Date | null) {
+  if (!canCreateSession.value) {
+    return;
+  }
   activeSession.value = null;
   slotDate.value = date;
   sessionDialogVisible.value = true;

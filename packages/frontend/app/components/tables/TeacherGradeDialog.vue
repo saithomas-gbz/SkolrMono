@@ -63,20 +63,22 @@
                 :aria-label="$t('student.grade_dialog.edit_grade')"
                 @click="startEdit(grade)"
               />
-              <template v-if="confirmingId === grade.id">
-                <span class="confirm-text">{{ $t('student.grade_dialog.confirm_delete') }}</span>
-                <Button :label="$t('common.yes')" size="small" severity="danger" :loading="deleting" @click="submitDelete(grade.id)" />
-                <Button :label="$t('common.no')" size="small" text severity="secondary" @click="confirmingId = null" />
+              <template v-if="canDeleteGrade">
+                <template v-if="confirmingId === grade.id">
+                  <span class="confirm-text">{{ $t('student.grade_dialog.confirm_delete') }}</span>
+                  <Button :label="$t('common.yes')" size="small" severity="danger" :loading="deleting" @click="submitDelete(grade.id)" />
+                  <Button :label="$t('common.no')" size="small" text severity="secondary" @click="confirmingId = null" />
+                </template>
+                <Button
+                  v-else
+                  icon="pi pi-trash"
+                  size="small"
+                  text
+                  severity="danger"
+                  :aria-label="$t('student.grade_dialog.delete_grade')"
+                  @click="confirmingId = grade.id"
+                />
               </template>
-              <Button
-                v-else
-                icon="pi pi-trash"
-                size="small"
-                text
-                severity="danger"
-                :aria-label="$t('student.grade_dialog.delete_grade')"
-                @click="confirmingId = grade.id"
-              />
             </template>
           </li>
         </ul>
@@ -110,7 +112,16 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { fetchGradesByUserId, updateGrade, deleteGrade } = useGrade();
 const { fetchTeacherCourses } = useClass();
-const { user } = useAuth();
+const { user, hasRole } = useAuth();
+
+/**
+ * Supprimer une note efface une trace d'évaluation, pas une simple saisie : un
+ * enseignant corrige la sienne en la modifiant, l'effacement relève de
+ * l'administration. Ce dialogue est partagé — `middleware/teacher.ts` ouvre les
+ * écrans enseignant aux ADMIN et STAFF — d'où une allowlist plutôt que le
+ * simple retrait du bouton, qui priverait aussi l'administration.
+ */
+const canDeleteGrade = computed(() => hasRole('ADMIN', 'STAFF'));
 
 const grades = ref<GradeEntity[]>([]);
 const courses = ref<GradeCourse[]>([]);
@@ -244,6 +255,9 @@ const confirmingId = ref<string | null>(null);
 const deleting = ref(false);
 
 async function submitDelete(id: string) {
+  if (!canDeleteGrade.value) {
+    return;
+  }
   deleting.value = true;
   try {
     await deleteGrade(id);

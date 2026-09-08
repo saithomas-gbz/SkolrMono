@@ -107,6 +107,18 @@ const sampleGrade = {
 
 async function buildTestApp() {
   const app = Fastify();
+
+  // Artefact du harnais, pas du code applicatif — même parade que
+  // `planningRoutes.test.ts`, où il est décrit en détail : sur une route DELETE,
+  // `deny()` fait `await reply.send(...)`, `Reply.then` s'abonne à
+  // `eos(reply.raw)` que light-my-request fait rejeter une fois la réponse
+  // écrite, et Fastify retente alors un writeHead (ERR_HTTP_HEADERS_SENT). Le
+  // statut reçu par le client est bien 401/403 et le handler ne tourne pas.
+  app.setErrorHandler((err, _request, reply) => {
+    if ((err as { code?: string }).code === 'ERR_HTTP_HEADERS_SENT') return reply;
+    return reply.status(500).send({ error: err.message });
+  });
+
   await app.register(fastifyJwt, { secret: 'test-secret' });
   await app.register(gradeRoutes);
   await app.ready();
@@ -285,17 +297,31 @@ describe('GradeRoutes', () => {
     await app.close();
   });
 
-  it('DELETE /grades/:id deletes a grade for a TEACHER', async () => {
+  it('DELETE /grades/:id deletes a grade for an ADMIN', async () => {
     prismaMock.grade.findUnique.mockResolvedValue(sampleGrade);
     prismaMock.grade.delete.mockResolvedValue(sampleGrade);
     const app = await buildTestApp();
     const res = await app.inject({
       method: 'DELETE',
       url: '/grades/grade-1',
-      headers: authHeader(app, teacherPayload),
+      headers: authHeader(app, adminPayload),
     });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ data: sampleGrade, message: 'Grade deleted successfully' });
+    await app.close();
+  });
+
+  it('DELETE /grades/:id refuse un enseignant, y compris dans son périmètre', async () => {
+    prismaMock.grade.findUnique.mockResolvedValue(sampleGrade);
+    const app = await buildTestApp();
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/grades/grade-1',
+      headers: authHeader(app, teacherPayload),
+    });
+    expect(res.statusCode).toBe(403);
+    expect(prismaMock.grade.findUnique).not.toHaveBeenCalled();
+    expect(prismaMock.grade.delete).not.toHaveBeenCalled();
     await app.close();
   });
   describe('périmètre enseignant (#234)', () => {
@@ -343,20 +369,6 @@ describe('GradeRoutes', () => {
       });
       expect(res.statusCode).toBe(403);
       expect(prismaMock.grade.update).not.toHaveBeenCalled();
-      await app.close();
-    });
-
-    it('DELETE /grades/:id refuse un enseignant hors de son périmètre', async () => {
-      outOfScope();
-      prismaMock.grade.findUnique.mockResolvedValue(sampleGrade);
-      const app = await buildTestApp();
-      const res = await app.inject({
-        method: 'DELETE',
-        url: '/grades/grade-1',
-        headers: authHeader(app, teacherPayload),
-      });
-      expect(res.statusCode).toBe(403);
-      expect(prismaMock.grade.delete).not.toHaveBeenCalled();
       await app.close();
     });
 
