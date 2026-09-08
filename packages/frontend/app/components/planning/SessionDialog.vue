@@ -95,6 +95,34 @@
     </div>
 
     <template #footer>
+      <div v-if="session" class="delete-zone">
+        <template v-if="confirmingDelete">
+          <span class="confirm-text">{{ $t('planning.session_dialog.confirm_delete') }}</span>
+          <Button
+            :label="$t('common.yes')"
+            size="small"
+            severity="danger"
+            :loading="deleting"
+            @click="remove"
+          />
+          <Button
+            :label="$t('common.no')"
+            size="small"
+            text
+            severity="secondary"
+            :disabled="deleting"
+            @click="confirmingDelete = false"
+          />
+        </template>
+        <Button
+          v-else
+          :label="$t('planning.session_dialog.delete')"
+          icon="pi pi-trash"
+          severity="danger"
+          text
+          @click="confirmingDelete = true"
+        />
+      </div>
       <Button :label="$t('common.cancel')" severity="secondary" text @click="visible = false" />
       <Button
         :label="session ? $t('common.save') : $t('common.create')"
@@ -126,7 +154,7 @@ const emit = defineEmits<{
 const visible = defineModel<boolean>('visible', { default: false });
 
 const { t } = useI18n();
-const { createSession, updateSession } = usePlanning();
+const { createSession, updateSession, deleteSession } = usePlanning();
 const { fetchAllUsers } = useUser();
 const { fetchCourses } = useCourse();
 const { fetchTeacherCourses } = useClass();
@@ -216,6 +244,16 @@ watch(
 const pending = ref(false);
 const error = ref<string | null>(null);
 
+/**
+ * Suppression en deux temps : le bouton bascule sur « Supprimer ? Oui / Non »
+ * plutôt que d'appeler l'API au premier clic. Même idiome que
+ * `TeacherGradeDialog` — PrimeVue `ConfirmDialog` n'est utilisé nulle part dans
+ * l'application, on n'en introduit pas un pour ce seul bouton.
+ */
+const confirmingDelete = ref(false);
+const deleting = ref(false);
+const currentSession = computed(() => props.session);
+
 const isFormValid = computed(
   () => form.classId && form.courseId && form.teacherId && form.startAt && form.endAt,
 );
@@ -239,6 +277,7 @@ watch(
 function resetForm() {
   Object.assign(form, defaultForm());
   error.value = null;
+  confirmingDelete.value = false;
 }
 
 async function submit() {
@@ -266,6 +305,30 @@ async function submit() {
     error.value = conflictMessage(e) ?? normalizeApiError(e);
   } finally {
     pending.value = false;
+  }
+}
+
+/**
+ * Le dialog porte la suppression lui-même plutôt que de la déléguer à la page :
+ * il a déjà l'état `pending`/`error` et le `Message` pour l'afficher. Un 403
+ * (séance hors des classes de l'enseignant, `denyIfOutsideTeacherScope`) ou un
+ * 404 reste ainsi lisible à côté du bouton qui l'a déclenché, dialog ouvert.
+ */
+async function remove() {
+  const session = currentSession.value;
+  if (!session) return;
+
+  error.value = null;
+  deleting.value = true;
+  try {
+    await deleteSession(session.id);
+    visible.value = false;
+    emit('saved');
+  } catch (e) {
+    confirmingDelete.value = false;
+    error.value = normalizeApiError(e);
+  } finally {
+    deleting.value = false;
   }
 }
 
@@ -310,5 +373,18 @@ function conflictMessage(e: unknown): string | null {
 
 .w-full {
   width: 100%;
+}
+
+/* Le pied du dialog est en `justify-content: flex-end` : la marge auto isole
+   l'action destructrice à gauche, loin de « Enregistrer ». */
+.delete-zone {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirm-text {
+  font-size: 0.875rem;
 }
 </style>

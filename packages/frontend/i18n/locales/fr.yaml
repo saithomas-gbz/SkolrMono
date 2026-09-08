@@ -419,6 +419,8 @@ planning:
     room_placeholder: "Ex: B204"
     start: Début
     end: Fin
+    delete: Supprimer la séance
+    confirm_delete: "Supprimer cette séance ?"
 
 homework:
   title: Devoirs
