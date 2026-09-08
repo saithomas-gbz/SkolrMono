@@ -152,7 +152,7 @@ describe('webhookController.handleStripeWebhook', () => {
     expect(reply.send).toHaveBeenCalledWith({ received: true });
   });
 
-  it('customer.subscription.deleted : passe en CANCELED et publie billing.subscription.canceled', async () => {
+  it('customer.subscription.deleted : passe en CANCELED, purge les references Stripe et publie billing.subscription.canceled', async () => {
     stripeMock.webhooks.constructEvent.mockReturnValue({
       id: 'evt_3',
       type: 'customer.subscription.deleted',
@@ -166,7 +166,14 @@ describe('webhookController.handleStripeWebhook', () => {
 
     expect(prismaMock.subscription.updateMany).toHaveBeenCalledWith({
       where: { establishmentId: 'est-1' },
-      data: { status: 'CANCELED' },
+      data: {
+        status: 'CANCELED',
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+        cancelAtPeriodEnd: false,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+      },
     });
     expect(publishMock).toHaveBeenCalledWith('billing.subscription.canceled', {
       establishmentId: 'est-1',

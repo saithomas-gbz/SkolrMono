@@ -39,11 +39,15 @@
 
           <p v-if="establishment.subscription" class="plan-line">
             {{ $t('billing.current_plan', { plan: planLabel(establishment.subscription.planTier) }) }}
-            <template v-if="establishment.subscription.currentPeriodEnd">
-              — {{ $t('billing.renews_on', { date: formatDate(establishment.subscription.currentPeriodEnd) }) }}
+            <template v-if="periodEndLabel">
+              — {{ periodEndLabel }}
             </template>
           </p>
           <p v-else class="plan-line muted">{{ $t('billing.no_subscription') }}</p>
+
+          <Message v-if="showCancelNotice" severity="warn" :closable="false">
+            {{ $t('billing.cancel_notice') }}
+          </Message>
 
           <Message v-if="showInactiveWarning" severity="warn" :closable="false">
             {{ $t('billing.inactive_warning') }}
@@ -157,12 +161,42 @@ const showInactiveWarning = computed(() => {
   return Boolean(status) && status !== 'ACTIVE' && status !== 'TRIALING';
 });
 
+/** Un abonnement annulé reste `ACTIVE` chez Stripe jusqu'à la fin de la période payée. */
+const showCancelNotice = computed(() => Boolean(establishment.value?.subscription?.cancelAtPeriodEnd));
+
+/**
+ * La fin de période est une date de renouvellement tant que l'abonnement court,
+ * mais une date d'arrêt dès qu'une annulation est programmée. Annoncer un
+ * « renouvellement » dans ce second cas laisserait croire à un prélèvement à
+ * venir — le même faux message que le retour de portail corrigé en #267.
+ */
+const periodEndLabel = computed(() => {
+  const subscription = establishment.value?.subscription;
+  if (!subscription?.currentPeriodEnd) return null;
+  const date = formatDate(subscription.currentPeriodEnd);
+  return subscription.cancelAtPeriodEnd
+    ? t('billing.cancel_ends_on', { date })
+    : t('billing.renews_on', { date });
+});
+
+/**
+ * Le plan en cours, uniquement s'il est réellement en vigueur : après une
+ * annulation, `planTier` reste renseigné en base et désactiverait le bouton du
+ * plan qu'on vient de quitter, interdisant justement de s'y réabonner.
+ */
+const activeTier = computed(() => {
+  const subscription = establishment.value?.subscription;
+  if (!subscription) return null;
+  const running = subscription.status === 'ACTIVE' || subscription.status === 'TRIALING';
+  return running ? subscription.planTier : null;
+});
+
 function planLabel(tier: BillingPlanTier) {
   return t(`billing.plan_label.${tier}`);
 }
 
 function isCurrentPlan(tier: BillingPlanTier) {
-  return establishment.value?.subscription?.planTier === tier;
+  return activeTier.value === tier;
 }
 
 function formatDate(value: string) {
