@@ -14,6 +14,18 @@ import { SEED } from '../fixtures/seed';
  * temps seedé.
  */
 
+// Vidéo activée pour cette spec uniquement (démo PR #293) — pas de changement
+// global de playwright.config.ts. L'enregistrement du parcours est figé dans
+// `demo/suppression-seance-pr293.webm`.
+test.use({ video: 'on' });
+
+/**
+ * Temps de pause du parcours filmé. Les assertions n'en ont pas besoin —
+ * Playwright attend déjà —, mais sans eux le dialog et sa confirmation
+ * n'occupent qu'une poignée d'images et la vidéo ne montre rien de lisible.
+ */
+const PAUSE_DEMO = 1_200;
+
 const ROOM = `E2E-SUPPR-${Date.now()}`;
 
 type SessionApi = { id: string };
@@ -66,10 +78,16 @@ test('un admin supprime une séance depuis le dialog', async ({ page, request })
 
     const evenement = page.locator('.fc-event').filter({ hasText: ROOM });
     await expect(evenement).toBeVisible({ timeout: 20_000 });
+    // La grille s'ouvre sur le matin : le créneau de l'après-midi est sous la
+    // ligne de flottaison, et resterait hors champ de la vidéo.
+    await evenement.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(PAUSE_DEMO);
+
     await evenement.click();
 
     const supprimer = page.getByRole('button', { name: 'Supprimer la séance' });
     await expect(supprimer).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(PAUSE_DEMO);
     await supprimer.click();
 
     // Confirmation en deux temps : le premier clic ne doit rien avoir supprimé.
@@ -77,10 +95,12 @@ test('un admin supprime une séance depuis le dialog', async ({ page, request })
     expect((await request.get(`/api/planning/sessions/${seance.id}`, { headers })).status()).toBe(
       200,
     );
+    await page.waitForTimeout(PAUSE_DEMO);
 
     await page.getByRole('button', { name: 'Oui', exact: true }).click();
 
     await expect(evenement).toHaveCount(0, { timeout: 20_000 });
+    await page.waitForTimeout(PAUSE_DEMO);
     expect((await request.get(`/api/planning/sessions/${seance.id}`, { headers })).status()).toBe(
       404,
     );
