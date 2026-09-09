@@ -1,4 +1,5 @@
 import { test, expect, loginAs, loginApi } from '../fixtures/auth';
+import { SEED } from '../fixtures/seed';
 
 /**
  * Suppression d'une séance depuis l'interface (#292).
@@ -15,19 +16,25 @@ import { test, expect, loginAs, loginApi } from '../fixtures/auth';
 
 const ROOM = `E2E-SUPPR-${Date.now()}`;
 
-type SessionApi = { id: string; classId: string; courseId: string; teacherId: string };
+type SessionApi = { id: string };
 
 /**
- * Dimanche 10:00 de la semaine affichée. Le calendrier ouvre sur la semaine
- * courante (lundi → dimanche, `firstDay: 1`) et n'affiche que 08:00–19:00 : le
- * créneau est donc visible, et le dimanche n'est occupé par aucune séance du
- * seed, ce qui évite un 409 de conflit à la création.
+ * Dimanche 16:00 **de la semaine affichée**, en heure locale.
+ *
+ * Le `dimanche()` de `fixtures/seed` ne convient pas ici : il vise le dimanche
+ * SUIVANT, hors de la semaine ouverte par le calendrier quand le test tourne un
+ * dimanche, et raisonne en UTC alors que la grille n'affiche que 08:00–19:00 en
+ * heure locale. La séance doit être cliquable, donc les deux comptent.
+ *
+ * 16:00 plutôt que le matin : `recette-planning` et `recette-admin` occupent
+ * déjà le dimanche matin pour CM2-A, et un chevauchement ferait échouer leur
+ * propre création par un 409 selon l'ordre d'exécution.
  */
-function creneauDimanche(): { startAt: string; endAt: string } {
+function dimancheApresMidi(): { startAt: string; endAt: string } {
   const start = new Date();
   const jour = start.getDay(); // 0 = dimanche
   start.setDate(start.getDate() + (jour === 0 ? 0 : 7 - jour));
-  start.setHours(10, 0, 0, 0);
+  start.setHours(16, 0, 0, 0);
   const end = new Date(start.getTime() + 45 * 60 * 1000);
   return { startAt: start.toISOString(), endAt: end.toISOString() };
 }
@@ -36,23 +43,17 @@ test('un admin supprime une séance depuis le dialog', async ({ page, request })
   const { token } = await loginApi(request, 'admin');
   const headers = { authorization: `Bearer ${token}` };
 
-  // Classe/matière/enseignant repris d'une séance existante : la création ne
-  // valide pas ces relations, mais réutiliser un triplet réel garde la séance
-  // affichable (le calendrier résout les libellés depuis ces identifiants).
-  const existantes = (await (
-    await request.get('/api/planning/sessions', { headers })
-  ).json()) as SessionApi[];
-  const modele = existantes[0];
-  expect(modele, "l'emploi du temps seedé doit contenir au moins une séance").toBeTruthy();
-
+  // Identifiants du seed : le calendrier compose le libellé de la séance à
+  // partir de la matière et de l'enseignant, une séance rattachée à des
+  // identifiants inventés s'afficherait sans titre.
   const creation = await request.post('/api/planning/sessions', {
     headers,
     data: {
-      classId: modele!.classId,
-      courseId: modele!.courseId,
-      teacherId: modele!.teacherId,
+      classId: SEED.classes.cm2a,
+      courseId: SEED.courses.maths,
+      teacherId: SEED.users.teacher,
       room: ROOM,
-      ...creneauDimanche(),
+      ...dimancheApresMidi(),
     },
   });
   expect(creation.status()).toBe(201);
