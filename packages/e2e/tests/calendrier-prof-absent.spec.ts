@@ -1,4 +1,5 @@
 import { test, expect, loginAs, loginApi } from '../fixtures/auth';
+import { SEED } from '../fixtures/seed';
 
 /**
  * Une absence d'enseignant doit se voir dans l'emploi du temps.
@@ -16,13 +17,19 @@ test('0. declarer un enseignant absent sur une seance a venir', async ({ request
   const { token } = await loginApi(request, 'admin');
   const h = { authorization: `Bearer ${token}` };
 
-  const sessions = (await (await request.get('/api/planning/sessions', { headers: h })).json()) as
-    { id: string; teacherId: string; startAt: string }[];
+  // La seance visee doit appartenir a la classe de `lea` (CM2-A) : le test 2
+  // verifie que l'eleve voit la marque, et son emploi du temps ne montre que
+  // les seances de sa classe. Sans ce filtre, « la premiere seance a venir »
+  // toutes classes confondues tombe sur 6eme Sciences selon le jour ou la CI
+  // tourne, et le test 2 echoue alors que la fonctionnalite marche.
+  const sessions = (await (
+    await request.get(`/api/planning/sessions?classId=${SEED.classes.cm2a}`, { headers: h })
+  ).json()) as { id: string; teacherId: string; startAt: string }[];
   const futures = sessions
     .filter((s) => new Date(s.startAt) > new Date())
     .sort((a, b) => a.startAt.localeCompare(b.startAt));
   const cible = futures[0];
-  expect(cible, 'il faut une seance a venir').toBeTruthy();
+  expect(cible, 'il faut une seance a venir dans la classe de l eleve').toBeTruthy();
 
   partage.sessionId = cible!.id;
   partage.jour = cible!.startAt.slice(0, 10);

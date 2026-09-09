@@ -82,14 +82,13 @@ import type { Session, SessionFilters } from '~/composables/usePlanning';
 import type { UserProfile } from '~/composables/useUser';
 
 definePageMeta({ middleware: ['auth'] });
-defineExpose({ removeSession });
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const api = useApi();
 const { hasRole, userId, user } = useAuth();
-const { fetchSessions, deleteSession, fetchAbsences } = usePlanning();
+const { fetchSessions, fetchAbsences } = usePlanning();
 const { fetchUsersByIds, fetchAllUsers } = useUser();
 const { fetchClassesByTeacherId } = useClass();
 
@@ -348,16 +347,6 @@ function openCreateDialog(date: Date | null) {
   activeSession.value = null;
   slotDate.value = date;
   sessionDialogVisible.value = true;
-}
-
-// Suppression accessible depuis le dialog via event futur
-async function removeSession(id: string) {
-  try {
-    await deleteSession(id);
-    await refresh();
-  } catch (e) {
-    fetchError.value = normalizeApiError(e);
-  }
 }
 
 </script>
